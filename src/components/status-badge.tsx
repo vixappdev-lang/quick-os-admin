@@ -28,3 +28,24 @@ export function statusTone(status: string): Tone {
   if (["saída", "ajuste"].includes(s)) return "info";
   return "neutral";
 }
+
+// Tom específico para o fluxo de pedidos (kanban)
+export function pedidoStatusTone(status: string): Tone {
+  const s = status.toLowerCase();
+  if (s === "pendente") return "warning";
+  if (s === "autorizado") return "info";
+  if (s === "separacao") return "primary";
+  if (s === "conferencia") return "primary";
+  if (s === "concluido" || s === "concluído") return "success";
+  if (s === "cancelado" || s === "reprovado") return "danger";
+  return statusTone(status);
+}
+
+export const PEDIDO_STATUS_LABEL: Record<string, string> = {
+  pendente: "Pendente",
+  autorizado: "Autorizado",
+  separacao: "Separação",
+  conferencia: "Conferência",
+  concluido: "Finalizado",
+  cancelado: "Cancelado",
+};
