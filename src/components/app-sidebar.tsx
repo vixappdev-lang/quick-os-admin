@@ -1,12 +1,10 @@
 import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  LayoutDashboard, ShoppingCart, Receipt, ClipboardList, Bike,
-  Package, Tags, Boxes, FileText, ArrowLeftRight,
-  Wallet, TrendingUp, CircleDollarSign, FileBarChart, BookOpen,
-  Users, Heart, HandCoins,
-  Shield, ScrollText, UserCog,
-  Settings, Plug, DatabaseBackup,
+  LayoutDashboard, ShoppingCart, Receipt,
+  Package, Boxes,
+  Wallet, TrendingUp, FileBarChart,
+  Users, UserCog, Settings,
   ChevronLeft, Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,27 +19,20 @@ const groups: Group[] = [
     items: [
       { label: "PDV", to: "/pdv", icon: ShoppingCart },
       { label: "Pedidos", to: "/pedidos", icon: Receipt },
-      { label: "Comandas", to: "/comandas", icon: ClipboardList },
-      { label: "Delivery", to: "/delivery", icon: Bike },
     ],
   },
   {
-    label: "Produtos",
+    label: "Catálogo",
     items: [
       { label: "Produtos", to: "/produtos", icon: Package },
-      { label: "Categorias", to: "/categorias", icon: Tags },
       { label: "Estoque", to: "/estoque", icon: Boxes },
-      { label: "Entradas NF-e", to: "/nfe", icon: FileText },
-      { label: "Movimentações", to: "/movimentacoes", icon: ArrowLeftRight },
     ],
   },
   {
     label: "Financeiro",
     items: [
       { label: "Caixa", to: "/caixa", icon: Wallet },
-      { label: "Fluxo Financeiro", to: "/financeiro", icon: TrendingUp },
-      { label: "Despesas", to: "/despesas", icon: CircleDollarSign },
-      { label: "Contas", to: "/contas", icon: BookOpen },
+      { label: "Financeiro", to: "/financeiro", icon: TrendingUp },
       { label: "Relatórios", to: "/relatorios", icon: FileBarChart },
     ],
   },
@@ -49,24 +40,13 @@ const groups: Group[] = [
     label: "CRM",
     items: [
       { label: "Clientes", to: "/clientes", icon: Users },
-      { label: "Fidelidade", to: "/fidelidade", icon: Heart },
-      { label: "Fiado", to: "/fiado", icon: HandCoins },
-    ],
-  },
-  {
-    label: "Administração",
-    items: [
-      { label: "Usuários", to: "/usuarios", icon: UserCog },
-      { label: "Permissões", to: "/permissoes", icon: Shield },
-      { label: "Logs", to: "/logs", icon: ScrollText },
     ],
   },
   {
     label: "Sistema",
     items: [
+      { label: "Usuários", to: "/usuarios", icon: UserCog },
       { label: "Configurações", to: "/configuracoes", icon: Settings },
-      { label: "Integrações", to: "/integracoes", icon: Plug },
-      { label: "Backup", to: "/backup", icon: DatabaseBackup },
     ],
   },
 ];

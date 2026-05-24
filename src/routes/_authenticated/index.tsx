@@ -209,7 +209,7 @@ function Dashboard() {
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <SectionCard title="Movimentações recentes" actions={<Link to="/movimentacoes" className="text-xs font-medium text-primary hover:underline">Ver todas</Link>} padded={false}>
+        <SectionCard title="Movimentações recentes" actions={<Link to="/estoque" className="text-xs font-medium text-primary hover:underline">Ver todas</Link>} padded={false}>
           <ul className="divide-y">
             {movimentacoes.slice(0, 5).map((m) => (
               <li key={m.id} className="flex items-center justify-between px-5 py-3">
