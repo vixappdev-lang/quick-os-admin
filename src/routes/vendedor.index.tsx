@@ -42,7 +42,7 @@ function VendedorHome() {
     <div className="min-h-screen bg-surface pb-24">
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
+        <div className="flex w-full items-center justify-between px-4 py-3 sm:px-6 lg:px-10">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Zap className="h-4 w-4" strokeWidth={2.5} />
@@ -52,15 +52,20 @@ function VendedorHome() {
               <p className="text-[11px] text-muted-foreground">Vendedor</p>
             </div>
           </div>
-          <button onClick={() => signOut().then(() => navigate({ to: "/login" }))} className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Sair">
-            <LogOut className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <Link to="/vendedor/novo" className="hidden h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-[var(--primary-hover)] sm:inline-flex">
+              <Plus className="h-3.5 w-3.5" /> Novo pedido
+            </Link>
+            <button onClick={() => signOut().then(() => navigate({ to: "/login" }))} className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Sair">
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 py-4 space-y-4">
+      <main className="w-full space-y-4 px-4 py-5 sm:px-6 lg:px-10 lg:py-6">
         {/* KPIs */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-3 lg:max-w-3xl">
           {[
             { l: "Hoje", v: String(totais.hoje), i: ShoppingBag, c: "text-primary bg-primary/10" },
             { l: "Valor", v: formatBRL(totais.valor), i: CheckCircle2, c: "text-success bg-success/10" },
@@ -92,7 +97,7 @@ function VendedorHome() {
         </div>
 
         {/* Lista */}
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:gap-3 lg:grid-cols-2 xl:grid-cols-3">
           {isLoading && <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">Carregando...</div>}
           {!isLoading && filtrados.length === 0 && <div className="rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">Nenhum pedido encontrado</div>}
           {filtrados.map((p) => (
@@ -120,8 +125,8 @@ function VendedorHome() {
         </div>
       </main>
 
-      {/* FAB */}
-      <Link to="/vendedor/novo" className="fixed bottom-6 right-6 z-40 flex h-14 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:scale-105">
+      {/* FAB (mobile only — desktop tem botão no header) */}
+      <Link to="/vendedor/novo" className="fixed bottom-6 right-6 z-40 flex h-14 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/30 transition hover:scale-105 sm:hidden">
         <Plus className="h-5 w-5" /> Novo pedido
       </Link>
     </div>
