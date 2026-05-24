@@ -307,11 +307,13 @@ export function useEstoqueMovimentos(produtoId?: string) {
 export function useAjusteEstoque() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { produto_id: string; tipo: "entrada" | "saida" | "ajuste"; qtd: number; motivo?: string }) => {
+    mutationFn: async (input: { produto_id: string; tipo: "entrada" | "saida" | "ajuste" | "perda"; qtd: number; motivo?: string }) => {
       // ler estoque atual
       const { data: prod, error: pe } = await supabase.from("produtos").select("estoque").eq("id", input.produto_id).single();
       if (pe) throw pe;
-      const delta = input.tipo === "saida" ? -Math.abs(input.qtd) : (input.tipo === "ajuste" ? input.qtd - Number(prod.estoque) : Math.abs(input.qtd));
+      const delta = (input.tipo === "saida" || input.tipo === "perda")
+        ? -Math.abs(input.qtd)
+        : (input.tipo === "ajuste" ? input.qtd - Number(prod.estoque) : Math.abs(input.qtd));
       const novo = input.tipo === "ajuste" ? input.qtd : Number(prod.estoque) + delta;
       const { error: ue } = await supabase.from("produtos").update({ estoque: novo }).eq("id", input.produto_id);
       if (ue) throw ue;
