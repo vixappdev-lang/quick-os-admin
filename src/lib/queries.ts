@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
@@ -16,6 +17,41 @@ export type NfeItem = Tables<"nfe_itens">;
 export type EstoqueMovimento = Tables<"estoque_movimentos">;
 export type Profile = Tables<"profiles">;
 export type UserRole = Tables<"user_roles">;
+export type AppSettings = Tables<"app_settings">;
+
+// APP SETTINGS
+export function useAppSettings() {
+  return useQuery({
+    queryKey: ["app_settings"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("*")
+        .eq("id", "main")
+        .maybeSingle();
+      if (error) throw error;
+      return data as AppSettings | null;
+    },
+    staleTime: 60_000,
+    placeholderData: keepPreviousData,
+  });
+}
+export function useUpdateAppSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: Partial<AppSettings>) => {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .update(patch as any)
+        .eq("id", "main")
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["app_settings"] }),
+  });
+}
 
 // PRODUTOS
 export function useProdutos() {
