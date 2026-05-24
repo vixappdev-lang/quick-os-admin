@@ -279,7 +279,7 @@ export function useFecharCaixa() {
 export function useCaixaMovimento() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { sessao_id: string; tipo: "suprimento" | "sangria" | "venda" | "ajuste"; valor: number; descricao?: string }) => {
+    mutationFn: async (input: { sessao_id: string; tipo: "suprimento" | "sangria" | "venda" | "despesa"; valor: number; descricao?: string }) => {
       const { error } = await supabase.from("caixa_movimentos").insert(input);
       if (error) throw error;
     },
