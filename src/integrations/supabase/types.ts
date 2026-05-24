@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_keys: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          key_hash: string
+          last_used_at: string | null
+          nome: string
+          prefix: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash: string
+          last_used_at?: string | null
+          nome: string
+          prefix: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash?: string
+          last_used_at?: string | null
+          nome?: string
+          prefix?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           acao: string

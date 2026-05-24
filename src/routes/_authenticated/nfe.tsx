@@ -82,14 +82,30 @@ function NfePage() {
     );
   }, [nfes, busca]);
 
+  const [duplicateInfo, setDuplicateInfo] = useState<{ numero: string; fornecedor: string | null; created_at: string } | null>(null);
+
   const onFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     const file = files[0];
+    // SEMPRE limpa o input para permitir re-selecionar o mesmo arquivo depois
+    if (fileRef.current) fileRef.current.value = "";
     if (!file.name.toLowerCase().endsWith(".xml")) { toast.error("Selecione um arquivo XML"); return; }
     try {
       const text = await file.text();
       const p = parseXmlNfe(text);
       if (!p.numero) { toast.error("XML inválido: número não encontrado"); return; }
+      // Detecta duplicada imediatamente
+      if (p.chave) {
+        const { data: dup } = await supabase
+          .from("nfe_entradas")
+          .select("numero, fornecedor, created_at")
+          .eq("chave", p.chave)
+          .maybeSingle();
+        if (dup) {
+          setDuplicateInfo({ numero: dup.numero ?? p.numero, fornecedor: dup.fornecedor, created_at: dup.created_at });
+          return;
+        }
+      }
       setParsed(p);
     } catch (e: any) { toast.error("Falha ao ler XML: " + e.message); }
   };
@@ -284,6 +300,32 @@ function NfePage() {
 
       {/* Preview de NF-e já importada */}
       <NfeDetailDialog id={previewId} onClose={() => setPreviewId(null)} />
+
+      {/* Aviso de duplicada */}
+      <Dialog open={!!duplicateInfo} onOpenChange={(o) => !o && setDuplicateInfo(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-warning">
+              <AlertTriangle className="h-5 w-5" /> NF-e já importada
+            </DialogTitle>
+          </DialogHeader>
+          {duplicateInfo && (
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                Você já importou esta nota fiscal anteriormente. Confira os dados abaixo:
+              </p>
+              <div className="rounded-md border bg-muted/30 p-3 space-y-1">
+                <p><span className="text-muted-foreground">Número:</span> <strong>{duplicateInfo.numero}</strong></p>
+                <p><span className="text-muted-foreground">Fornecedor:</span> {duplicateInfo.fornecedor ?? "—"}</p>
+                <p><span className="text-muted-foreground">Importada em:</span> {formatDate(duplicateInfo.created_at)}</p>
+              </div>
+              <div className="flex justify-end">
+                <button onClick={() => setDuplicateInfo(null)} className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">Entendi</button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
