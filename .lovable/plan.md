@@ -1,122 +1,248 @@
 
-# Quick OS — Plano de Implementação
+# Quick OS — Refatoração Enterprise (Fase 2)
 
-Sistema operacional enterprise premium em modo claro, desktop-first, com navegação real, autenticação simulada e todos os módulos como **telas próprias** (não modais).
+Plano completo para transformar o Quick OS de um protótipo com mocks em um sistema operacional **real, conectado, responsivo e otimizado**, com foco em **lojas de conveniência**.
 
-## Stack e arquitetura
+---
 
-- TanStack Start (já configurado) + Tailwind v4 + shadcn/ui + Recharts + Lucide
-- File-based routing em `src/routes/` — cada módulo é uma rota dedicada
-- Auth simulada com `localStorage` + contexto + `_authenticated` layout (`beforeLoad` redireciona para `/login`)
-- Design tokens em `src/styles.css` (oklch) — paleta clara premium, azul profissional como primária, glass sutil via tokens reutilizáveis
-- Dados mockados (fixtures TS) — sem backend nesta fase
+## 1. Backend real — Lovable Cloud (Supabase)
 
-## Design system
+Ativar Lovable Cloud e migrar 100% dos dados em memória (`src/data/mock.ts`) para tabelas reais.
 
-- Modo claro premium: superfícies `#FAFBFC`, cards brancos, borda `oklch(0.93 0.01 250)`, primária azul `oklch(0.55 0.18 255)`
-- Tipografia: Inter (UI) + tabular-nums para números operacionais
-- Tokens: `--surface`, `--surface-elevated`, `--glass-bg`, `--glass-border`, `--shadow-sm/md/lg` refinadas, `--radius: 0.625rem`
-- Componentes shadcn customizados: Button (primário azul, ghost, outline refinado), Card (com variante `glass`), Table densa, Input compacto, Badge de status, KPI Card
+### Tabelas
 
-## Estrutura de rotas
-
-```
-src/routes/
-  __root.tsx                       (shell + providers)
-  login.tsx                        (split-screen)
-  _authenticated.tsx               (sidebar + header + Outlet, guard)
-  _authenticated/
-    index.tsx                      (Dashboard)
-    pdv.tsx
-    pedidos.tsx                    (listagem)
-    pedidos.$id.tsx                (detalhes)
-    pedidos.novo.tsx
-    comandas.tsx
-    delivery.tsx
-    produtos.tsx
-    produtos.$id.tsx               (cadastro/edição em tela)
-    produtos.novo.tsx
-    categorias.tsx
-    estoque.tsx
-    estoque.movimentacoes.tsx
-    nfe.tsx                        (entradas NF-e)
-    movimentacoes.tsx
-    caixa.tsx
-    financeiro.tsx                 (fluxo)
-    despesas.tsx
-    contas.tsx
-    relatorios.tsx
-    clientes.tsx
-    clientes.$id.tsx
-    fidelidade.tsx
-    fiado.tsx
-    usuarios.tsx
-    permissoes.tsx
-    logs.tsx
-    configuracoes.tsx              (tabs internas)
-    integracoes.tsx
-    backup.tsx
+```text
+profiles            id, nome, email, telefone, avatar_url
+user_roles          user_id, role (admin | gerente | operador | vendedor)
+categorias          id, nome, cor, icone
+produtos            id, sku, nome, categoria_id, preco_venda, preco_custo,
+                    estoque, estoque_minimo, unidade, codigo_barras, imagem_url, ativo
+clientes            id, nome, telefone, email, documento, endereco (jsonb),
+                    limite_credito, observacoes
+pedidos             id, numero, cliente_id, vendedor_id, operador_id,
+                    origem (balcao|pdv|vendedor|delivery), status
+                    (rascunho|pendente|autorizado|separacao|conferencia|
+                    faturamento|concluido|cancelado), pagamento, subtotal,
+                    desconto, total, observacoes, created_at, updated_at
+pedido_itens        id, pedido_id, produto_id, qtd, preco_unit, desconto, total
+caixa_sessoes       id, operador_id, abertura, fechamento, valor_inicial,
+                    valor_final, status
+caixa_movimentos    id, sessao_id, tipo (sangria|suprimento|venda|despesa),
+                    valor, descricao
+despesas            id, descricao, valor, categoria, vencimento, pago, pago_em
+contas              id, tipo (pagar|receber), descricao, valor, vencimento, status
+nfe_entradas        id, numero, fornecedor, valor_total, xml_url, status
+                    (importado|conferindo|confirmado), created_at
+nfe_itens           id, nfe_id, codigo_xml, descricao_xml, qtd, valor_unit,
+                    produto_id (FK opcional p/ vínculo), divergencia
+estoque_movimentos  id, produto_id, tipo (entrada|saida|ajuste|perda),
+                    qtd, motivo, referencia_id, created_at
+fidelidade_pontos   cliente_id, pontos, atualizado_em
+audit_logs          id, user_id, acao, entidade, entidade_id, payload, created_at
 ```
 
-## Shell (sidebar + header)
+RLS em todas: admin/gerente full, operador escreve operacional, **vendedor só vê os próprios pedidos**. Roles via tabela `user_roles` + função `has_role` (security definer).
 
-- **Sidebar** escura (`oklch(0.20 0.02 260)`), 240px expandida / 64px colapsada, grupos com labels: Operacional, Produtos, Financeiro, CRM, Administração, Sistema. Estados ativos com barra azul à esquerda + bg sutil. Ícones Lucide. Animação de collapse suave.
-- **Header sticky** com glass leve (`backdrop-blur`, bg `white/70`, borda inferior 1px): breadcrumbs (do router), busca global (Cmd+K), status do caixa (badge verde/cinza), notificações (dropdown glass), troca tema, avatar perfil (dropdown).
+### Storage buckets
+- `produtos` (imagens), `nfe-xmls` (XMLs importados), `avatares`.
 
-## Módulos — escopo de implementação
+### Server functions (`src/lib/*.functions.ts`)
+- `pedidos.create / update / changeStatus / cancel / print`
+- `pdv.checkout` (transação: pedido + itens + movimento de estoque + caixa)
+- `nfe.parseXml` (upload XML → parse server-side → cria `nfe_entradas` + `nfe_itens` com sugestão de vínculo por SKU/EAN)
+- `nfe.confirmar` (gera entradas de estoque)
+- `caixa.abrir / fechar / sangria / suprimento`
+- `estoque.ajuste`
 
-**Dashboard**: 6 KPI cards (vendas hoje, pedidos, ticket médio, lucro, produtos vendidos, caixa) com mini-sparkline + delta %; 4 gráficos Recharts (vendas semana area, pagamentos pie, horários pico bar, fluxo line); listas operacionais (estoque baixo, pedidos recentes, alertas, NF-e recentes).
+### Auth
+- Email/senha + Google.
+- Trigger `handle_new_user` cria `profiles`.
+- Seed: 1 admin + 1 vendedor de teste com credenciais visíveis no /login.
 
-**PDV**: layout 2 colunas (60/40). Esquerda: busca + scanner mock + chips de categorias + grid de produtos com imagem/preço. Direita: carrinho com qty editável, subtotal/desconto/total, seletor de cliente, abas de pagamento (PIX/Cartão/Dinheiro/Fiado) com troco automático, botão finalizar. Atalhos teclado (F2 busca, F8 finalizar).
+---
 
-**Pedidos**: tabela densa com filtros (status, período, operador, pagamento), badges de status coloridos, paginação. Tela de detalhe com timeline vertical, dados do cliente, itens, totais, ações.
+## 2. Reestruturação do menu
 
-**Produtos**: tabela com imagem thumb, SKU, categoria, estoque (badge), preço, status. Filtros + busca + exportar. Tela de cadastro com seções (Identificação, Preços/Margem auto-calculada, Estoque, Imagens, Fornecedor).
+**Remover do menu lateral:** Delivery, Fiado, Comandas, Backup, Integrações.
 
-**Estoque**: KPIs (itens, valor, baixo, ruptura) + tabela movimentações com tipo (entrada/saída/ajuste/perda) + filtros.
+**Realocar:**
+- `Backup` e `Integrações` → tabs internas em **Configurações**.
+- `Fidelidade` e `Fiado` → tabs internas em **Clientes**.
+- `Categorias` → tab interna em **Produtos**.
+- `Movimentações` e `NF-e` → tabs internas em **Estoque**.
+- `Despesas`, `Contas`, `Fluxo` → tabs internas em **Financeiro**.
+- `Permissões` e `Logs` → tabs internas em **Usuários**.
 
-**NF-e**: dropzone XML, lista de NF-es importadas, tela de conferência (produtos do XML × cadastro, divergências destacadas), confirmação.
+**Menu final (enxuto, 9 itens):**
 
-**Financeiro**: Caixa (estado aberto/fechado, sangria/suprimento, histórico de sessões), Fluxo (gráfico + tabela entradas/saídas), Despesas (CRUD em tela), Contas (a pagar/receber com status).
+```text
+Operacional   → Dashboard, PDV, Pedidos (Kanban)
+Catálogo      → Produtos (tabs: Lista, Categorias)
+Estoque       → Estoque (tabs: Posição, Movimentações, NF-e)
+Financeiro    → Financeiro (tabs: Caixa, Fluxo, Despesas, Contas)
+CRM           → Clientes (tabs: Lista, Fidelidade, Fiado)
+Relatórios
+Administração → Usuários (tabs: Equipe, Permissões, Auditoria)
+Configurações → (tabs: Empresa, PDV, Impressão, Integrações, Backup, Tema)
+```
 
-**Clientes**: tabela + tela de detalhe com abas (Dados, Histórico de compras, Fiado, Fidelidade, Observações, botão WhatsApp).
+Vendedor vê apenas: **Meus Pedidos**, **Novo Pedido**, **Catálogo (somente leitura)**.
 
-**Relatórios**: barra de filtros sticky + KPIs do período + 4 gráficos + 4 tabelas com export.
+---
 
-**Usuários/Permissões/Logs**: tabela usuários com role, matriz de permissões por módulo, log de auditoria com filtros.
+## 3. Pedidos — Kanban funcional
 
-**Configurações**: tabs (Empresa, PDV, Impressão, Integrações, Backup, Tema).
+Substituir a tabela atual por um **Kanban drag-and-drop** estilo Trello, próprio do Quick (sem copiar a imagem de referência).
 
-**Comandas / Delivery / Fidelidade / Fiado / Integrações / Backup**: telas funcionais com listagem + ações principais (não placeholder).
+### Colunas (status)
+`Pendente · Autorizado · Separação · Conferência · Faturamento · Concluído`
 
-## Auth
+### Card do pedido
+- Header: `#numero` + tempo decorrido + badge de origem.
+- Cliente + cidade.
+- Chips: status de pagamento, crédito disponível, vendedor.
+- Footer: total em destaque + ícone de itens.
+- Menu **⋯** (popover): **Ver detalhes**, **Editar**, **Imprimir**, **Encerrar**, **Cancelar**.
 
-- `/login` split-screen: esquerda gradiente sofisticado + branding Quick OS + mockup ilustrativo; direita card com email/senha/lembrar/entrar/esqueceu.
-- Validação: `admin@loja.com` / `admin12` → grava sessão em `localStorage`, redireciona para `/`.
-- `_authenticated` guard via `beforeLoad` lendo contexto auth.
-- Enter submete, loading state no botão, toast de erro elegante.
+### Interações
+- Drag-and-drop com `@dnd-kit/core` (suaviza, suporta touch → mobile).
+- Ao soltar em outra coluna → server fn `pedidos.changeStatus` + invalidate React Query + animação otimista.
+- Filtros sticky no topo: período, vendedor, origem, busca.
+- Toggle **Kanban / Lista** preservado para usuários que preferem tabela.
+
+### Novo pedido (rota dedicada `/pedidos/novo`)
+Layout inspirado na ref, mas no padrão Quick:
+- **Dados principais** (grid responsivo 1/2/4 cols): Orçamento, Pedido (auto), Data, Empresa, Tipo, Operação, Cliente (combobox com busca server-side a partir de 2 caracteres).
+- **Produtos**: input com busca instantânea + scanner mock; tabela editável (Ref, Produto, Qtd, UN, Vlr Unit, Desconto, Total) com totalizadores ao vivo.
+- **Resumo lateral sticky** (desktop) / **bottom-sheet** (mobile): subtotal, desconto, frete, total, método pagamento, botão salvar.
+- Validação Zod, toast de feedback, redireciona para o Kanban com card já posicionado.
+
+---
+
+## 4. PDV — refino
+
+PDV continua como **tela cheia separada** (faz sentido — operação rápida em caixa), mas:
+- Conecta ao backend real (`pdv.checkout`).
+- Atalhos F2/F8/F4 funcionais.
+- Sessão de caixa obrigatória (bloqueia venda se caixa fechado, com CTA "Abrir caixa").
+- Layout responsivo: tablet horizontal 60/40, mobile vira fluxo em 2 etapas (produtos → carrinho).
+
+---
+
+## 5. NF-e — fluxo real funcional
+
+1. Dropzone aceita `.xml` (single ou múltiplos).
+2. Upload para bucket `nfe-xmls`.
+3. Server fn `nfe.parseXml` lê XML (parser `fast-xml-parser`), extrai itens NFe, cria registros.
+4. Tela de **conferência**: tabela lado-a-lado (XML × cadastro), destaque de divergências, autocomplete para vincular item sem cadastro a um `produto` existente ou criar novo inline.
+5. Botão **Confirmar entrada** → gera `estoque_movimentos` em transação, atualiza `produtos.estoque`, marca NF-e como `confirmado`.
+
+---
+
+## 6. Painel do vendedor
+
+Novo layout dedicado em `/_vendedor/*` (guard de role = `vendedor`).
+
+- Shell minimalista mobile-first: bottom-nav com 3 itens (Pedidos / Novo / Catálogo).
+- **Pedidos**: lista cronológica dos pedidos do vendedor (filtrada por `vendedor_id = auth.uid()`), status em badge colorido, pull-to-refresh.
+- **Novo pedido**: mesma server fn do admin, formulário enxuto mobile (steps: Cliente → Itens → Revisão).
+- **Catálogo**: grid de produtos com busca, somente leitura.
+- Login do vendedor cai direto em `/_vendedor/pedidos` (admin cai em `/`).
+- 100% conectado ao mesmo backend → pedido criado pelo vendedor aparece **em tempo real** no Kanban do admin via Supabase Realtime (channel em `pedidos`).
+
+---
+
+## 7. Refino visual (modo claro)
+
+Ajustes em `src/styles.css`:
+- `--border` de `oklch(0.93 0.01 250)` → `oklch(0.88 0.012 250)` (mais nítida).
+- Nova `--border-strong` para divisores de seção.
+- Sombra de card: `0 1px 2px rgba(15,23,42,0.04), 0 1px 3px rgba(15,23,42,0.06)` (estava muito sutil).
+- Pontilhados (`border-dashed`): trocar por `border-2 border-dashed` com `--border-strong`.
+- Hover de linha em tabela com cor um pouco mais visível.
+- Headers de tabela com bg `oklch(0.975 0.005 250)`.
+
+Sem neon. Paleta atual mantida.
+
+---
+
+## 8. Performance — clique entre abas lento
+
+Causas atuais e correções:
+- **Sem code-splitting agressivo** → habilitar `lazy` no router (TanStack faz por rota, mas garantir que componentes pesados — Recharts, dnd-kit — sejam `lazy()` dentro das rotas).
+- **Recharts pesado** → importar só os módulos usados, memoizar dados.
+- **React Query como camada padrão** com `defaultPreloadStaleTime: 30_000` e `staleTime: 60_000` por rota para evitar refetch a cada clique.
+- **Preload no hover** dos links da sidebar (`preload="intent"` já é padrão, validar).
+- **Sidebar fixa** (sem re-render por rota) — mover `useLocation` para componente filho.
+- Remover animações de mount caras em rotas (`framer-motion` apenas em hero/transições intencionais).
+- Tabelas grandes → virtualização com `@tanstack/react-virtual` em listas > 100 itens.
+
+---
+
+## 9. Responsividade total (mobile-first)
+
+Auditoria por tela com breakpoints `sm 640 / md 768 / lg 1024`.
+
+- **Sidebar** vira `Sheet` (drawer) em `< lg`. Header ganha botão hambúrguer.
+- **Header**: busca colapsa em ícone, breadcrumb mostra só último nível em mobile.
+- **KPI cards**: grid `1 / 2 / 3 / 6` cols.
+- **DataTable**: em mobile vira lista de cards (componente `<ResponsiveTable>` que detecta breakpoint).
+- **Kanban**: em mobile colunas viram tabs horizontais swipeable; em tablet scroll horizontal com snap.
+- **Formulários** (novo pedido, produto): grid colapsa para 1 col, resumo lateral vira `Drawer` bottom-sheet com botão fixo "Ver resumo".
+- **PDV mobile**: fluxo em duas telas (produto → carrinho) com FAB para alternar.
+- Toques mínimos 44px, font-size mínimo 14px, inputs `h-11` em mobile.
+
+---
+
+## 10. Botões sem ação — passar a limpa
+
+Auditoria varrendo todos os arquivos em `src/routes/_authenticated/**`:
+- Cada `<button>` recebe `onClick` real (server fn, navegação, ou modal).
+- Modais reais (shadcn `Dialog`) para: editar produto rápido, abrir caixa, sangria, ajuste estoque, vincular produto NF-e, confirmar exclusão.
+- Toasts (`sonner`) em todas as ações.
+- Loading states (`isPending` do React Query) em todos os submits.
+
+---
+
+## 11. Remoções
+
+Deletar rotas e arquivos:
+- `src/routes/_authenticated/delivery.tsx`
+- `src/routes/_authenticated/comandas.tsx`
+- `src/routes/_authenticated/fiado.tsx` (vira tab em clientes)
+- `src/routes/_authenticated/fidelidade.tsx` (vira tab em clientes)
+- `src/routes/_authenticated/backup.tsx` (vira tab em config)
+- `src/routes/_authenticated/integracoes.tsx` (vira tab em config)
+- `src/routes/_authenticated/movimentacoes.tsx` (vira tab em estoque)
+- `src/routes/_authenticated/estoque.movimentacoes.tsx` (consolidar)
+- `src/routes/_authenticated/nfe.tsx` (vira tab em estoque)
+- `src/routes/_authenticated/categorias.tsx` (vira tab em produtos)
+- `src/routes/_authenticated/despesas.tsx`, `contas.tsx`, `financeiro.tsx` → consolidar em `financeiro.tsx` com tabs
+- `src/routes/_authenticated/permissoes.tsx`, `logs.tsx` → consolidar em `usuarios.tsx` com tabs
+- `src/data/mock.ts` (após migração)
+
+---
 
 ## Detalhes técnicos
 
-- Mock data em `src/data/` (produtos, pedidos, clientes, movimentações) para popular tabelas e gráficos de forma realista
-- Helpers: `formatBRL`, `formatDate`, `formatPercent` em `src/lib/format.ts`
-- Componentes compartilhados em `src/components/`: `KpiCard`, `PageHeader`, `DataTable`, `StatusBadge`, `EmptyState`, `SectionCard`, `GlassCard`
-- Atalhos globais com `useHotkeys` simples (sem dep extra — handler em window)
+**Stack adicional:** `@dnd-kit/core` + `@dnd-kit/sortable` (Kanban), `fast-xml-parser` (NF-e), `@tanstack/react-virtual` (listas grandes), `react-hook-form` + `zod` (forms grandes).
 
-## Entrega faseada (numa única implementação)
+**Realtime:** canal `pedidos` em Supabase para sincronizar Kanban admin ↔ vendedor.
 
-1. Tokens + tema + shell (sidebar + header + auth + guard)
-2. Dashboard completo + componentes compartilhados
-3. PDV + Pedidos (listagem/detalhe/novo)
-4. Produtos + Categorias + Estoque + NF-e + Movimentações
-5. Financeiro (Caixa, Fluxo, Despesas, Contas) + Relatórios
-6. CRM (Clientes, Fidelidade, Fiado) + Administração (Usuários, Permissões, Logs) + Sistema (Configurações, Integrações, Backup) + Comandas + Delivery
+**Ordem de execução (1 build longo, mas faseada internamente):**
+1. Lovable Cloud + schema + RLS + seed + auth real
+2. Server functions (pedidos, pdv, nfe, caixa, estoque)
+3. Refator menu + tabs consolidadas + remoções
+4. Kanban + Novo pedido refeito
+5. NF-e funcional (upload + parse + conferência)
+6. PDV conectado + caixa
+7. Painel vendedor + realtime
+8. Refino visual + performance (lazy, memo, virtual)
+9. Pass de responsividade mobile em todas as telas
+10. Auditoria de botões sem ação
 
-## Fora de escopo desta fase
+**Fora de escopo desta fase:** Delivery, comandas, integrações fiscais reais (SEFAZ), WhatsApp real, app nativo.
 
-- Backend real / Lovable Cloud (tudo mockado in-memory)
-- Integração real de NF-e, pagamentos, WhatsApp
-- Mobile dedicado (responsivo básico, foco desktop/notebook/tablet)
-- Modo escuro completo (toggle existe, mas otimização é para o claro)
+---
 
-Confirmando, parto direto para a build na ordem acima.
+Confirmando este plano, sigo para implementação completa.

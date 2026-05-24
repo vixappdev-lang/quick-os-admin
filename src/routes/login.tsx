@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Eye, EyeOff, Loader2, Zap, ShieldCheck, BarChart3, Boxes } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Entrar — Quick OS" }] }),
@@ -10,25 +11,33 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
-  const { signIn, user, ready } = useAuth();
+  const { signIn, signUp, user, ready } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@loja.com");
-  const [password, setPassword] = useState("admin12");
-  const [remember, setRemember] = useState(true);
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [nome, setNome] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (ready && user) navigate({ to: "/" });
+    if (ready && user) {
+      navigate({ to: user.role === "vendedor" ? "/vendedor" : "/" });
+    }
   }, [ready, user, navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await signIn(email, password, remember);
-      toast.success("Bem-vindo de volta!");
-      navigate({ to: "/" });
+      if (mode === "login") {
+        await signIn(email, password);
+        toast.success("Bem-vindo de volta!");
+      } else {
+        await signUp(email, password, nome);
+        toast.success("Conta criada! Você já pode entrar.");
+        setMode("login");
+      }
     } catch (err: any) {
       toast.error(err.message || "Erro ao entrar");
     } finally {
@@ -120,11 +129,35 @@ function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight">Entrar na plataforma</h1>
-            <p className="text-sm text-muted-foreground">Acesse sua loja com suas credenciais de operação.</p>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {mode === "login" ? "Entrar na plataforma" : "Criar conta"}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {mode === "login"
+                ? "Acesse sua loja com suas credenciais de operação."
+                : "Crie sua conta de operador. Um admin poderá ajustar seu papel."}
+            </p>
           </div>
 
-          <form onSubmit={submit} className="mt-8 space-y-4">
+          <div className="mt-5 inline-flex rounded-md border bg-muted/40 p-0.5">
+            <button type="button" onClick={() => setMode("login")} className={cn("rounded px-3 py-1 text-xs font-medium", mode === "login" ? "bg-card shadow-sm" : "text-muted-foreground")}>Entrar</button>
+            <button type="button" onClick={() => setMode("signup")} className={cn("rounded px-3 py-1 text-xs font-medium", mode === "signup" ? "bg-card shadow-sm" : "text-muted-foreground")}>Criar conta</button>
+          </div>
+
+          <form onSubmit={submit} className="mt-5 space-y-4">
+            {mode === "signup" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Nome completo</label>
+                <input
+                  type="text"
+                  required
+                  value={nome}
+                  onChange={(e) => setNome(e.target.value)}
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  placeholder="João da Silva"
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground">Email</label>
               <input
@@ -139,7 +172,7 @@ function LoginPage() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground">Senha</label>
-                <button type="button" className="text-[11px] font-medium text-primary hover:underline">Esqueceu a senha?</button>
+                {mode === "login" && <button type="button" className="text-[11px] font-medium text-primary hover:underline" onClick={() => toast.info("Em breve")}>Esqueceu a senha?</button>}
               </div>
               <div className="relative">
                 <input
@@ -159,17 +192,8 @@ function LoginPage() {
                   {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              {mode === "signup" && <p className="text-[10px] text-muted-foreground">Mínimo 6 caracteres.</p>}
             </div>
-
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={remember}
-                onChange={(e) => setRemember(e.target.checked)}
-                className="h-4 w-4 rounded border-input text-primary focus:ring-primary/30"
-              />
-              Lembrar deste acesso
-            </label>
 
             <button
               type="submit"
@@ -177,13 +201,12 @@ function LoginPage() {
               className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-primary text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-[var(--primary-hover)] disabled:opacity-60"
             >
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              {loading ? "Validando..." : "Entrar"}
+              {loading ? "Aguarde..." : mode === "login" ? "Entrar" : "Criar conta"}
             </button>
 
-            <div className="rounded-md border border-dashed border-border bg-muted/40 p-3 text-[11px] leading-relaxed text-muted-foreground">
-              <p className="font-medium text-foreground">Credenciais de demonstração</p>
-              <p>Email: admin@loja.com</p>
-              <p>Senha: admin12</p>
+            <div className="rounded-md border bg-muted/40 p-3 text-[11px] leading-relaxed text-muted-foreground">
+              <p className="font-medium text-foreground">Primeiro acesso?</p>
+              <p>Crie uma conta acima — o primeiro usuário criado será promovido a Administrador automaticamente.</p>
             </div>
           </form>
 
