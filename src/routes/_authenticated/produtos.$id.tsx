@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { useCategorias, useProduto, useUpsertProduto, useDeleteProduto } from "@/lib/queries";
 import { generateProductImage } from "@/lib/product-image.functions";
+import { ProductImageGallery } from "@/components/product-image-gallery";
 import { formatBRL } from "@/lib/format";
 import { toast } from "sonner";
 
@@ -202,6 +203,9 @@ function ProdutoDetail() {
               {gerando ? "Gerando..." : "Gerar imagem com IA"}
             </button>
             <input value={form.imagem_url} onChange={(e) => set("imagem_url", e.target.value)} placeholder="ou cole uma URL" className={`${inputCls} mt-2`} />
+            <div className="mt-2">
+              <ProductImageGallery nome={form.nome} onPick={(url) => set("imagem_url", url)} />
+            </div>
           </SectionCard>
 
           <SectionCard title="Status">

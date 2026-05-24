@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { useCategorias, useUpsertProduto } from "@/lib/queries";
 import { generateProductImage } from "@/lib/product-image.functions";
+import { ProductImageGallery } from "@/components/product-image-gallery";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/produtos/novo")({
@@ -136,6 +137,9 @@ function NovoProduto() {
               {gerando ? "Gerando..." : "Gerar imagem com IA"}
             </button>
             <input value={form.imagem_url} onChange={(e) => set("imagem_url", e.target.value)} placeholder="ou cole uma URL" className={`${inputCls} mt-2`} />
+            <div className="mt-2">
+              <ProductImageGallery nome={form.nome} onPick={(url) => set("imagem_url", url)} />
+            </div>
           </SectionCard>
           <SectionCard title="Status">
             <label className="flex items-center justify-between"><span className="text-sm">Produto ativo</span><input type="checkbox" checked={form.ativo} onChange={(e) => set("ativo", e.target.checked)} className="h-4 w-4 rounded" /></label>
