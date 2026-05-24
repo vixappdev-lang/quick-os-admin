@@ -21,7 +21,7 @@ function ConfiguracoesPage() {
   const inp = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
   const [empresa, setEmpresa] = useState({ razao: "", cnpj: "", telefone: "", email: "", endereco: "" });
 
-  const paymentMap = useMemo(() => ({ pix: true, credito: true, debito: true, dinheiro: true, fiado: true, outro: false, ...((settings?.metodos_pagamento ?? {}) as Record<string, boolean>) }), [settings]);
+  const paymentMap = useMemo<Record<string, boolean>>(() => ({ pix: true, credito: true, debito: true, dinheiro: true, fiado: true, outro: false, ...((settings?.metodos_pagamento ?? {}) as Record<string, boolean>) }), [settings]);
 
   const saveEmpresa = async () => {
     try {
