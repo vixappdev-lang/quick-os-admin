@@ -33,6 +33,7 @@ import { Route as AuthenticatedPedidosIdRouteImport } from './routes/_authentica
 import { Route as AuthenticatedEstoqueMovimentacoesRouteImport } from './routes/_authenticated/estoque.movimentacoes'
 import { Route as AuthenticatedClientesIdRouteImport } from './routes/_authenticated/clientes.$id'
 import { Route as ApiPublicV1ProdutosRouteImport } from './routes/api/public/v1/produtos'
+import { Route as ApiPublicV1PedidosRouteImport } from './routes/api/public/v1/pedidos'
 
 const VendedorRoute = VendedorRouteImport.update({
   id: '/vendedor',
@@ -157,6 +158,11 @@ const ApiPublicV1ProdutosRoute = ApiPublicV1ProdutosRouteImport.update({
   path: '/api/public/v1/produtos',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicV1PedidosRoute = ApiPublicV1PedidosRouteImport.update({
+  id: '/api/public/v1/pedidos',
+  path: '/api/public/v1/pedidos',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/pedidos/novo': typeof AuthenticatedPedidosNovoRoute
   '/produtos/$id': typeof AuthenticatedProdutosIdRoute
   '/produtos/novo': typeof AuthenticatedProdutosNovoRoute
+  '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
   '/api/public/v1/produtos': typeof ApiPublicV1ProdutosRoute
 }
 export interface FileRoutesByTo {
@@ -205,6 +212,7 @@ export interface FileRoutesByTo {
   '/pedidos/novo': typeof AuthenticatedPedidosNovoRoute
   '/produtos/$id': typeof AuthenticatedProdutosIdRoute
   '/produtos/novo': typeof AuthenticatedProdutosNovoRoute
+  '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
   '/api/public/v1/produtos': typeof ApiPublicV1ProdutosRoute
 }
 export interface FileRoutesById {
@@ -232,6 +240,7 @@ export interface FileRoutesById {
   '/_authenticated/pedidos/novo': typeof AuthenticatedPedidosNovoRoute
   '/_authenticated/produtos/$id': typeof AuthenticatedProdutosIdRoute
   '/_authenticated/produtos/novo': typeof AuthenticatedProdutosNovoRoute
+  '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
   '/api/public/v1/produtos': typeof ApiPublicV1ProdutosRoute
 }
 export interface FileRouteTypes {
@@ -259,6 +268,7 @@ export interface FileRouteTypes {
     | '/pedidos/novo'
     | '/produtos/$id'
     | '/produtos/novo'
+    | '/api/public/v1/pedidos'
     | '/api/public/v1/produtos'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -283,6 +293,7 @@ export interface FileRouteTypes {
     | '/pedidos/novo'
     | '/produtos/$id'
     | '/produtos/novo'
+    | '/api/public/v1/pedidos'
     | '/api/public/v1/produtos'
   id:
     | '__root__'
@@ -309,6 +320,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pedidos/novo'
     | '/_authenticated/produtos/$id'
     | '/_authenticated/produtos/novo'
+    | '/api/public/v1/pedidos'
     | '/api/public/v1/produtos'
   fileRoutesById: FileRoutesById
 }
@@ -316,6 +328,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   VendedorRoute: typeof VendedorRouteWithChildren
+  ApiPublicV1PedidosRoute: typeof ApiPublicV1PedidosRoute
   ApiPublicV1ProdutosRoute: typeof ApiPublicV1ProdutosRoute
 }
 
@@ -489,6 +502,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicV1ProdutosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/v1/pedidos': {
+      id: '/api/public/v1/pedidos'
+      path: '/api/public/v1/pedidos'
+      fullPath: '/api/public/v1/pedidos'
+      preLoaderRoute: typeof ApiPublicV1PedidosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -597,6 +617,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   VendedorRoute: VendedorRouteWithChildren,
+  ApiPublicV1PedidosRoute: ApiPublicV1PedidosRoute,
   ApiPublicV1ProdutosRoute: ApiPublicV1ProdutosRoute,
 }
 export const routeTree = rootRouteImport
