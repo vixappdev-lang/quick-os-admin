@@ -1,10 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Search, Package, Eye, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Package, Eye, Pencil, Trash2, MoreHorizontal, Sparkles, Loader2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useProdutos, useCategorias, useDeleteProduto } from "@/lib/queries";
+import { generateMissingProductImages } from "@/lib/product-image.functions";
 import { formatBRL } from "@/lib/format";
 import { ProductFormPanel, type PanelMode } from "@/components/product-form-panel";
 import { Pagination } from "@/components/pagination";
@@ -21,6 +24,9 @@ function ProdutosPage() {
   const { data: produtos = [], isLoading } = useProdutos();
   const { data: categorias = [] } = useCategorias();
   const del = useDeleteProduto();
+  const qc = useQueryClient();
+  const genMissing = useServerFn(generateMissingProductImages);
+  const [gerando, setGerando] = useState(false);
   const [busca, setBusca] = useState("");
   const [cat, setCat] = useState("todas");
   const [page, setPage] = useState(1);
@@ -37,6 +43,7 @@ function ProdutosPage() {
 
   const baixo = produtos.filter((p: any) => Number(p.estoque) < Number(p.estoque_minimo ?? 0)).length;
   const ruptura = produtos.filter((p: any) => Number(p.estoque) <= 0).length;
+  const semImagem = produtos.filter((p: any) => !p.imagem_url).length;
 
   const openCreate = () => setPanel({ open: true, mode: "create", produto: null });
   const openView = (p: any) => setPanel({ open: true, mode: "view", produto: p });
@@ -47,10 +54,41 @@ function ProdutosPage() {
     catch (e: any) { toast.error(e.message ?? "Erro ao excluir"); }
   };
 
+  const gerarFaltantes = async () => {
+    if (gerando) return;
+    setGerando(true);
+    let totalGerado = 0;
+    let restante = semImagem;
+    try {
+      // Lote loop: até 5 rodadas de 12 = 60 produtos por clique
+      for (let i = 0; i < 5 && restante > 0; i++) {
+        const r: any = await genMissing();
+        totalGerado += r?.processed ?? 0;
+        restante = (r?.total ?? 0) - (r?.processed ?? 0);
+        if (!r?.total) break;
+        await qc.invalidateQueries({ queryKey: ["produtos"] });
+      }
+      toast.success(`${totalGerado} imagem(ns) gerada(s)`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Erro ao gerar imagens");
+    } finally {
+      setGerando(false);
+      qc.invalidateQueries({ queryKey: ["produtos"] });
+    }
+  };
+
   return (
     <div>
       <PageHeader title="Produtos" description={`${produtos.length} produto${produtos.length === 1 ? "" : "s"} cadastrado${produtos.length === 1 ? "" : "s"}`} actions={
-        <button onClick={openCreate} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"><Plus className="h-3.5 w-3.5" /> Novo produto</button>
+        <div className="flex flex-wrap gap-2">
+          {semImagem > 0 && (
+            <button onClick={gerarFaltantes} disabled={gerando} title={`${semImagem} produto(s) sem imagem`} className="inline-flex h-9 items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-3 text-sm font-medium text-primary hover:bg-primary/15 disabled:opacity-60">
+              {gerando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {gerando ? "Gerando..." : `Gerar imagens (${semImagem})`}
+            </button>
+          )}
+          <button onClick={openCreate} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"><Plus className="h-3.5 w-3.5" /> Novo produto</button>
+        </div>
       } />
 
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-4">
