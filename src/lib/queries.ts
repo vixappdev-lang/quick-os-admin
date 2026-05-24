@@ -66,6 +66,7 @@ export function useProdutos() {
       return data as (Produto & { categoria: { id: string; nome: string; cor: string | null } | null })[];
     },
     staleTime: 60_000,
+    placeholderData: keepPreviousData,
   });
 }
 export function useProduto(id: string) {
