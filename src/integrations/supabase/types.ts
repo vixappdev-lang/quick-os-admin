@@ -47,6 +47,51 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          empresa_cnpj: string | null
+          empresa_email: string | null
+          empresa_endereco: string | null
+          empresa_razao: string | null
+          empresa_telefone: string | null
+          id: string
+          metodos_pagamento: Json
+          pdv_ativo: boolean
+          pix_chave: string | null
+          pix_qr_url: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          empresa_cnpj?: string | null
+          empresa_email?: string | null
+          empresa_endereco?: string | null
+          empresa_razao?: string | null
+          empresa_telefone?: string | null
+          id?: string
+          metodos_pagamento?: Json
+          pdv_ativo?: boolean
+          pix_chave?: string | null
+          pix_qr_url?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          empresa_cnpj?: string | null
+          empresa_email?: string | null
+          empresa_endereco?: string | null
+          empresa_razao?: string | null
+          empresa_telefone?: string | null
+          id?: string
+          metodos_pagamento?: Json
+          pdv_ativo?: boolean
+          pix_chave?: string | null
+          pix_qr_url?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           acao: string
