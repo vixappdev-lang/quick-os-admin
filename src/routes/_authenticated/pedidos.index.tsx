@@ -14,7 +14,7 @@ import { usePedidos, useUpdatePedidoStatus, type Pedido } from "@/lib/queries";
 import { toast } from "sonner";
 import { printRomaneio, printRomaneios } from "@/components/romaneio-print";
 
-export const Route = createFileRoute("/_authenticated/pedidos")({
+export const Route = createFileRoute("/_authenticated/pedidos/")({
   head: () => ({ meta: [{ title: "Pedidos — Quick OS" }] }),
   component: PedidosPage,
 });
