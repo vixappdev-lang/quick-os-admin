@@ -232,15 +232,20 @@ export function useCaixaAtual() {
   return useQuery({
     queryKey: ["caixa", "atual"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: sessao, error } = await supabase
         .from("caixa_sessoes")
-        .select("*, movimentos:caixa_movimentos(*)")
+        .select("*")
         .eq("status", "aberto")
         .order("abertura", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data as any;
+      if (!sessao) return null;
+      const { data: movs } = await supabase
+        .from("caixa_movimentos")
+        .select("*")
+        .eq("sessao_id", sessao.id);
+      return { ...sessao, movimentos: movs ?? [] } as any;
     },
     staleTime: 15_000,
   });
