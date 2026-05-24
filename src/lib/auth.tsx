@@ -67,16 +67,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
+    let lastHydratedUid: string | null = null;
+    const hydrate = (u: User) => {
+      if (lastHydratedUid === u.id) return;
+      lastHydratedUid = u.id;
+      hydrateUser(u).then((v) => { if (mounted) setUser(v); }).catch(() => { if (mounted) setUser(null); });
+    };
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
       if (s?.user) {
-        // Defer hydration to next tick to avoid deadlock
-        setTimeout(() => {
-          hydrateUser(s.user).then(setUser).catch(() => setUser(null));
-        }, 0);
+        // Defer hydration to next tick to avoid deadlock and dedupe by uid
+        setTimeout(() => hydrate(s.user), 0);
       } else {
+        lastHydratedUid = null;
         setUser(null);
       }
     });
@@ -84,15 +90,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session: s } }) => {
       setSession(s);
       if (s?.user) {
+        lastHydratedUid = s.user.id;
         hydrateUser(s.user)
-          .then(setUser)
-          .finally(() => setReady(true));
+          .then((v) => { if (mounted) setUser(v); })
+          .finally(() => { if (mounted) setReady(true); });
       } else {
-        setReady(true);
+        if (mounted) setReady(true);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => { mounted = false; subscription.unsubscribe(); };
   }, []);
 
   const signIn = async (email: string, password: string) => {

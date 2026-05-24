@@ -6,7 +6,7 @@ import {
 } from "@dnd-kit/core";
 import { Plus, Search, MoreVertical, Eye, Printer, CheckCircle2, XCircle, LayoutGrid, List, ChevronDown, ArrowRight, FileText, Package as PackageIcon } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { StatusBadge, statusTone } from "@/components/status-badge";
+import { StatusBadge, statusTone, pedidoStatusTone, PEDIDO_STATUS_LABEL } from "@/components/status-badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatBRL, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -155,7 +155,7 @@ function PedidosPage() {
                   <td className="px-4 py-3 capitalize text-muted-foreground">{p.origem}</td>
                   <td className="px-4 py-3 text-muted-foreground">{formatTime(p.created_at)}</td>
                   <td className="px-4 py-3 text-right font-semibold tabular">{formatBRL(Number(p.total))}</td>
-                  <td className="px-4 py-3"><StatusBadge status={p.status} tone={statusTone(p.status)} /></td>
+                  <td className="px-4 py-3"><StatusBadge status={PEDIDO_STATUS_LABEL[p.status] ?? p.status} tone={pedidoStatusTone(p.status)} /></td>
                   <td className="px-4 py-3"><PedidoActions pedido={p} /></td>
                 </tr>
               ))}
@@ -229,7 +229,7 @@ function KanbanCard({ pedido, onView }: { pedido: any; onView: (id: string) => v
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <p className="text-sm font-semibold">{pedido.numero}</p>
-            <StatusBadge status={pedido.status} tone={statusTone(pedido.status)} />
+            <StatusBadge status={PEDIDO_STATUS_LABEL[pedido.status] ?? pedido.status} tone={pedidoStatusTone(pedido.status)} />
           </div>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">{pedido.cliente?.nome ?? "Balcão"}</p>
         </div>
