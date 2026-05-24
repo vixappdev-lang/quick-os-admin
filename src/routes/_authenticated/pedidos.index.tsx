@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { printRomaneio, printRomaneios } from "@/components/romaneio-print";
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
+  // Index route for /pedidos. Path is normalized below via TanStack;
+  // the trailing slash here mirrors the file system convention.
   head: () => ({ meta: [{ title: "Pedidos — Quick OS" }] }),
   component: PedidosPage,
 });
