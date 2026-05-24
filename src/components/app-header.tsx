@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Bell, Search, Sun, Moon, ChevronRight, Wallet, Plus, Menu, LogOut, User as UserIcon } from "lucide-react";
+import { Sun, Moon, ChevronRight, Wallet, Plus, Menu, LogOut, User as UserIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCaixaAtual } from "@/lib/queries";
@@ -9,6 +9,7 @@ import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 const labels: Record<string, string> = {
   "": "Dashboard",
@@ -106,9 +107,7 @@ export function AppHeader({ onMenuClick }: Props) {
             {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
-          <button className="relative flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Notificações">
-            <Bell className="h-4 w-4" />
-          </button>
+          <NotificationsBell />
 
           <DropdownMenu>
             <DropdownMenuTrigger className="flex h-9 items-center gap-2 rounded-md px-1.5 text-left hover:bg-muted">
