@@ -42,7 +42,7 @@ function VendedorHome() {
     <div className="min-h-screen bg-surface pb-24">
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
-        <div className="flex w-full items-center justify-between px-4 py-3 sm:px-6 lg:px-10">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-10">
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Zap className="h-4 w-4" strokeWidth={2.5} />
@@ -63,9 +63,9 @@ function VendedorHome() {
         </div>
       </header>
 
-      <main className="w-full space-y-4 px-4 py-5 sm:px-6 lg:px-10 lg:py-6">
+      <main className="mx-auto w-full max-w-7xl space-y-4 px-4 py-5 sm:px-6 lg:px-10 lg:py-6">
         {/* KPIs */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-3 lg:max-w-3xl">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {[
             { l: "Hoje", v: String(totais.hoje), i: ShoppingBag, c: "text-primary bg-primary/10" },
             { l: "Valor", v: formatBRL(totais.valor), i: CheckCircle2, c: "text-success bg-success/10" },
@@ -97,9 +97,9 @@ function VendedorHome() {
         </div>
 
         {/* Lista */}
-        <div className="grid gap-2 sm:gap-3 lg:grid-cols-2 xl:grid-cols-3">
-          {isLoading && <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">Carregando...</div>}
-          {!isLoading && filtrados.length === 0 && <div className="rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">Nenhum pedido encontrado</div>}
+        <div className="grid gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">
+          {isLoading && <div className="col-span-full rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">Carregando...</div>}
+          {!isLoading && filtrados.length === 0 && <div className="col-span-full rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">Nenhum pedido encontrado</div>}
           {filtrados.map((p) => (
             <button key={p.id} onClick={() => navigate({ to: "/pedidos/$id", params: { id: p.id } })} className="block w-full rounded-xl border bg-card p-4 text-left shadow-subtle transition hover:border-primary/40 hover:shadow-md">
               <div className="flex items-start justify-between gap-3">
