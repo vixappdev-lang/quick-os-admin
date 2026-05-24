@@ -1,15 +1,19 @@
-import { existsSync, rmSync, cpSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+// Verifies the Vercel Build Output API directory exists after `vite build`
+// with the Nitro `vercel` preset. Nitro writes `.vercel/output/` which Vercel
+// picks up automatically — no copy step needed.
+import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 
-const candidates = ["dist/client", ".output/public", "dist/public", "dist"];
-const source = candidates.find((dir) => existsSync(join(dir, "index.html")));
+const dir = resolve(".vercel/output");
+const cfg = resolve(".vercel/output/config.json");
 
-if (!source) {
-  throw new Error(`Vercel output not found. Checked: ${candidates.join(", ")}`);
+if (!existsSync(dir) || !existsSync(cfg)) {
+  console.error(
+    "Vercel Build Output API directory not found at .vercel/output.\n" +
+      "Expected Nitro (preset=vercel) to generate it during `vite build`.\n" +
+      "Check that vite.vercel.config.ts includes nitro() and the build ran successfully.",
+  );
+  process.exit(1);
 }
 
-rmSync("public", { recursive: true, force: true });
-mkdirSync("public", { recursive: true });
-cpSync(source, "public", { recursive: true });
-writeFileSync("public/.vercel-output-source", `${source}\n`);
-console.log(`Prepared Vercel static output from ${source} -> public`);
+console.log("Vercel build output ready at .vercel/output (Build Output API).");
