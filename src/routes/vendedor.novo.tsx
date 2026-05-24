@@ -14,7 +14,7 @@ function VendedorNovo() {
   return (
     <div className="min-h-screen bg-surface pb-6">
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur">
-        <div className="flex w-full items-center gap-3 px-4 py-3 sm:px-6 lg:px-10">
+        <div className="mx-auto flex w-full max-w-7xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-10">
           <Link to="/vendedor" className="flex h-9 w-9 items-center justify-center rounded-md hover:bg-muted">
             <ArrowLeft className="h-4 w-4" />
           </Link>
@@ -24,7 +24,7 @@ function VendedorNovo() {
           </div>
         </div>
       </header>
-      <div className="w-full px-4 py-4 sm:px-6 lg:px-10 lg:max-w-6xl">
+      <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-10">
         <PedidoBuilder
           vendedorId={user?.id}
           origem="balcao"
