@@ -169,7 +169,7 @@ export function usePedidos(filters?: { vendedorId?: string }) {
     queryFn: async () => {
       let q = supabase
         .from("pedidos")
-        .select("*, cliente:clientes(id,nome), itens:pedido_itens(id,qtd,preco_unit,total,produto:produtos(id,nome,sku))")
+        .select("*, cliente:clientes(id,nome,telefone), itens:pedido_itens(id,qtd,preco_unit,total,produto:produtos(id,nome,sku))")
         .order("created_at", { ascending: false });
       if (filters?.vendedorId) q = q.eq("vendedor_id", filters.vendedorId);
       const { data, error } = await q;
@@ -177,6 +177,7 @@ export function usePedidos(filters?: { vendedorId?: string }) {
       return data as any[];
     },
     staleTime: 15_000,
+    placeholderData: keepPreviousData,
   });
 }
 export function usePedido(id: string) {
