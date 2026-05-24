@@ -12,7 +12,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const { signIn, user, ready } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("admin@loja.com");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -217,12 +217,6 @@ function LoginPage() {
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? "Aguarde..." : "Entrar"}
             </button>
-
-            <div className="rounded-md border bg-muted/40 p-3 text-[11px] leading-relaxed text-muted-foreground">
-              <p className="font-medium text-foreground">Acesso de demonstração</p>
-              <p>Email: <span className="font-mono text-foreground">admin@loja.com</span></p>
-              <p>Senha: <span className="font-mono text-foreground">admin12</span></p>
-            </div>
           </form>
 
           <p className="mt-8 text-center text-[11px] text-muted-foreground">

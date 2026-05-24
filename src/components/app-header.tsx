@@ -1,6 +1,6 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Bell, Search, Sun, Moon, ChevronRight, Wallet, Plus, Menu, LogOut, User as UserIcon } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useCaixaAtual } from "@/lib/queries";
 import { formatBRL } from "@/lib/format";
@@ -31,10 +31,18 @@ export function AppHeader({ onMenuClick }: Props) {
   const { data: caixa } = useCaixaAtual();
   const [dark, setDark] = useState(false);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("qos-theme");
+    const isDark = saved ? saved === "dark" : window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+    document.documentElement.classList.toggle("dark", isDark);
+    setDark(isDark);
+  }, []);
+
   const toggleTheme = () => {
     setDark((d) => {
       const next = !d;
       document.documentElement.classList.toggle("dark", next);
+      localStorage.setItem("qos-theme", next ? "dark" : "light");
       return next;
     });
   };
