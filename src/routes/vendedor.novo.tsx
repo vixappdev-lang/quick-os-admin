@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { PedidoBuilder } from "@/components/pedido-builder";
+import { PedidoForm } from "@/components/pedido-form";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/vendedor/novo")({
@@ -25,7 +25,7 @@ function VendedorNovo() {
         </div>
       </header>
       <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 lg:px-10">
-        <PedidoBuilder
+        <PedidoForm
           vendedorId={user?.id}
           origem="balcao"
           onCreated={() => navigate({ to: "/vendedor" })}
