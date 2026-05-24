@@ -12,9 +12,15 @@ function AuthLayout() {
   const { user, ready } = useAuth();
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
-    if (ready && !user) navigate({ to: "/login" });
+    if (!ready) return;
+    if (!user) {
+      navigate({ to: "/login" });
+    } else if (user.role === "vendedor") {
+      navigate({ to: "/vendedor" });
+    }
   }, [ready, user, navigate]);
 
   if (!ready) {
@@ -24,14 +30,22 @@ function AuthLayout() {
       </div>
     );
   }
-  if (!user) return null;
+  if (!user || user.role === "vendedor") return null;
 
   return (
     <div className="min-h-screen bg-surface text-foreground">
-      <AppSidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
-      <div style={{ paddingLeft: collapsed ? 68 : 244 }} className="transition-[padding] duration-200">
-        <AppHeader />
-        <main className="px-6 py-6">
+      <AppSidebar
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((c) => !c)}
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
+      />
+      <div
+        style={{ paddingLeft: undefined }}
+        className={collapsed ? "lg:pl-[68px] transition-[padding] duration-200" : "lg:pl-[244px] transition-[padding] duration-200"}
+      >
+        <AppHeader onMenuClick={() => setMobileOpen(true)} />
+        <main className="px-4 py-4 md:px-6 md:py-6">
           <Outlet />
         </main>
       </div>
