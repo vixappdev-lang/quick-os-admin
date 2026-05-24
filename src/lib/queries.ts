@@ -230,11 +230,15 @@ export function useCreatePedido() {
       pagamento?: Pedido["pagamento"] | null;
       desconto?: number;
       observacoes?: string | null;
-      itens: { produto_id: string; qtd: number; preco_unit: number }[];
+      itens: { produto_id: string; qtd: number; preco_unit: number; desconto?: number }[];
     }) => {
-      const subtotal = input.itens.reduce((s, i) => s + i.qtd * i.preco_unit, 0);
-      const desconto = input.desconto ?? 0;
-      const total = Math.max(0, subtotal - desconto);
+      const toCents = (v: number) => Math.round((Number.isFinite(v) ? v : 0) * 100);
+      const fromCents = (v: number) => v / 100;
+      const subtotalCents = input.itens.reduce((s, i) => s + Math.max(0, toCents(i.preco_unit) * i.qtd - toCents(i.desconto ?? 0)), 0);
+      const descontoCents = Math.min(toCents(input.desconto ?? 0), subtotalCents);
+      const subtotal = fromCents(subtotalCents);
+      const desconto = fromCents(descontoCents);
+      const total = fromCents(Math.max(0, subtotalCents - descontoCents));
       const { data: pedido, error: pe } = await supabase
         .from("pedidos")
         .insert({
@@ -255,7 +259,8 @@ export function useCreatePedido() {
         produto_id: i.produto_id,
         qtd: i.qtd,
         preco_unit: i.preco_unit,
-        total: i.qtd * i.preco_unit,
+        desconto: i.desconto ?? 0,
+        total: fromCents(Math.max(0, toCents(i.preco_unit) * i.qtd - toCents(i.desconto ?? 0))),
       }));
       const { error: ie } = await supabase.from("pedido_itens").insert(itensInsert);
       if (ie) throw ie;
