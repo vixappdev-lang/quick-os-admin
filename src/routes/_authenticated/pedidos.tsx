@@ -20,9 +20,10 @@ export const Route = createFileRoute("/_authenticated/pedidos")({
 
 const COLUMNS: { id: Pedido["status"]; label: string; tone: string }[] = [
   { id: "pendente", label: "Pendente", tone: "border-warning/40" },
-  { id: "separacao", label: "Em separação", tone: "border-info/40" },
+  { id: "autorizado", label: "Autorizado", tone: "border-info/40" },
+  { id: "separacao", label: "Separação", tone: "border-info/40" },
   { id: "conferencia", label: "Conferência", tone: "border-primary/40" },
-  { id: "concluido", label: "Concluído", tone: "border-success/40" },
+  { id: "concluido", label: "Finalizado", tone: "border-success/40" },
 ];
 
 function PedidosPage() {
@@ -114,7 +115,7 @@ function PedidosPage() {
 
       {!isLoading && view === "kanban" && (
         <DndContext sensors={sensors} onDragStart={(e: DragStartEvent) => setDragId(e.active.id as string)} onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
             {COLUMNS.map((col) => (
               <KanbanColumn key={col.id} col={col} pedidos={byCol[col.id] ?? []} onView={(id) => navigate({ to: "/pedidos/$id", params: { id } })} />
             ))}

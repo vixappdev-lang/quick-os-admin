@@ -9,9 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VendedorRouteImport } from './routes/vendedor'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as VendedorIndexRouteImport } from './routes/vendedor.index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as VendedorNovoRouteImport } from './routes/vendedor.novo'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProdutosRouteImport } from './routes/_authenticated/produtos'
@@ -30,6 +33,11 @@ import { Route as AuthenticatedPedidosIdRouteImport } from './routes/_authentica
 import { Route as AuthenticatedEstoqueMovimentacoesRouteImport } from './routes/_authenticated/estoque.movimentacoes'
 import { Route as AuthenticatedClientesIdRouteImport } from './routes/_authenticated/clientes.$id'
 
+const VendedorRoute = VendedorRouteImport.update({
+  id: '/vendedor',
+  path: '/vendedor',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -39,10 +47,20 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VendedorIndexRoute = VendedorIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => VendedorRoute,
+} as any)
 const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthenticatedRoute,
+} as any)
+const VendedorNovoRoute = VendedorNovoRouteImport.update({
+  id: '/novo',
+  path: '/novo',
+  getParentRoute: () => VendedorRoute,
 } as any)
 const AuthenticatedUsuariosRoute = AuthenticatedUsuariosRouteImport.update({
   id: '/usuarios',
@@ -137,6 +155,7 @@ const AuthenticatedClientesIdRoute = AuthenticatedClientesIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/login': typeof LoginRoute
+  '/vendedor': typeof VendedorRouteWithChildren
   '/caixa': typeof AuthenticatedCaixaRoute
   '/clientes': typeof AuthenticatedClientesRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -148,6 +167,8 @@ export interface FileRoutesByFullPath {
   '/produtos': typeof AuthenticatedProdutosRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/vendedor/novo': typeof VendedorNovoRoute
+  '/vendedor/': typeof VendedorIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/estoque/movimentacoes': typeof AuthenticatedEstoqueMovimentacoesRoute
   '/pedidos/$id': typeof AuthenticatedPedidosIdRoute
@@ -168,7 +189,9 @@ export interface FileRoutesByTo {
   '/produtos': typeof AuthenticatedProdutosRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/vendedor/novo': typeof VendedorNovoRoute
   '/': typeof AuthenticatedIndexRoute
+  '/vendedor': typeof VendedorIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/estoque/movimentacoes': typeof AuthenticatedEstoqueMovimentacoesRoute
   '/pedidos/$id': typeof AuthenticatedPedidosIdRoute
@@ -180,6 +203,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
+  '/vendedor': typeof VendedorRouteWithChildren
   '/_authenticated/caixa': typeof AuthenticatedCaixaRoute
   '/_authenticated/clientes': typeof AuthenticatedClientesRouteWithChildren
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -191,7 +215,9 @@ export interface FileRoutesById {
   '/_authenticated/produtos': typeof AuthenticatedProdutosRouteWithChildren
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
+  '/vendedor/novo': typeof VendedorNovoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/vendedor/': typeof VendedorIndexRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
   '/_authenticated/estoque/movimentacoes': typeof AuthenticatedEstoqueMovimentacoesRoute
   '/_authenticated/pedidos/$id': typeof AuthenticatedPedidosIdRoute
@@ -204,6 +230,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/vendedor'
     | '/caixa'
     | '/clientes'
     | '/configuracoes'
@@ -215,6 +242,8 @@ export interface FileRouteTypes {
     | '/produtos'
     | '/relatorios'
     | '/usuarios'
+    | '/vendedor/novo'
+    | '/vendedor/'
     | '/clientes/$id'
     | '/estoque/movimentacoes'
     | '/pedidos/$id'
@@ -235,7 +264,9 @@ export interface FileRouteTypes {
     | '/produtos'
     | '/relatorios'
     | '/usuarios'
+    | '/vendedor/novo'
     | '/'
+    | '/vendedor'
     | '/clientes/$id'
     | '/estoque/movimentacoes'
     | '/pedidos/$id'
@@ -246,6 +277,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_authenticated'
     | '/login'
+    | '/vendedor'
     | '/_authenticated/caixa'
     | '/_authenticated/clientes'
     | '/_authenticated/configuracoes'
@@ -257,7 +289,9 @@ export interface FileRouteTypes {
     | '/_authenticated/produtos'
     | '/_authenticated/relatorios'
     | '/_authenticated/usuarios'
+    | '/vendedor/novo'
     | '/_authenticated/'
+    | '/vendedor/'
     | '/_authenticated/clientes/$id'
     | '/_authenticated/estoque/movimentacoes'
     | '/_authenticated/pedidos/$id'
@@ -269,10 +303,18 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
+  VendedorRoute: typeof VendedorRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/vendedor': {
+      id: '/vendedor'
+      path: '/vendedor'
+      fullPath: '/vendedor'
+      preLoaderRoute: typeof VendedorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -287,12 +329,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vendedor/': {
+      id: '/vendedor/'
+      path: '/'
+      fullPath: '/vendedor/'
+      preLoaderRoute: typeof VendedorIndexRouteImport
+      parentRoute: typeof VendedorRoute
+    }
     '/_authenticated/': {
       id: '/_authenticated/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/vendedor/novo': {
+      id: '/vendedor/novo'
+      path: '/novo'
+      fullPath: '/vendedor/novo'
+      preLoaderRoute: typeof VendedorNovoRouteImport
+      parentRoute: typeof VendedorRoute
     }
     '/_authenticated/usuarios': {
       id: '/_authenticated/usuarios'
@@ -503,9 +559,24 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface VendedorRouteChildren {
+  VendedorNovoRoute: typeof VendedorNovoRoute
+  VendedorIndexRoute: typeof VendedorIndexRoute
+}
+
+const VendedorRouteChildren: VendedorRouteChildren = {
+  VendedorNovoRoute: VendedorNovoRoute,
+  VendedorIndexRoute: VendedorIndexRoute,
+}
+
+const VendedorRouteWithChildren = VendedorRoute._addFileChildren(
+  VendedorRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
+  VendedorRoute: VendedorRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
