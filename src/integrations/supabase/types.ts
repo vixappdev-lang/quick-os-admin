@@ -558,6 +558,33 @@ export type Database = {
           },
         ]
       }
+      product_images: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          nome: string
+          nome_chave: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome: string
+          nome_chave: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome?: string
+          nome_chave?: string
+          url?: string
+        }
+        Relationships: []
+      }
       produtos: {
         Row: {
           ativo: boolean
