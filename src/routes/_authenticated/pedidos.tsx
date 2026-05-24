@@ -6,7 +6,7 @@ import {
 } from "@dnd-kit/core";
 import { Plus, Search, MoreVertical, Eye, Printer, CheckCircle2, XCircle, LayoutGrid, List, ChevronDown, ArrowRight, FileText, Package as PackageIcon } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
-import { StatusBadge, statusTone } from "@/components/status-badge";
+import { StatusBadge, statusTone, pedidoStatusTone, PEDIDO_STATUS_LABEL } from "@/components/status-badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { formatBRL, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
