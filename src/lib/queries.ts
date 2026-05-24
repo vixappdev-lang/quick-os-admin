@@ -307,6 +307,7 @@ export function useEstoqueMovimentos(produtoId?: string) {
       if (error) throw error;
       return data as any[];
     },
+    staleTime: 30_000,
   });
 }
 export function useAjusteEstoque() {
@@ -346,6 +347,7 @@ export function useDespesas() {
       if (error) throw error;
       return data;
     },
+    staleTime: 30_000,
   });
 }
 export function useUpsertDespesa() {
@@ -372,6 +374,7 @@ export function useContas() {
       if (error) throw error;
       return data as any[];
     },
+    staleTime: 30_000,
   });
 }
 
@@ -387,6 +390,7 @@ export function useNfes() {
       if (error) throw error;
       return data as any[];
     },
+    staleTime: 30_000,
   });
 }
 export function useNfe(id: string) {
@@ -424,6 +428,7 @@ export function useUsuarios() {
       });
       return (profiles ?? []).map((p) => ({ ...p, roles: map.get(p.id) ?? [] }));
     },
+    staleTime: 30_000,
   });
 }
 
@@ -436,5 +441,27 @@ export function useAuditLogs(limit = 50) {
       if (error) throw error;
       return data;
     },
+    staleTime: 30_000,
+  });
+}
+
+// PRODUCT IMAGES (galeria reutilizável de imagens IA)
+export function useProductImages(query?: string) {
+  return useQuery({
+    queryKey: ["product-images", query ?? ""],
+    queryFn: async () => {
+      let q = supabase
+        .from("product_images" as any)
+        .select("id, nome, nome_chave, url, created_at")
+        .order("created_at", { ascending: false })
+        .limit(24);
+      if (query && query.trim().length >= 2) {
+        q = q.ilike("nome_chave", `%${query.trim().toLowerCase()}%`);
+      }
+      const { data, error } = await q;
+      if (error) return [] as any[];
+      return (data ?? []) as any[];
+    },
+    staleTime: 60_000,
   });
 }

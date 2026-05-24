@@ -5,7 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const generateProductImage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ nome: z.string().min(2).max(120) }).parse(i))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY ausente");
     const prompt = `Foto profissional de produto: ${data.nome}. Fundo branco neutro, iluminação suave, embalagem brasileira realista, alto detalhe, sem texto adicional, estilo catálogo de mercado/conveniência.`;
@@ -25,5 +25,20 @@ export const generateProductImage = createServerFn({ method: "POST" })
     const json: any = await res.json();
     const url = json?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     if (!url) throw new Error("Imagem não retornada pelo modelo");
+    // Persiste na galeria reutilizável (best-effort, não bloqueia o retorno)
+    try {
+      const slug = data.nome
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      await context.supabase.from("product_images" as any).insert({
+        nome: data.nome,
+        nome_chave: slug,
+        url,
+        created_by: context.userId,
+      });
+    } catch { /* ignore */ }
     return { imageUrl: url as string };
   });

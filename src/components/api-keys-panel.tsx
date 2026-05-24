@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, Plus, Trash2, KeyRound, Power, Check } from "lucide-react";
+import { Copy, Plus, Trash2, KeyRound, Power, Check, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { SectionCard } from "@/components/section-card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -184,13 +184,14 @@ export function ApiKeysPanel() {
 function Endpoint({ method, path, desc, example }: { method: string; path: string; desc: string; example: string }) {
   const m: Record<string, string> = { GET: "bg-info/15 text-info", POST: "bg-success/15 text-success", DELETE: "bg-destructive/15 text-destructive" };
   return (
-    <div className="rounded-md border bg-card/60 p-3">
-      <div className="flex items-center gap-2">
+    <details className="group rounded-md border bg-card/60 open:bg-card">
+      <summary className="flex cursor-pointer list-none items-center gap-2 p-3 hover:bg-muted/40">
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground transition-transform group-open:rotate-180" />
         <span className={cn("rounded px-1.5 py-0.5 text-[10px] font-bold", m[method])}>{method}</span>
         <code className="font-mono text-xs">{path}</code>
-      </div>
-      <p className="mt-1 text-xs text-muted-foreground">{desc}</p>
-      <pre className="mt-2 overflow-auto rounded bg-muted/50 p-2 text-[11px] leading-relaxed"><code>{example}</code></pre>
-    </div>
+        <span className="ml-2 truncate text-[11px] text-muted-foreground">{desc}</span>
+      </summary>
+      <pre className="overflow-auto rounded-b bg-muted/50 p-3 text-[11px] leading-relaxed"><code>{example}</code></pre>
+    </details>
   );
 }

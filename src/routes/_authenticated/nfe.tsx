@@ -181,7 +181,7 @@ function NfePage() {
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); onFiles(e.dataTransfer.files); }}
-            className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 p-8 text-center"
+            className="flex h-full min-h-[260px] flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/30 p-8 text-center"
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
               <UploadCloud className="h-6 w-6" />
@@ -192,13 +192,13 @@ function NfePage() {
             <button onClick={() => fileRef.current?.click()} className="mt-4 h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">Selecionar XML</button>
           </div>
         </SectionCard>
-        <div className="space-y-2">
+        <div className="grid h-full grid-rows-3 gap-2">
           {[
             { i: CheckCircle2, c: "text-success bg-success/10", t: "Vínculo automático por EAN", d: "Itens com código de barras cadastrado são reconhecidos" },
             { i: AlertTriangle, c: "text-warning bg-warning/15", t: "Detecção de divergências", d: "Preço, código não cadastrado, EAN inválido" },
             { i: FileText, c: "text-info bg-info/10", t: "Histórico completo", d: "Busca por nº de pedido, chave de acesso ou fornecedor" },
           ].map((s) => (
-            <div key={s.t} className="flex gap-3 rounded-xl border bg-card p-3.5 shadow-subtle">
+            <div key={s.t} className="flex items-center gap-3 rounded-xl border bg-card p-3.5 shadow-subtle">
               <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-md", s.c)}><s.i className="h-4 w-4" /></div>
               <div><p className="text-sm font-medium">{s.t}</p><p className="text-xs text-muted-foreground">{s.d}</p></div>
             </div>
