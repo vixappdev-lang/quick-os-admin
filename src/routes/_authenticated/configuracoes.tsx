@@ -2,16 +2,23 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ApiKeysPanel } from "@/components/api-keys-panel";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
-  head: () => ({ meta: [{ title: "Configurações — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Configurações | Quick OS" }] }),
   component: () => {
     const inp = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
     return (
       <div>
         <PageHeader title="Configurações" description="Preferências da empresa e do sistema" />
         <Tabs defaultValue="empresa">
-          <TabsList><TabsTrigger value="empresa">Empresa</TabsTrigger><TabsTrigger value="pdv">PDV</TabsTrigger><TabsTrigger value="impressao">Impressão</TabsTrigger><TabsTrigger value="integracoes">Integrações</TabsTrigger><TabsTrigger value="backup">Backup</TabsTrigger><TabsTrigger value="tema">Tema</TabsTrigger></TabsList>
+          <TabsList>
+            <TabsTrigger value="empresa">Empresa</TabsTrigger>
+            <TabsTrigger value="pdv">PDV</TabsTrigger>
+            <TabsTrigger value="impressao">Impressão</TabsTrigger>
+            <TabsTrigger value="api">API</TabsTrigger>
+            <TabsTrigger value="tema">Tema</TabsTrigger>
+          </TabsList>
           <TabsContent value="empresa" className="mt-4">
             <SectionCard title="Dados da empresa">
               <div className="grid grid-cols-2 gap-4">
@@ -25,8 +32,7 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
           </TabsContent>
           <TabsContent value="pdv" className="mt-4"><SectionCard title="Configurações do PDV"><div className="space-y-3 text-sm"><Toggle label="Permitir desconto manual" /><Toggle label="Exigir cliente em pagamento fiado" defaultOn /><Toggle label="Imprimir cupom automaticamente" defaultOn /><Toggle label="Som ao finalizar venda" /></div></SectionCard></TabsContent>
           <TabsContent value="impressao" className="mt-4"><SectionCard title="Impressora térmica"><div className="grid grid-cols-2 gap-4"><div><label className="mb-1.5 block text-xs font-medium">Modelo</label><select className={inp}><option>Bematech MP-4200 TH</option><option>Epson TM-T20</option></select></div><div><label className="mb-1.5 block text-xs font-medium">Largura</label><select className={inp}><option>80mm</option><option>58mm</option></select></div></div></SectionCard></TabsContent>
-          <TabsContent value="integracoes" className="mt-4"><SectionCard title="Integrações ativas"><p className="text-sm text-muted-foreground">Configure integrações em Sistema → Integrações.</p></SectionCard></TabsContent>
-          <TabsContent value="backup" className="mt-4"><SectionCard title="Backup automático"><Toggle label="Backup diário às 03:00" defaultOn /></SectionCard></TabsContent>
+          <TabsContent value="api" className="mt-4"><ApiKeysPanel /></TabsContent>
           <TabsContent value="tema" className="mt-4"><SectionCard title="Aparência"><Toggle label="Modo escuro" /></SectionCard></TabsContent>
         </Tabs>
       </div>
