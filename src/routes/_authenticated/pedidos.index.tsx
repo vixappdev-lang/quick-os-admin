@@ -4,19 +4,21 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable, type DragEndEvent, type DragStartEvent,
 } from "@dnd-kit/core";
-import { Plus, Search, MoreVertical, Eye, Printer, CheckCircle2, XCircle, LayoutGrid, List, ChevronDown, ArrowRight, ArrowLeft, FileText, Package as PackageIcon, CreditCard, AlertTriangle, MessageSquare, Pencil } from "lucide-react";
+import { Plus, Search, MoreVertical, Eye, Printer, CheckCircle2, XCircle, LayoutGrid, List, ChevronDown, ArrowRight, ArrowLeft, FileText, Package as PackageIcon, CreditCard, AlertTriangle, MessageSquare, Pencil, Lock } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge, statusTone, pedidoStatusTone, PEDIDO_STATUS_LABEL } from "@/components/status-badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatBRL, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, useClientes, useVendedores, useCriarFaturamento, type Pedido } from "@/lib/queries";
+import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, useClientes, useVendedores, useCriarFaturamento, usePedidoPagamentos, useAddPedidoPagamento, useRemovePedidoPagamento, useEncerrarPedido, type Pedido } from "@/lib/queries";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { printRomaneio, printRomaneios } from "@/components/romaneio-print";
 import { printEntregas, exportEntregasCSV, formatEndereco } from "@/components/entregas-print";
 import { printSeparacao, agregarSeparacao } from "@/components/separacao-print";
+import { PaymentSplitter } from "@/components/payment-splitter";
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
   // Index route for /pedidos. Path is normalized below via TanStack;
@@ -81,6 +83,7 @@ function PedidosPage() {
     const map: Record<string, any[]> = {};
     COLUMNS.forEach((c) => (map[c.id] = []));
     filtered.forEach((p) => {
+      if (p.status === "encerrado" || p.status === "cancelado") return;
       const col = COLUMNS.find((c) => c.id === p.status)?.id ?? "pendente";
       map[col].push(p);
     });
