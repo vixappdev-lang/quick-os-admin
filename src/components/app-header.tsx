@@ -1,6 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Sun, Moon, ChevronRight, Wallet, Plus, Menu, LogOut, User as UserIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { ChevronRight, Wallet, Plus, Menu, LogOut, User as UserIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useCaixaAtual } from "@/lib/queries";
 import { formatBRL } from "@/lib/format";
@@ -10,6 +9,7 @@ import {
   DropdownMenuLabel, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const labels: Record<string, string> = {
   "": "Dashboard",
@@ -30,23 +30,6 @@ export function AppHeader({ onMenuClick }: Props) {
   const segments = pathname.split("/").filter(Boolean);
   const { user, signOut } = useAuth();
   const { data: caixa } = useCaixaAtual();
-  const [dark, setDark] = useState(false);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("qos-theme");
-    const isDark = saved ? saved === "dark" : window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-    document.documentElement.classList.toggle("dark", isDark);
-    setDark(isDark);
-  }, []);
-
-  const toggleTheme = () => {
-    setDark((d) => {
-      const next = !d;
-      document.documentElement.classList.toggle("dark", next);
-      localStorage.setItem("qos-theme", next ? "dark" : "light");
-      return next;
-    });
-  };
 
   const caixaTotal = caixa
     ? Number(caixa.valor_inicial) + (caixa.movimentos ?? []).reduce(
@@ -103,9 +86,7 @@ export function AppHeader({ onMenuClick }: Props) {
             <Plus className="h-4 w-4" /> Nova venda
           </Link>
 
-          <button onClick={toggleTheme} className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground" aria-label="Alternar tema">
-            {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-          </button>
+          <ThemeToggle />
 
           <NotificationsBell />
 

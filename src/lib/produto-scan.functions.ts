@@ -54,14 +54,13 @@ export const identifyAndCreateProduct = createServerFn({ method: "POST" })
     }
 
     const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY ausente");
 
     // 2) Tenta identificar via IA
     let identified = false;
     let info: { nome: string; marca?: string; unidade?: string; categoria_sugerida?: string } = {
       nome: `Produto ${ean}`,
     };
-    try {
+    if (key) try {
       const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
@@ -102,7 +101,7 @@ export const identifyAndCreateProduct = createServerFn({ method: "POST" })
     } catch { /* fallback */ }
 
     // 3) Imagem (best-effort)
-    const imagemUrl = identified ? await genImageBestEffort(info.nome, key) : null;
+    const imagemUrl = identified && key ? await genImageBestEffort(info.nome, key) : null;
 
     // 4) Insert
     const insertRow = {
@@ -136,5 +135,5 @@ export const identifyAndCreateProduct = createServerFn({ method: "POST" })
       } catch { /* ignore */ }
     }
 
-    return { already: false as const, produto: criado, identified };
+    return { already: false as const, produto: criado, identified, warning: key ? null : "AI indisponível — cadastro mínimo, edite para completar" };
   });

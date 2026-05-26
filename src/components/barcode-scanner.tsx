@@ -42,6 +42,20 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
     setTorchSupported(false);
   }, []);
 
+  // Limpeza no unmount real do componente (ex.: troca de rota fecha o Dialog
+  // sem disparar `open=false` antes). Garante que a câmera nunca fica viva.
+  useEffect(() => {
+    return () => { stopAll(); };
+  }, [stopAll]);
+
+  // Pausa câmera quando a aba esconde; ao voltar, reinicia se o modal seguir aberto.
+  useEffect(() => {
+    if (!open) return;
+    const onVis = () => { if (document.hidden) stopAll(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [open, stopAll]);
+
   const handleCode = (code: string) => {
     const now = Date.now();
     if (lastCodeRef.current.code === code && now - lastCodeRef.current.t < 1200) return;
@@ -179,9 +193,9 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
           </DialogTitle>
           <DialogDescription className="sr-only">Aponte o código de barras para a câmera ou digite manualmente.</DialogDescription>
         </DialogHeader>
-        <div className="relative bg-black sm:aspect-[4/3] flex-1 min-h-0 max-sm:min-h-[55vh]">
+        <div className="relative bg-foreground/95 sm:aspect-[4/3] flex-1 min-h-0 max-sm:min-h-[55vh]">
           {error ? (
-            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-white/90">{error}</div>
+            <div className="flex h-full items-center justify-center p-6 text-center text-sm text-background">{error}</div>
           ) : (
             <>
               <video ref={videoRef} className="h-full w-full object-cover max-sm:object-contain" playsInline muted />
@@ -190,12 +204,12 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
               </div>
               <div className="absolute right-3 top-3 flex flex-col gap-2">
                 {devices.length > 1 && (
-                  <button onClick={() => setDeviceIx((i) => (i + 1) % devices.length)} className="inline-flex h-10 items-center gap-1.5 rounded-md bg-black/70 px-3 text-xs font-medium text-white hover:bg-black/90 active:scale-95">
+                  <button onClick={() => setDeviceIx((i) => (i + 1) % devices.length)} className="inline-flex h-10 items-center gap-1.5 rounded-md bg-foreground/80 px-3 text-xs font-medium text-background hover:bg-foreground active:scale-95">
                     <RefreshCw className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Trocar câmera</span>
                   </button>
                 )}
                 {torchSupported && (
-                  <button onClick={toggleTorch} className={`inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-xs font-medium text-white active:scale-95 ${torchOn ? "bg-amber-500/90 hover:bg-amber-500" : "bg-black/70 hover:bg-black/90"}`}>
+                  <button onClick={toggleTorch} className={`inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-xs font-medium active:scale-95 ${torchOn ? "bg-warning text-warning-foreground hover:opacity-90" : "bg-foreground/80 text-background hover:bg-foreground"}`}>
                     <Flashlight className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Lanterna</span>
                   </button>
                 )}

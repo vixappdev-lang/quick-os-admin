@@ -46,6 +46,11 @@ export function NovoProdutoChooser({ open, onClose, onPickManual, onPickEdit }: 
   const reset = () => { setStage("chooser"); setResult(null); setIdentified(false); setLastEan(""); };
   const close = () => { reset(); onClose(); };
 
+  // Reset total quando o componente fechar (ou for desmontado pela rota)
+  useEffect(() => {
+    if (!open) { setStage("chooser"); setResult(null); setIdentified(false); setLastEan(""); playedRef.current = null; }
+  }, [open]);
+
   const handleDetected = async (code: string) => {
     const ean = code.trim();
     if (!ean) return;
