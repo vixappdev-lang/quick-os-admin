@@ -364,6 +364,76 @@ export function useUpdatePedidoStatus() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["pedidos"] }),
   });
 }
+
+// PAGAMENTOS DO PEDIDO (múltiplas formas)
+export function usePedidoPagamentos(pedidoId: string | undefined) {
+  return useQuery({
+    queryKey: ["pedido_pagamentos", pedidoId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("pedido_pagamentos" as any)
+        .select("*")
+        .eq("pedido_id", pedidoId as string)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    enabled: !!pedidoId,
+  });
+}
+export function useAddPedidoPagamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { pedido_id: string; forma: string; condicao?: string | null; vencimento?: string | null; valor: number }) => {
+      const { data, error } = await supabase
+        .from("pedido_pagamentos" as any)
+        .insert(input as any)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["pedido_pagamentos", v.pedido_id] });
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["pedidos", v.pedido_id] });
+    },
+  });
+}
+export function useRemovePedidoPagamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; pedido_id: string }) => {
+      const { error } = await supabase.from("pedido_pagamentos" as any).delete().eq("id", input.id);
+      if (error) throw error;
+      return input;
+    },
+    onSuccess: (v) => {
+      qc.invalidateQueries({ queryKey: ["pedido_pagamentos", v.pedido_id] });
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["pedidos", v.pedido_id] });
+    },
+  });
+}
+export function useEncerrarPedido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data, error } = await supabase
+        .from("pedidos")
+        .update({ status: "encerrado" as any, updated_at: new Date().toISOString() })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_d, id) => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["pedidos", id] });
+    },
+  });
+}
 export function useCreatePedido() {
   const qc = useQueryClient();
   return useMutation({
