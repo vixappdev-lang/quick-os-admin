@@ -15,6 +15,8 @@ import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, useCli
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { printRomaneio, printRomaneios } from "@/components/romaneio-print";
+import { printEntregas, exportEntregasCSV, formatEndereco } from "@/components/entregas-print";
+import { printSeparacao, agregarSeparacao } from "@/components/separacao-print";
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
   // Index route for /pedidos. Path is normalized below via TanStack;
@@ -225,6 +227,8 @@ function KanbanColumn({ col, pedidos, onView }: { col: typeof COLUMNS[number]; p
   const updateStatus = useUpdatePedidoStatus();
   const criarFat = useCriarFaturamento();
   const { user } = useAuth();
+  const [entregasOpen, setEntregasOpen] = useState(false);
+  const [separacaoOpen, setSeparacaoOpen] = useState(false);
   const next = NEXT_OF[col.id];
   const moverTodos = async (alvo: Pedido["status"]) => {
     for (const p of pedidos) {
@@ -260,8 +264,8 @@ function KanbanColumn({ col, pedidos, onView }: { col: typeof COLUMNS[number]; p
               <ColAction icon={Printer} label="Imprimir todos" onClick={() => printRomaneios(pedidos)} />
               {next && <ColAction icon={ArrowRight} label="Mover p/ o próximo processo" onClick={() => moverTodos(next)} />}
               <div className="my-1 border-t" />
-              <ColAction icon={Truck()} label="Relação de Entregas" onClick={() => toast.info("Em breve: relação de entregas")} />
-              <ColAction icon={PackageIcon} label="Separação por Produto" onClick={() => toast.info("Em breve: separação por produto")} />
+              <ColAction icon={Truck()} label="Relação de Entregas" onClick={() => setEntregasOpen(true)} />
+              <ColAction icon={PackageIcon} label="Separação por Produto" onClick={() => setSeparacaoOpen(true)} />
             </PopoverContent>
           </Popover>
         </div>
@@ -274,6 +278,8 @@ function KanbanColumn({ col, pedidos, onView }: { col: typeof COLUMNS[number]; p
         )}
         {pedidos.map((p) => <KanbanCard key={p.id} pedido={p} onView={onView} />)}
       </div>
+      <EntregasDialog open={entregasOpen} onOpenChange={setEntregasOpen} pedidos={pedidos} colLabel={col.label} />
+      <SeparacaoDialog open={separacaoOpen} onOpenChange={setSeparacaoOpen} pedidos={pedidos} colLabel={col.label} />
     </div>
   );
 }
@@ -474,3 +480,103 @@ function ColAction({ icon: Icon, label, onClick }: { icon: any; label: string; o
   );
 }
 function Truck() { return function TruckIcon() { return <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7zM6 19a2 2 0 100-4 2 2 0 000 4zM17 19a2 2 0 100-4 2 2 0 000 4z"/></svg>; }; }
+
+function EntregasDialog({ open, onOpenChange, pedidos, colLabel }: { open: boolean; onOpenChange: (o: boolean) => void; pedidos: any[]; colLabel: string }) {
+  const totalGeral = pedidos.reduce((s, p) => s + Number(p.total), 0);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Relação de Entregas — {colLabel}</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-auto rounded-md border">
+          <table className="w-full min-w-[720px] text-sm">
+            <thead className="sticky top-0 bg-muted/60">
+              <tr className="border-b">
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">Pedido</th>
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">Cliente</th>
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">Endereço</th>
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">Telefone</th>
+                <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase text-muted-foreground">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pedidos.length === 0 && (
+                <tr><td colSpan={5} className="px-3 py-8 text-center text-xs text-muted-foreground">Sem pedidos nesta coluna</td></tr>
+              )}
+              {pedidos.map((p) => (
+                <tr key={p.id} className="border-b">
+                  <td className="px-3 py-2 font-semibold">{p.numero}</td>
+                  <td className="px-3 py-2">{p.cliente?.nome ?? "Balcão"}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{formatEndereco(p.cliente?.endereco)}</td>
+                  <td className="px-3 py-2 text-xs">{p.cliente?.telefone ?? "—"}</td>
+                  <td className="px-3 py-2 text-right tabular font-semibold">{formatBRL(Number(p.total))}</td>
+                </tr>
+              ))}
+            </tbody>
+            {pedidos.length > 0 && (
+              <tfoot>
+                <tr className="bg-muted/40"><td colSpan={4} className="px-3 py-2 text-right text-xs font-semibold">Total geral</td><td className="px-3 py-2 text-right tabular font-bold">{formatBRL(totalGeral)}</td></tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+        <DialogFooter>
+          <button onClick={() => onOpenChange(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Fechar</button>
+          <button onClick={() => exportEntregasCSV(pedidos)} disabled={pedidos.length === 0} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted disabled:opacity-50">Exportar CSV</button>
+          <button onClick={() => printEntregas(pedidos)} disabled={pedidos.length === 0} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-50">Imprimir</button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SeparacaoDialog({ open, onOpenChange, pedidos, colLabel }: { open: boolean; onOpenChange: (o: boolean) => void; pedidos: any[]; colLabel: string }) {
+  const linhas = useMemo(() => agregarSeparacao(pedidos), [pedidos]);
+  const totalItens = linhas.reduce((s, l) => s + l.qtd, 0);
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Separação por Produto — {colLabel}</DialogTitle>
+        </DialogHeader>
+        <div className="max-h-[60vh] overflow-auto rounded-md border">
+          <table className="w-full min-w-[680px] text-sm">
+            <thead className="sticky top-0 bg-muted/60">
+              <tr className="border-b">
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">SKU</th>
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">Produto</th>
+                <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase text-muted-foreground">Qtd</th>
+                <th className="px-3 py-2 text-center text-[11px] font-semibold uppercase text-muted-foreground">Unid</th>
+                <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase text-muted-foreground">Pedidos</th>
+              </tr>
+            </thead>
+            <tbody>
+              {linhas.length === 0 && (
+                <tr><td colSpan={5} className="px-3 py-8 text-center text-xs text-muted-foreground">Sem itens para separar</td></tr>
+              )}
+              {linhas.map((l) => (
+                <tr key={l.produto_id} className="border-b">
+                  <td className="px-3 py-2 font-mono text-xs">{l.sku}</td>
+                  <td className="px-3 py-2 font-medium">{l.nome}</td>
+                  <td className="px-3 py-2 text-right tabular font-semibold">{l.qtd.toLocaleString("pt-BR")}</td>
+                  <td className="px-3 py-2 text-center text-xs text-muted-foreground">{l.unidade}</td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">{l.pedidos.join(", ")}</td>
+                </tr>
+              ))}
+            </tbody>
+            {linhas.length > 0 && (
+              <tfoot>
+                <tr className="bg-muted/40"><td colSpan={2} className="px-3 py-2 text-right text-xs font-semibold">Total</td><td className="px-3 py-2 text-right tabular font-bold">{totalItens.toLocaleString("pt-BR")}</td><td colSpan={2} /></tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+        <DialogFooter>
+          <button onClick={() => onOpenChange(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Fechar</button>
+          <button onClick={() => printSeparacao(pedidos)} disabled={linhas.length === 0} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-50">Imprimir</button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
