@@ -8,8 +8,40 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
 // @cloudflare/vite-plugin builds from this — wrangler.jsonc main alone is insufficient.
+//
+// Also: garantir que o bundle do browser tenha as URLs/chaves do Supabase
+// embutidas mesmo quando o pipeline de build não exporta VITE_* (acontece em
+// alguns publishes), copiando dos secrets SUPABASE_* disponíveis no build.
+// E manter `process.env.SUPABASE_*` como acesso dinâmico no browser para que
+// a injeção SSR feita em __root.tsx (window.process.env) siga funcionando —
+// sem isso, plugins podem reescrever estaticamente para `undefined`.
+const SUPABASE_URL =
+  process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+const SUPABASE_PUBLISHABLE_KEY =
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  process.env.SUPABASE_PUBLISHABLE_KEY ||
+  "";
+
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
+  },
+  vite: {
+    define: {
+      // Build-time injection: garante que `import.meta.env.VITE_SUPABASE_*`
+      // resolva para strings reais no bundle publicado, mesmo se o pipeline
+      // só expuser os SUPABASE_* (sem prefixo VITE_).
+      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(SUPABASE_URL),
+      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
+        SUPABASE_PUBLISHABLE_KEY,
+      ),
+      // Runtime fallback: NÃO inlinar `process.env.SUPABASE_*` como undefined.
+      // Redireciona para `globalThis.process?.env?....`, que casa com o
+      // `window.process.env` injetado pelo SSR em src/routes/__root.tsx.
+      "process.env.SUPABASE_URL":
+        "(typeof globalThis!=='undefined'&&globalThis.process&&globalThis.process.env&&globalThis.process.env.SUPABASE_URL)",
+      "process.env.SUPABASE_PUBLISHABLE_KEY":
+        "(typeof globalThis!=='undefined'&&globalThis.process&&globalThis.process.env&&globalThis.process.env.SUPABASE_PUBLISHABLE_KEY)",
+    },
   },
 });
