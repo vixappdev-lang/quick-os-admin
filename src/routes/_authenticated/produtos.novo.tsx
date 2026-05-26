@@ -8,9 +8,20 @@ import { useCategorias, useUpsertProduto } from "@/lib/queries";
 import { generateProductImage } from "@/lib/product-image.functions";
 import { ProductImageGallery } from "@/components/product-image-gallery";
 import { toast } from "sonner";
+import { z } from "zod";
 
 export const Route = createFileRoute("/_authenticated/produtos/novo")({
   head: () => ({ meta: [{ title: "Novo produto — Quick OS" }] }),
+  validateSearch: (s: Record<string, unknown>) =>
+    z
+      .object({
+        ean: z.string().trim().min(1).max(64).optional(),
+        nome: z.string().trim().min(1).max(200).optional(),
+        unidade: z.string().trim().min(1).max(10).optional(),
+        imagem: z.string().trim().max(2048).optional(),
+      })
+      .partial()
+      .parse(s),
   component: NovoProduto,
 });
 
@@ -21,14 +32,20 @@ const inputCls = "h-9 w-full rounded-md border border-input bg-background px-3 t
 
 function NovoProduto() {
   const navigate = useNavigate();
+  const search = Route.useSearch();
   const { data: categorias = [] } = useCategorias();
   const upsert = useUpsertProduto();
   const genImage = useServerFn(generateProductImage);
 
   const [form, setForm] = useState({
-    nome: "", sku: "", codigo_barras: "", categoria_id: "",
-    preco_custo: "", preco_venda: "", estoque: "0", estoque_minimo: "0", unidade: "UN",
-    ativo: true, imagem_url: "",
+    nome: search.nome ?? "",
+    sku: search.ean ?? "",
+    codigo_barras: search.ean ?? "",
+    categoria_id: "",
+    preco_custo: "", preco_venda: "", estoque: "0", estoque_minimo: "0",
+    unidade: search.unidade ?? "UN",
+    ativo: true,
+    imagem_url: search.imagem ?? "",
   });
   const [gerando, setGerando] = useState(false);
 
