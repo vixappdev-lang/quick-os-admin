@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Outlet, useMatches } from "@tanstack/react-router";
 import { Plus, Search } from "lucide-react";
 import { useState, useMemo } from "react";
 import { PageHeader } from "@/components/page-header";
@@ -13,6 +13,9 @@ export const Route = createFileRoute("/_authenticated/clientes")({
 
 function ClientesPage() {
   const navigate = useNavigate();
+  const matches = useMatches();
+  const hasChild = matches.some((m: any) => typeof m.routeId === "string" && m.routeId.startsWith("/_authenticated/clientes/"));
+  if (hasChild) return <Outlet />;
   const { data: clientes = [], isLoading } = useClientes();
   const [busca, setBusca] = useState("");
 
