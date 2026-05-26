@@ -1,15 +1,17 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Printer, CheckCircle2, Clock, Receipt, Truck, User } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Printer, CheckCircle2, Clock, Receipt, Truck, User, Pencil, Save, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge, statusTone } from "@/components/status-badge";
-import { usePedido, useUpdatePedidoStatus, type Pedido } from "@/lib/queries";
+import { usePedido, useUpdatePedidoStatus, useUpdatePedido, type Pedido } from "@/lib/queries";
 import { formatBRL, formatDateTime, formatTime } from "@/lib/format";
 import { printRomaneio } from "@/components/romaneio-print";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
   head: () => ({ meta: [{ title: "Detalhes do pedido — Quick OS" }] }),
+  validateSearch: (s: Record<string, unknown>) => ({ edit: s.edit === 1 || s.edit === "1" ? 1 : undefined }) as { edit?: 1 },
   component: PedidoDetail,
 });
 
@@ -17,8 +19,24 @@ const FLOW: Pedido["status"][] = ["pendente", "autorizado", "separacao", "confer
 
 function PedidoDetail() {
   const { id } = Route.useParams();
+  const { edit } = Route.useSearch();
+  const navigate = useNavigate();
   const { data: pedido, isLoading } = usePedido(id);
   const updateStatus = useUpdatePedidoStatus();
+  const updatePedido = useUpdatePedido();
+  const [editMode, setEditMode] = useState<boolean>(edit === 1);
+  const [pagamento, setPagamento] = useState<string>("");
+  const [observacoes, setObservacoes] = useState<string>("");
+  const [desconto, setDesconto] = useState<string>("0");
+
+  useEffect(() => { setEditMode(edit === 1); }, [edit]);
+  useEffect(() => {
+    if (pedido) {
+      setPagamento(pedido.pagamento ?? "pix");
+      setObservacoes(pedido.observacoes ?? "");
+      setDesconto(String(Number(pedido.desconto ?? 0)));
+    }
+  }, [pedido?.id]);
 
   if (isLoading) return <div className="p-10 text-center text-sm text-muted-foreground">Carregando pedido...</div>;
   if (!pedido) return (
@@ -42,6 +60,20 @@ function PedidoDetail() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+  const salvarEdicao = async () => {
+    try {
+      await updatePedido.mutateAsync({
+        id: pedido.id,
+        pagamento,
+        observacoes,
+        desconto: Number(desconto) || 0,
+      });
+      toast.success("Pedido atualizado");
+      setEditMode(false);
+      navigate({ to: "/pedidos/$id", params: { id: pedido.id }, search: {} as any });
+    } catch (e: any) { toast.error(e.message); }
+  };
+
   const imprimir = () => printRomaneio(pedido);
 
   const timeline = [
@@ -62,6 +94,16 @@ function PedidoDetail() {
         description={`Criado em ${formatDateTime(pedido.created_at)}${pedido.vendedor?.nome ? ` · Vendedor ${pedido.vendedor.nome}` : ""}`}
         actions={
           <>
+            {!editMode ? (
+              <button onClick={() => setEditMode(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
+                <Pencil className="h-3.5 w-3.5" /> Alterar
+              </button>
+            ) : (
+              <>
+                <button onClick={() => { setEditMode(false); navigate({ to: "/pedidos/$id", params: { id: pedido.id }, search: {} as any }); }} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><X className="h-3.5 w-3.5" /> Cancelar</button>
+                <button onClick={salvarEdicao} disabled={updatePedido.isPending} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-50"><Save className="h-3.5 w-3.5" /> Salvar</button>
+              </>
+            )}
             <button onClick={imprimir} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
               <Printer className="h-3.5 w-3.5" /> Imprimir
             </button>
@@ -78,6 +120,7 @@ function PedidoDetail() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
           <SectionCard title={`Itens do pedido (${itens.length})`} padded={false}>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/40">
                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Produto</th>
@@ -100,15 +143,28 @@ function PedidoDetail() {
                 ))}
               </tbody>
             </table>
+            </div>
             <div className="space-y-1 border-t bg-muted/30 px-4 py-3 text-sm">
               <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span className="tabular">{formatBRL(Number(pedido.subtotal))}</span></div>
-              <div className="flex justify-between text-muted-foreground"><span>Desconto</span><span className="tabular">- {formatBRL(Number(pedido.desconto))}</span></div>
+              <div className="flex justify-between text-muted-foreground"><span>Desconto</span>
+                {editMode ? (
+                  <input type="number" step="0.01" min="0" value={desconto} onChange={(e) => setDesconto(e.target.value)} className="h-7 w-28 rounded border bg-background px-2 text-right text-sm tabular focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                ) : (
+                  <span className="tabular">- {formatBRL(Number(pedido.desconto))}</span>
+                )}
+              </div>
               <div className="flex justify-between border-t pt-1.5 font-semibold"><span>Total</span><span className="tabular text-base text-primary">{formatBRL(Number(pedido.total))}</span></div>
             </div>
           </SectionCard>
 
-          {pedido.observacoes && (
-            <SectionCard title="Observações"><p className="whitespace-pre-line text-sm text-muted-foreground">{pedido.observacoes}</p></SectionCard>
+          {(editMode || pedido.observacoes) && (
+            <SectionCard title="Observações">
+              {editMode ? (
+                <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={4} className="w-full rounded-md border bg-background p-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+              ) : (
+                <p className="whitespace-pre-line text-sm text-muted-foreground">{pedido.observacoes}</p>
+              )}
+            </SectionCard>
           )}
 
           <SectionCard title="Timeline" padded={false}>
@@ -142,7 +198,15 @@ function PedidoDetail() {
 
           <SectionCard title="Pagamento">
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Método</span><span className="font-medium capitalize">{pedido.pagamento ?? "—"}</span></div>
+              <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Método</span>
+                {editMode ? (
+                  <select value={pagamento} onChange={(e) => setPagamento(e.target.value)} className="h-8 rounded border bg-background px-2 text-sm capitalize focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    {["pix","credito","debito","dinheiro","fiado","outro"].map((m) => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                ) : (
+                  <span className="font-medium capitalize">{pedido.pagamento ?? "—"}</span>
+                )}
+              </div>
               <div className="flex justify-between"><span className="text-muted-foreground">Status</span><StatusBadge status={pedido.status} tone={statusTone(pedido.status)} /></div>
               <div className="flex justify-between border-t pt-2"><span className="text-muted-foreground">Valor</span><span className="tabular font-semibold">{formatBRL(Number(pedido.total))}</span></div>
             </div>
