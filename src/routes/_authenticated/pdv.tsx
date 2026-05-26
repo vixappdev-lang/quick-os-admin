@@ -77,8 +77,6 @@ function PdvPage() {
     toast.success(`${p.nome} · ${formatBRL(Number(p.preco_venda))}`);
   };
 
-  // Captura GLOBAL de scanner HID — funciona sem abrir modal nem precisar focar input
-  useHidScanner(handleScanCode, !disabled);
 
   const paymentMap = (settings?.metodos_pagamento ?? {}) as Record<string, boolean>;
   const pagamentosAtivos = useMemo(() => {
@@ -140,6 +138,9 @@ function PdvPage() {
   };
 
   const disabled = settings?.pdv_ativo === false;
+
+  // Captura GLOBAL de scanner HID — funciona sem abrir modal nem precisar focar input
+  useHidScanner(handleScanCode, !disabled);
 
   return (
     <div className="relative -mx-4 -my-4 min-h-[calc(100vh-3.5rem)] md:-mx-6 md:-my-6">
