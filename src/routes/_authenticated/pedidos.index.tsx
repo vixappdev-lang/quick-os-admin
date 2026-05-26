@@ -9,7 +9,6 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge, statusTone, pedidoStatusTone, PEDIDO_STATUS_LABEL } from "@/components/status-badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatBRL, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, useClientes, useVendedores, useCriarFaturamento, usePedidoPagamentos, useAddPedidoPagamento, useRemovePedidoPagamento, useEncerrarPedido, type Pedido } from "@/lib/queries";
