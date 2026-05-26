@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { BrowserMultiFormatReader } from "@zxing/browser";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Camera, RefreshCw, X, Flashlight } from "lucide-react";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -26,11 +26,29 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
   const [torchSupported, setTorchSupported] = useState(false);
   const isMobile = useIsMobile();
 
+  const stopAll = useCallback(() => {
+    try { nativeStopRef.current?.(); } catch {}
+    nativeStopRef.current = null;
+    try {
+      const v = videoRef.current;
+      const s = (v?.srcObject as MediaStream | null) ?? streamRef.current;
+      s?.getTracks().forEach((t) => t.stop());
+      if (v) v.srcObject = null;
+    } catch {}
+    try { (readerRef.current as any)?.reset?.(); } catch {}
+    readerRef.current = null;
+    streamRef.current = null;
+    setTorchOn(false);
+    setTorchSupported(false);
+  }, []);
+
   const handleCode = (code: string) => {
     const now = Date.now();
     if (lastCodeRef.current.code === code && now - lastCodeRef.current.t < 1200) return;
     lastCodeRef.current = { code, t: now };
     beepScan();
+    // Encerra a câmera imediatamente para evitar "fantasma" sobre a tela
+    stopAll();
     onDetected(code);
   };
 
@@ -135,22 +153,15 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
     start();
     return () => {
       cancelled = true;
-      try { nativeStopRef.current?.(); } catch {}
-      nativeStopRef.current = null;
-      try {
-        const v = videoRef.current;
-        const s = v?.srcObject as MediaStream | null;
-        s?.getTracks().forEach((t) => t.stop());
-        if (v) v.srcObject = null;
-      } catch {}
-      try { (readerRef.current as any)?.reset?.(); } catch {}
-      readerRef.current = null;
-      streamRef.current = null;
-      setTorchOn(false);
-      setTorchSupported(false);
+      stopAll();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, deviceIx]);
+
+  // Trava extra: se `open` virar false a qualquer momento, garante parada total
+  useEffect(() => {
+    if (!open) stopAll();
+  }, [open, stopAll]);
 
   const submitManual = () => {
     const v = manual.trim();
@@ -166,6 +177,7 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
           <DialogTitle className="flex items-center gap-2 text-base">
             <Camera className="h-4 w-4" /> Scanner de código de barras
           </DialogTitle>
+          <DialogDescription className="sr-only">Aponte o código de barras para a câmera ou digite manualmente.</DialogDescription>
         </DialogHeader>
         <div className="relative bg-black sm:aspect-[4/3] flex-1 min-h-0 max-sm:min-h-[55vh]">
           {error ? (
