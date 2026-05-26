@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Download, Calendar, DollarSign, ShoppingBag, TrendingUp, Package2, FileBarChart2 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -18,7 +18,6 @@ const PAGAMENTO_LABEL: Record<string, string> = {
 };
 
 function RelatoriosPage() {
-  const navigate = useNavigate();
   const { data: pedidos = [] } = usePedidos();
 
   const { faturamento, itens, ticket, qtdPedidos, vendasDia, formas, topProdutos } = useMemo(() => {
@@ -74,13 +73,13 @@ function RelatoriosPage() {
         <>
           <button className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Calendar className="h-3.5 w-3.5" /> Últimos 30 dias</button>
           <button onClick={() => window.print()} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Download className="h-3.5 w-3.5" /> Exportar</button>
-          <button
-            type="button"
-            onClick={() => navigate({ to: "/relatorios/catalogo" })}
+          <Link
+            to="/relatorios/catalogo"
+            preload="intent"
             className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] shadow-sm"
           >
             <FileBarChart2 className="h-3.5 w-3.5" /> Catálogo de Relatórios
-          </button>
+          </Link>
         </>
       } />
 
