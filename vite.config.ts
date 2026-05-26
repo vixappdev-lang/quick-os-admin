@@ -22,26 +22,29 @@ const SUPABASE_PUBLISHABLE_KEY =
   process.env.SUPABASE_PUBLISHABLE_KEY ||
   "";
 
+// Only inject when we actually have values from process.env. Otherwise we
+// would clobber the VITE_* values that @lovable.dev/vite-tanstack-config
+// already injects from the .env file (which Vite loads into import.meta.env,
+// NOT into process.env) — causing the runtime "Missing Supabase env" error.
+const defines: Record<string, string> = {};
+if (SUPABASE_URL) {
+  defines["import.meta.env.VITE_SUPABASE_URL"] = JSON.stringify(SUPABASE_URL);
+  defines["process.env.SUPABASE_URL"] = JSON.stringify(SUPABASE_URL);
+}
+if (SUPABASE_PUBLISHABLE_KEY) {
+  defines["import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY"] = JSON.stringify(
+    SUPABASE_PUBLISHABLE_KEY,
+  );
+  defines["process.env.SUPABASE_PUBLISHABLE_KEY"] = JSON.stringify(
+    SUPABASE_PUBLISHABLE_KEY,
+  );
+}
+
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
   },
   vite: {
-    define: {
-      // Build-time injection: garante que `import.meta.env.VITE_SUPABASE_*`
-      // resolva para strings reais no bundle publicado, mesmo se o pipeline
-      // só expuser os SUPABASE_* (sem prefixo VITE_).
-      "import.meta.env.VITE_SUPABASE_URL": JSON.stringify(SUPABASE_URL),
-      "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
-        SUPABASE_PUBLISHABLE_KEY,
-      ),
-      // Also inline process.env.SUPABASE_* as string literals so any
-      // browser-side fallback resolves at build time. esbuild's `define`
-      // requires a JS literal — expressions are rejected.
-      "process.env.SUPABASE_URL": JSON.stringify(SUPABASE_URL),
-      "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
-        SUPABASE_PUBLISHABLE_KEY,
-      ),
-    },
+    define: defines,
   },
 });
