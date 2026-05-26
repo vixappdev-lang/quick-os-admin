@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -6,6 +6,7 @@ import { ScanBarcode, Pencil, Loader2, CheckCircle2, AlertTriangle, Package, Plu
 import { BarcodeScanner } from "@/components/barcode-scanner";
 import { identifyAndCreateProduct } from "@/lib/produto-scan.functions";
 import { toast } from "sonner";
+import { beepSuccess, beepError } from "@/lib/sounds";
 
 type Stage = "chooser" | "scanner" | "processing" | "success" | "duplicate";
 type ResultProduto = {
@@ -31,8 +32,16 @@ export function NovoProdutoChooser({ open, onClose, onPickManual, onPickEdit }: 
   const [result, setResult] = useState<ResultProduto | null>(null);
   const [identified, setIdentified] = useState(false);
   const [lastEan, setLastEan] = useState<string>("");
+  const playedRef = useRef<Stage | null>(null);
   const identify = useServerFn(identifyAndCreateProduct);
   const qc = useQueryClient();
+
+  useEffect(() => {
+    if (playedRef.current === stage) return;
+    if (stage === "success") { beepSuccess(); playedRef.current = stage; }
+    else if (stage === "duplicate") { beepError(); playedRef.current = stage; }
+    else if (stage === "chooser" || stage === "scanner") { playedRef.current = null; }
+  }, [stage]);
 
   const reset = () => { setStage("chooser"); setResult(null); setIdentified(false); setLastEan(""); };
   const close = () => { reset(); onClose(); };
