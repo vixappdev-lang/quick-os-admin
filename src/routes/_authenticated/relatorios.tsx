@@ -1,13 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { Download, Calendar, DollarSign, ShoppingBag, TrendingUp, Package2, FileBarChart2, Users as UsersIcon, Wallet, Boxes } from "lucide-react";
+import { Download, Calendar, DollarSign, ShoppingBag, TrendingUp, Package2, FileBarChart2 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { KpiCard } from "@/components/kpi-card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatBRL } from "@/lib/format";
-import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuarios } from "@/lib/queries";
+import { usePedidos } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — Quick OS" }] }),
@@ -19,12 +18,8 @@ const PAGAMENTO_LABEL: Record<string, string> = {
 };
 
 function RelatoriosPage() {
+  const navigate = useNavigate();
   const { data: pedidos = [] } = usePedidos();
-  const { data: produtos = [] } = useProdutos();
-  const { data: clientes = [] } = useClientes();
-  const { data: despesas = [] } = useDespesas();
-  const { data: contas = [] } = useContas();
-  const { data: usuarios = [] } = useUsuarios();
 
   const { faturamento, itens, ticket, qtdPedidos, vendasDia, formas, topProdutos } = useMemo(() => {
     const validos = pedidos.filter((p: any) => p.status !== "cancelado");
@@ -79,19 +74,16 @@ function RelatoriosPage() {
         <>
           <button className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Calendar className="h-3.5 w-3.5" /> Últimos 30 dias</button>
           <button onClick={() => window.print()} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Download className="h-3.5 w-3.5" /> Exportar</button>
-          <Link to="/relatorios/catalogo" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] shadow-sm"><FileBarChart2 className="h-3.5 w-3.5" /> Catálogo de Relatórios</Link>
+          <button
+            type="button"
+            onClick={() => navigate({ to: "/relatorios/catalogo" })}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] shadow-sm"
+          >
+            <FileBarChart2 className="h-3.5 w-3.5" /> Catálogo de Relatórios
+          </button>
         </>
       } />
 
-      <Tabs defaultValue="vendas" className="w-full">
-        <TabsList className="mb-4 flex w-full flex-wrap gap-1 sm:w-auto">
-          <TabsTrigger value="vendas" className="gap-1.5"><ShoppingBag className="h-3.5 w-3.5" /> Vendas</TabsTrigger>
-          <TabsTrigger value="cadastros" className="gap-1.5"><UsersIcon className="h-3.5 w-3.5" /> Cadastros</TabsTrigger>
-          <TabsTrigger value="financeiro" className="gap-1.5"><Wallet className="h-3.5 w-3.5" /> Financeiro</TabsTrigger>
-          <TabsTrigger value="estoque" className="gap-1.5"><Boxes className="h-3.5 w-3.5" /> Estoque</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="vendas">
       <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <KpiCard label="Faturamento" value={formatBRL(faturamento)} icon={DollarSign} accent="primary" />
         <KpiCard label="Pedidos" value={String(qtdPedidos)} icon={ShoppingBag} accent="info" />
@@ -156,86 +148,6 @@ function RelatoriosPage() {
           </table></div>
         </SectionCard>
       </div>
-        </TabsContent>
-
-        <TabsContent value="cadastros">
-          <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <KpiCard label="Clientes" value={String(clientes.length)} icon={UsersIcon} accent="primary" />
-            <KpiCard label="Produtos" value={String(produtos.length)} icon={Package2} accent="info" />
-            <KpiCard label="Usuários" value={String(usuarios.length)} icon={UsersIcon} accent="success" />
-            <KpiCard label="Produtos ativos" value={String(produtos.filter((p: any) => p.ativo !== false).length)} icon={Boxes} accent="warning" />
-          </div>
-          <SectionCard title="Clientes recentes" padded={false}>
-            <div className="overflow-x-auto"><table className="w-full min-w-[420px] text-sm">
-              <thead><tr className="border-b bg-muted/40">
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Nome</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Telefone</th>
-                <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Saldo Fiado</th>
-              </tr></thead>
-              <tbody>
-                {clientes.slice(0, 15).map((c: any) => (
-                  <tr key={c.id} className="border-b"><td className="px-4 py-3 font-medium">{c.nome}</td><td className="px-4 py-3 text-muted-foreground">{c.telefone ?? "—"}</td><td className="px-4 py-3 text-right tabular">{formatBRL(Number(c.saldo_fiado ?? 0))}</td></tr>
-                ))}
-              </tbody>
-            </table></div>
-          </SectionCard>
-        </TabsContent>
-
-        <TabsContent value="financeiro">
-          {(() => {
-            const totalDespesas = despesas.reduce((s: number, d: any) => s + Number(d.valor), 0);
-            const pagas = despesas.filter((d: any) => d.pago).reduce((s: number, d: any) => s + Number(d.valor), 0);
-            const aReceber = contas.filter((c: any) => c.tipo === "receber" && c.status === "pendente").reduce((s: number, c: any) => s + Number(c.valor), 0);
-            return (
-              <>
-                <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <KpiCard label="Faturamento" value={formatBRL(faturamento)} icon={DollarSign} accent="primary" />
-                  <KpiCard label="Despesas" value={formatBRL(totalDespesas)} icon={Wallet} accent="warning" />
-                  <KpiCard label="Despesas pagas" value={formatBRL(pagas)} icon={Wallet} accent="success" />
-                  <KpiCard label="A receber" value={formatBRL(aReceber)} icon={TrendingUp} accent="info" />
-                </div>
-                <SectionCard title="Formas de pagamento" padded={false}>
-                  <div className="overflow-x-auto"><table className="w-full min-w-[360px] text-sm">
-                    <thead><tr className="border-b bg-muted/40"><th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase text-muted-foreground">Método</th><th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase text-muted-foreground">Total</th></tr></thead>
-                    <tbody>
-                      {formas.length === 0 && <tr><td colSpan={2} className="px-4 py-8 text-center text-xs text-muted-foreground">Sem dados</td></tr>}
-                      {formas.map((f, i) => <tr key={i} className="border-b"><td className="px-4 py-3 font-medium">{f.nome}</td><td className="px-4 py-3 text-right tabular font-semibold">{formatBRL(f.valor)}</td></tr>)}
-                    </tbody>
-                  </table></div>
-                </SectionCard>
-              </>
-            );
-          })()}
-        </TabsContent>
-
-        <TabsContent value="estoque">
-          {(() => {
-            const baixos = produtos.filter((p: any) => Number(p.estoque) <= Number(p.estoque_minimo ?? 0));
-            const valorEstoque = produtos.reduce((s: number, p: any) => s + Number(p.estoque) * Number(p.preco_custo ?? 0), 0);
-            return (
-              <>
-                <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                  <KpiCard label="Produtos" value={String(produtos.length)} icon={Boxes} accent="primary" />
-                  <KpiCard label="Estoque baixo" value={String(baixos.length)} icon={Package2} accent="warning" />
-                  <KpiCard label="Valor em estoque" value={formatBRL(valorEstoque)} icon={DollarSign} accent="info" />
-                  <KpiCard label="Itens vendidos" value={String(itens)} icon={ShoppingBag} accent="success" />
-                </div>
-                <SectionCard title="Produtos com estoque baixo" padded={false}>
-                  <div className="overflow-x-auto"><table className="w-full min-w-[480px] text-sm">
-                    <thead><tr className="border-b bg-muted/40"><th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase text-muted-foreground">Produto</th><th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase text-muted-foreground">SKU</th><th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase text-muted-foreground">Estoque</th><th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase text-muted-foreground">Mínimo</th></tr></thead>
-                    <tbody>
-                      {baixos.length === 0 && <tr><td colSpan={4} className="px-4 py-8 text-center text-xs text-muted-foreground">Nenhum produto com estoque baixo</td></tr>}
-                      {baixos.map((p: any) => (
-                        <tr key={p.id} className="border-b"><td className="px-4 py-3 font-medium">{p.nome}</td><td className="px-4 py-3 text-xs text-muted-foreground">{p.sku}</td><td className="px-4 py-3 text-right tabular text-destructive">{Number(p.estoque)}</td><td className="px-4 py-3 text-right tabular text-muted-foreground">{Number(p.estoque_minimo ?? 0)}</td></tr>
-                      ))}
-                    </tbody>
-                  </table></div>
-                </SectionCard>
-              </>
-            );
-          })()}
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
