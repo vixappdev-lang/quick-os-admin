@@ -6,9 +6,10 @@ function ctx(): AudioContext | null {
   try {
     const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
     if (!Ctx) return null;
-    if (!_ctx || _ctx.state === "closed") _ctx = new Ctx();
-    if (_ctx.state === "suspended") _ctx.resume().catch(() => {});
-    return _ctx;
+    if (!_ctx || _ctx.state === "closed") _ctx = new Ctx() as AudioContext;
+    const c = _ctx!;
+    if (c.state === "suspended") c.resume().catch(() => {});
+    return c;
   } catch {
     return null;
   }
