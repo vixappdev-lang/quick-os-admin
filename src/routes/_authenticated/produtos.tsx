@@ -9,6 +9,7 @@ import { formatBRL } from "@/lib/format";
 import { ProductFormPanel, type PanelMode } from "@/components/product-form-panel";
 import { Pagination } from "@/components/pagination";
 import { toast } from "sonner";
+import { NovoProdutoChooser } from "@/components/novo-produto-chooser";
 
 export const Route = createFileRoute("/_authenticated/produtos")({
   head: () => ({ meta: [{ title: "Produtos — Quick OS" }] }),
@@ -25,6 +26,7 @@ function ProdutosPage() {
   const [cat, setCat] = useState("todas");
   const [page, setPage] = useState(1);
   const [panel, setPanel] = useState<{ open: boolean; mode: PanelMode; produto: any | null }>({ open: false, mode: "view", produto: null });
+  const [chooserOpen, setChooserOpen] = useState(false);
 
   const filtrados = useMemo(() => produtos.filter((p: any) =>
     (cat === "todas" || p.categoria_id === cat) &&
@@ -38,7 +40,12 @@ function ProdutosPage() {
   const baixo = produtos.filter((p: any) => Number(p.estoque) < Number(p.estoque_minimo ?? 0)).length;
   const ruptura = produtos.filter((p: any) => Number(p.estoque) <= 0).length;
 
-  const openCreate = () => setPanel({ open: true, mode: "create", produto: null });
+  const openCreate = () => setChooserOpen(true);
+  const openManualCreate = () => setPanel({ open: true, mode: "create", produto: null });
+  const openEditById = (id: string) => {
+    const p = produtos.find((x: any) => x.id === id);
+    if (p) setPanel({ open: true, mode: "edit", produto: p });
+  };
   const openView = (p: any) => setPanel({ open: true, mode: "view", produto: p });
   const openEdit = (p: any) => setPanel({ open: true, mode: "edit", produto: p });
   const excluir = async (p: any) => {
@@ -150,6 +157,12 @@ function ProdutosPage() {
         produto={panel.produto}
         onClose={() => setPanel((p) => ({ ...p, open: false }))}
         onModeChange={(m) => setPanel((p) => ({ ...p, mode: m }))}
+      />
+      <NovoProdutoChooser
+        open={chooserOpen}
+        onClose={() => setChooserOpen(false)}
+        onPickManual={openManualCreate}
+        onPickEdit={openEditById}
       />
     </div>
   );
