@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Download, Calendar, DollarSign, ShoppingBag, TrendingUp, Package2, FileBarChart2, Users as UsersIcon, Wallet, Boxes } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader } from "@/components/page-header";
@@ -8,7 +8,6 @@ import { KpiCard } from "@/components/kpi-card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatBRL } from "@/lib/format";
 import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuarios } from "@/lib/queries";
-import { useState } from "react";
 import { RelatorioCatalog } from "@/components/relatorio-catalog";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
