@@ -1,85 +1,160 @@
-# Plano — Relatórios, Scanner e HID
+## Plano Final — Pedidos, Pagamentos múltiplos, Produtos UN/FD/CX, Fix Supabase env & Movimentações
 
-## 1. Relatórios — redesenhar a tela principal
+Agrupa Parte 1 + Parte 2. Sem implementação até aprovação.
 
-Hoje `/relatorios` mostra KPIs + gráficos (Bar/Pie) + Top produtos, e o catálogo fica em `/relatorios/catalogo`. Vou **inverter**: a tela principal vira o catálogo.
+---
 
-**Arquivo:** `src/routes/_authenticated/relatorios.tsx` — rewrite completo:
-- Remover KPIs, charts (Recharts), Top produtos, botão "Abrir Catálogo".
-- Renderizar o conteúdo que hoje está em `relatorios.catalogo.tsx`: sidebar de grupos (Cadastros / Financeiro / Vendas / Estoque) com busca + painel direito com tabela, botões **Imprimir** e **Exportar CSV**.
-- Reaproveitar `useRelatorios`, `exportRelatorioCSV`, `printRelatorio` de `src/components/relatorio-catalog.tsx` (já prontos).
-- Header: "Relatórios" / "Selecione um relatório para visualizar, imprimir ou exportar".
+### 1. Pagamentos múltiplos (modelo "lista de pagamentos")
 
-**Arquivo:** `src/routes/_authenticated/relatorios.catalogo.tsx` — virar redirect simples para `/relatorios` (manter compatibilidade com links antigos).
+Hoje cada pedido tem **1 forma** (`pagamento` text). Vamos suportar **N formas** somando até o total.
 
-Resultado: clicar em **Relatórios** no menu já abre o catálogo numerado — sem gráficos, sem etapa extra.
+**Banco** — nova tabela `pedido_pagamentos`:
+- `id`, `pedido_id` (FK), `tenant_id`
+- `forma` (pix, dinheiro, debito, credito, nota_promissoria, cheque, fiado, outro)
+- `condicao` (à vista / 7/14/30 dias / parcelado) — texto livre
+- `vencimento` (date, opcional)
+- `valor` (numeric)
+- `created_at`
+- GRANTs + RLS por tenant (mesmo padrão das outras tabelas)
+- Trigger que recalcula `pedido.total_pago` e `pedido.restante`
+- Manter coluna legada `pagamento` para compatibilidade (preenchida com a 1ª forma)
+- Renomear label "Fiado" → **"Nota promissória"** já feito no `pagamento.ts`; manter ambos os ids para retrocompat
 
-## 2. Scanner do "Novo produto" — novo fluxo "não cadastrado"
+**Componente novo** `PaymentSplitter` (`src/components/payment-splitter.tsx`):
+- Layout igual ao print: linha "Forma · Condição · Vencimento · Valor · Adicionar"
+- Tabela das formas já adicionadas (com botão remover)
+- Rodapé: **Total da Venda · Total Pago · Restante · Créditos**
+- Bloqueia salvar se `restante !== 0` (ou permite com aviso se "fiado/nota promissória")
+- 100% responsivo (cards no mobile, tabela no desktop)
 
-O erro vem de `identifyAndCreateProduct`: ele tenta INSERT mesmo quando a IA falha, e como `codigo_barras` agora tem UNIQUE index, qualquer concorrência ou erro de validação estoura. Além disso o usuário **não quer** cadastro automático — quer um aviso e o formulário manual com o EAN preenchido.
+**Onde plugar:**
+- **Novo Pedido** (`pedido-builder.tsx`): substituir o grid atual de 5 botões por `PaymentSplitter` embutido
+- **Detalhes do pedido** (`pedidos.$id.tsx`): menu de 3 pontinhos → item **"Pagamentos"** → abre `Sheet` lateral com `PaymentSplitter` (adicionar / editar / remover formas a qualquer momento)
 
-**Mudanças:**
+---
 
-**`src/lib/produto-scan.functions.ts`** — simplificar drasticamente:
-- Renomear lógica: a função vira `lookupProductByEan` (GET-style). Só faz **lookup**:
-  1. `SELECT` em `produtos` por `codigo_barras` ou `sku`.
-  2. Se não achou, `SELECT` em `gtin_global` (sugestão de nome/marca/unidade/categoria/imagem para pré-preencher).
-  3. **Nunca** insere. Retorna `{ found: boolean, produto?: ..., sugestao?: {nome, marca, unidade, categoria_sugerida, imagem_url} }`.
-- Sem chamada a IA no caminho de cadastro novo (elimina erros 500). A IA pode ser usada depois, de forma opcional, dentro do formulário manual (botão "preencher com IA").
+### 2. Kanban de Pedidos — Encerrar + Faturar
 
-**`src/components/novo-produto-chooser.tsx`** — novo estado `not_found`:
-- Stages: `chooser → scanner → processing → (found | duplicate | not_found)`.
-- `found`/`duplicate` → mesmo card de hoje (com "Adicionar estoque" / "Editar agora").
-- `not_found` → card com ícone de alerta, texto **"Produto não cadastrado"**, mostrar EAN em mono, e dois botões:
-  - **Cadastrar manualmente** (primário) → chama `onPickManual(ean, sugestao)` com o código já preenchido e (se houver) dados do `gtin_global` aplicados como defaults.
-  - **Escanear outro** → volta ao stage `scanner`.
-- Atualizar a interface `Props`: `onPickManual: (preFill?: { ean?: string; sugestao?: {...} }) => void`.
+**Encerrar pedido:**
+- Novo status `encerrado` (enum/check) — adicionar na migration
+- Botão "Encerrar" no card do Kanban e no detalhe
+- Filtro do Kanban: ocultar `encerrado`
+- Lista de pedidos: nova aba/filtro **"Encerrados"**
 
-**Callers de `NovoProdutoChooser`** (provavelmente `produtos.tsx` e/ou `produtos.novo.tsx`):
-- Aceitar o pré-fill e passar para `ProductFormPanel`/`produtos.novo` via state/search-param (`?ean=...`).
-- Em `produtos.novo.tsx`, ler `ean` de search params e setar nos campos `codigo_barras` + `sku` ao montar.
+**Faturamento (NFC-e consumidor final):**
+- Aba "Faturamento" no detalhe do pedido
+- Por ora: **gerar DANFE-simulado em PDF/HTML imprimível** (cabeçalho da empresa, dados do cliente "Consumidor Final" quando sem cliente, itens, totais, formas de pagamento, QR code placeholder)
+- Tabela `pedido_faturas`: `id`, `pedido_id`, `numero`, `serie`, `chave_acesso` (placeholder), `emitida_em`, `pdf_url?`, `status` (rascunho/emitida/cancelada)
+- **Integração SEFAZ real fica para fase 2** — aguardar exemplo de NF que o usuário vai enviar para mapear campos. Estrutura já fica preparada.
 
-Resultado: scaneia → se achar, abre o produto; se não, mostra **"Produto não cadastrado"** e abre o formulário manual já com o EAN. Depois de salvar, o produto está disponível no PDV (HID + busca).
+---
 
-## 3. HID Scanner — blindar e finalizar (100% funcional, sem erros)
+### 3. Novo Pedido — Novo Cliente sem dialog antigo
 
-Hoje `src/lib/hid-scanner.tsx` existe e está plugado no `__root.tsx` + `pdv.tsx`. Falta blindagem e integração nos outros pontos.
+- Em `pedido-builder.tsx`, botão "+ Novo cliente" hoje abre dialog
+- Trocar por navegação com `useNavigate` para `/clientes/novo?returnTo=/pedidos/novo&select=1`
+- `clientes/novo` lê `returnTo` e, ao salvar, volta. `pedidos/novo` recupera o cliente recém-criado via search param ou via cache (`useClientes` + último criado) e já seleciona
 
-**`src/lib/hid-scanner.tsx`** — hardening:
-- Ignorar quando algum `Dialog`/`Sheet` Radix com `data-state="open"` estiver visível com input focado (já cobrimos com `isEditable`, mas adicionar guard explícito para evitar conflito com o BarcodeScanner aberto).
-- Garantir `passive: false` no listener para `preventDefault` no `Enter`.
-- Adicionar `aria-hidden` capture-input helper component `<HidCaptureInput />` exportado, para telas que precisam capturar mesmo com inputs visíveis (PDV).
-- Limpar buffer no `blur` da janela e ao trocar de rota (`useEffect` + `router.subscribe('onBeforeNavigate')` opcional — ou simples reset no `visibilitychange`).
-- Telemetria leve via `console.debug` para diagnosticar em produção.
+---
 
-**Integração nas telas:**
-- **PDV** (`src/routes/_authenticated/pdv.tsx`): já tem. Validar que o map de EAN é atualizado quando `produtos` muda (dependency array) e que itens com `codigo_barras` `null` não quebram.
-- **Pedido novo** (`src/routes/_authenticated/pedidos.novo.tsx` / `pedido-builder.tsx`): plugar `useHidScanner` para adicionar item ao pedido em construção quando o usuário bipar.
-- **Estoque entrada** (`src/routes/_authenticated/estoque.movimentacoes.tsx`): plugar para abrir/incrementar quantidade do produto bipado.
-- **BarcodeScanner modal**: desativar HID enquanto o modal de câmera está aberto (evita captura dupla quando o leitor manda Enter).
+### 4. Produtos — UN / FD / CX (multi-embalagem)
 
-**Migration (se necessário):** confirmar índice único em `codigo_barras` (já feito numa migration anterior). Nada novo.
+**Banco** (migration):
+- Adicionar em `produtos`:
+  - `unidade_base` (default "UN")
+  - `embalagens` jsonb (default `[]`) — formato:
+    ```
+    [
+      { "tipo": "FD", "qtd_un": 12, "preco_venda": 60.00, "codigo_barras": "789..." },
+      { "tipo": "CX", "qtd_un": 24, "preco_venda": 115.00 }
+    ]
+    ```
+- Em `pedido_itens`:
+  - `embalagem_tipo` ("UN"|"FD"|"CX", default "UN")
+  - `qtd_un_por_embalagem` (int, default 1)
+  - `qtd_embalagens` (numeric) — `qtd` continua sendo qtd em UN (qtd_embalagens × qtd_un_por_embalagem) para manter cálculo de estoque
 
-## Arquivos afetados
+**Form de Produto** (`product-form-panel.tsx`):
+- Nova seção "Embalagens de venda" com lista editável (tipo, UN por embalagem, preço, código de barras opcional)
 
-```text
-Edit  src/routes/_authenticated/relatorios.tsx           (rewrite — vira catálogo)
-Edit  src/routes/_authenticated/relatorios.catalogo.tsx  (redirect → /relatorios)
-Edit  src/lib/produto-scan.functions.ts                  (lookup-only, sem insert)
-Edit  src/components/novo-produto-chooser.tsx            (stage not_found + onPickManual com preFill)
-Edit  src/routes/_authenticated/produtos.tsx             (passar preFill)
-Edit  src/routes/_authenticated/produtos.novo.tsx        (aceitar ?ean=)
-Edit  src/lib/hid-scanner.tsx                            (hardening + capture input)
-Edit  src/routes/_authenticated/pdv.tsx                  (revisão)
-Edit  src/routes/_authenticated/pedidos.novo.tsx OU
-      src/components/pedido-builder.tsx                  (integrar HID)
-Edit  src/routes/_authenticated/estoque.movimentacoes.tsx (integrar HID)
-```
+**Adicionar item no Pedido** (`pedido-builder.tsx`):
+- Ao clicar em um produto, abrir **modal "Dados do Produto"** (estilo do print enviado anteriormente):
+  - Referência, Produto (readonly)
+  - **Seletor UN/FD/CX** (apenas as cadastradas)
+  - Quantidade, Valor Unitário (preenchido pela embalagem), Total Bruto
+  - % Desconto, Valor de Desconto
+  - % Acréscimo, Valor de Acréscimo
+  - Total Líquido
+- HID scanner: ao ler código que bate com `embalagens[].codigo_barras`, já abre modal com aquela embalagem pré-selecionada
 
-## Critérios de aceite
+---
 
-1. Clicar em **Relatórios** no menu abre direto o catálogo numerado (Cadastros / Financeiro / Vendas / Estoque), com busca, imprimir, exportar CSV. Sem gráficos.
-2. No chooser "Novo produto" → **Scanner** → bipar código novo → tela **"Produto não cadastrado — Cadastrar manualmente"**. Ao clicar, formulário abre com o EAN preenchido. Salvar funciona e o produto fica disponível no PDV.
-3. Bipar código existente → tela **"Já cadastrado"** (igual hoje).
-4. HID: em PDV, pedido novo e movimentação de estoque, bipar um EAN cadastrado adiciona/abre o produto instantaneamente sem foco em campo, sem caracteres digitados em inputs, sem captura dupla quando o modal de câmera estiver aberto.
-5. Sem erros 500 do servidor no fluxo de scan (zero inserts especulativos).
+### 5. Fix CRÍTICO — "Missing Supabase environment variable(s)" fora do preview
+
+**Causa raiz:** `src/integrations/supabase/client.ts` lê `import.meta.env.VITE_SUPABASE_URL` que é substituído **em build-time pelo Vite**. No deploy Cloudflare Worker (`wrangler.jsonc`/`vercel.json`) as envs `VITE_*` precisam estar presentes **no momento do build**, mas estão sendo lidas só em runtime → o bundle do worker fica com `undefined`.
+
+**Solução estratégica (em camadas):**
+
+1. **Tornar o client lazy + tolerante**: já é Proxy lazy ✅. Adicionar fallback: ler também de `globalThis.__SUPABASE_ENV__` injetado pelo SSR a partir de `process.env.SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` (que **existem** no `.env` do worker).
+2. **Injetar envs no HTML via root SSR**: em `src/routes/__root.tsx` (`head()` ou shell), emitir um `<script>` com:
+   ```
+   window.__SUPABASE_ENV__ = { url: "...", key: "..." }
+   ```
+   lido de `process.env.SUPABASE_URL` no servidor (createServerFn `getPublicEnv` chamado no loader do root, com cache).
+3. **Atualizar `client.ts`** (o arquivo é auto-gerado, então criar um **wrapper** `src/integrations/supabase/runtime-env.ts` e ajustar apenas a leitura via Proxy se possível; se não der, documentar que o arquivo precisa de regeneração). Ordem de leitura:
+   `import.meta.env.VITE_*` → `globalThis.__SUPABASE_ENV__` → `process.env.SUPABASE_*` → erro amigável.
+4. **Garantir build Vercel/Worker**: no `scripts/prepare-vercel-output.mjs` e/ou `vite.vercel.config.ts`, **forçar** `define: { 'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL), ... }` na config de build, assim mesmo sem `VITE_*` exportadas no ambiente de deploy o bundle leva o valor correto.
+5. **Mensagem de erro** continua existindo só como último recurso, mas com link de "Reconectar Lovable Cloud".
+
+Resultado: aplicação publicada nunca mais quebra com esse erro, independente de onde o usuário hospede.
+
+---
+
+### 6. Fix — botão "Movimentações" sem ação
+
+Investigar `src/routes/_authenticated/estoque.tsx` e o menu/sidebar. Causa típica: `<Link to="/estoque/movimentacoes">` com path que **não** bate com `createFileRoute("/_authenticated/estoque/movimentacoes")` (filename usa ponto: `estoque.movimentacoes.tsx` → rota `/estoque/movimentacoes`). Plano:
+- Verificar `routeTree.gen.ts` para confirmar id real da rota
+- Substituir `<button onClick>` por `<Link to="/estoque/movimentacoes">` tipado
+- Garantir que `estoque.tsx` (layout pai) renderiza `<Outlet />` se for layout, ou que `movimentacoes` é rota irmã independente
+- Testar navegação no preview antes de finalizar
+
+---
+
+### Arquivos impactados
+
+**Migrations** (uma única):
+- `pedido_pagamentos` (tabela + RLS + GRANTs + trigger soma)
+- `pedido_faturas` (tabela + RLS + GRANTs)
+- `produtos.embalagens jsonb`, `produtos.unidade_base`
+- `pedido_itens.embalagem_tipo`, `qtd_un_por_embalagem`, `qtd_embalagens`
+- `pedidos.status` aceitar `encerrado`; colunas `total_pago`, `restante` (numeric)
+
+**Código novo:**
+- `src/components/payment-splitter.tsx`
+- `src/components/produto-add-dialog.tsx` (modal estilo print UN/FD/CX)
+- `src/components/fatura-print.tsx` (DANFE simulada)
+- `src/integrations/supabase/runtime-env.ts` (fallback envs)
+- `src/lib/queries.ts` — `useAddPedidoPagamento`, `useRemovePedidoPagamento`, `useEncerrarPedido`, `useFaturarPedido`
+
+**Código editado:**
+- `src/components/pedido-builder.tsx` (PaymentSplitter + novo cliente via rota + dialog UN/FD/CX)
+- `src/components/pedido-form.tsx`
+- `src/components/product-form-panel.tsx` (embalagens)
+- `src/routes/_authenticated/pedidos.$id.tsx` (menu 3 pontos → Pagamentos / Encerrar / Faturar; aba Faturamento)
+- `src/routes/_authenticated/pedidos.index.tsx` (filtro Encerrados, ação Encerrar no Kanban)
+- `src/routes/_authenticated/estoque.tsx` (corrigir link Movimentações)
+- `src/routes/__root.tsx` (injetar envs Supabase no SSR)
+- `src/integrations/supabase/client.ts` (se possível; ou wrapper)
+- `vite.vercel.config.ts` / `scripts/prepare-vercel-output.mjs` (define envs no build)
+- `src/lib/pagamento.ts` (já tem nota_promissoria; reordenar)
+
+**Aceite:**
+- Pagamentos múltiplos funcionam em Novo Pedido **e** no menu 3 pontos do detalhe; soma trava em "Restante 0,00"
+- Encerrar pedido tira do Kanban e aparece em "Encerrados" na lista
+- Faturar gera PDF imprimível (estrutura pronta para NFC-e real depois)
+- Novo Cliente abre a tela cheia e volta selecionado
+- Produto pode ser cadastrado com UN+FD+CX; dialog de adicionar item permite escolher embalagem
+- App publicado **não** mostra mais erro "Missing Supabase environment variable(s)"
+- Clicar em "Movimentações" navega para `/estoque/movimentacoes` e renderiza a tela
+
+Aguardando aprovação para implementar.
