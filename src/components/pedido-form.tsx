@@ -480,7 +480,7 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
       </div>
 
       <Dialog open={novoCliOpen} onOpenChange={setNovoCliOpen}>
-        <DialogContent>
+        <DialogContent className="max-sm:!w-screen max-sm:!max-w-none max-sm:!h-[100dvh] max-sm:!rounded-none max-sm:!translate-x-0 max-sm:!translate-y-0 max-sm:!top-0 max-sm:!left-0">
           <DialogHeader><DialogTitle>Cadastrar cliente</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <Field label="Nome"><input autoFocus value={novoCli.nome} onChange={(e) => setNovoCli((s) => ({ ...s, nome: e.target.value }))} className={inputBase} /></Field>
@@ -493,6 +493,15 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Barra de ações MOBILE — fixa no rodapé com safe-area */}
+      <div className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 gap-2 border-t bg-card/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+        <button type="button" onClick={onCancel} className="h-11 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">Cancelar</button>
+        <button type="button" onClick={salvar} disabled={createPedido.isPending || itens.length === 0} className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-[var(--primary-hover)] disabled:opacity-50">
+          {createPedido.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          {createPedido.isPending ? "Salvando..." : `Salvar · ${formatBRL(total)}`}
+        </button>
+      </div>
     </div>
   );
 }
