@@ -15,12 +15,23 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 // E manter `process.env.SUPABASE_*` como acesso dinâmico no browser para que
 // a injeção SSR feita em __root.tsx (window.process.env) siga funcionando —
 // sem isso, plugins podem reescrever estaticamente para `undefined`.
+// Fallback público (anon key + URL) — seguro embutir, pois são chaves
+// publicáveis protegidas por RLS. Garante que builds externos (Vercel,
+// self-host) que não tenham VITE_SUPABASE_* configurado ainda assim
+// funcionem em produção. Quando o ambiente fornece os valores via
+// process.env, eles têm prioridade.
+const FALLBACK_SUPABASE_URL = "https://rbquvltcxdqmbcftxswa.supabase.co";
+const FALLBACK_SUPABASE_PUBLISHABLE_KEY =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJicXV2bHRjeGRxbWJjZnR4c3dhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk1NzkxMTYsImV4cCI6MjA5NTE1NTExNn0.NUVwh909T_F_eFa6i0-zJ_MGXKh1KpYaW5oKnD3c-S0";
+
 const SUPABASE_URL =
-  process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || "";
+  process.env.VITE_SUPABASE_URL ||
+  process.env.SUPABASE_URL ||
+  FALLBACK_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY =
   process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   process.env.SUPABASE_PUBLISHABLE_KEY ||
-  "";
+  FALLBACK_SUPABASE_PUBLISHABLE_KEY;
 
 // Only inject when we actually have values from process.env. Otherwise we
 // would clobber the VITE_* values that @lovable.dev/vite-tanstack-config
