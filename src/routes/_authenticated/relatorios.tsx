@@ -7,15 +7,12 @@ import { SectionCard } from "@/components/section-card";
 import { KpiCard } from "@/components/kpi-card";
 import { formatBRL } from "@/lib/format";
 import { usePedidos } from "@/lib/queries";
+import { PAGAMENTO_META } from "@/lib/pagamento";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — Quick OS" }] }),
   component: RelatoriosPage,
 });
-
-const PAGAMENTO_LABEL: Record<string, string> = {
-  pix: "PIX", credito: "Crédito", debito: "Débito", dinheiro: "Dinheiro", fiado: "Fiado",
-};
 
 function RelatoriosPage() {
   const { data: pedidos = [] } = usePedidos();
@@ -42,7 +39,10 @@ function RelatoriosPage() {
     validos.filter((p: any) => p.pagamento).forEach((p: any) => {
       fmap[p.pagamento] = (fmap[p.pagamento] ?? 0) + Number(p.total);
     });
-    const formasArr = Object.entries(fmap).map(([k, v]) => ({ nome: PAGAMENTO_LABEL[k] ?? k, valor: v }));
+    const formasArr = Object.entries(fmap).map(([k, v]) => ({
+      nome: (PAGAMENTO_META as any)[k]?.label ?? k,
+      valor: v,
+    }));
 
     // top produtos
     const pmap = new Map<string, { id: string; nome: string; qtd: number; receita: number }>();
