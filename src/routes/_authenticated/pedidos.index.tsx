@@ -14,7 +14,6 @@ import { cn } from "@/lib/utils";
 import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, type Pedido } from "@/lib/queries";
 import { toast } from "sonner";
 import { printRomaneio, printRomaneios } from "@/components/romaneio-print";
-import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
   // Index route for /pedidos. Path is normalized below via TanStack;
