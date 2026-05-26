@@ -92,8 +92,16 @@ export function HidScannerProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const reset = () => { bufferRef.current = ""; };
+
     window.addEventListener("keydown", onKey, { capture: true });
-    return () => window.removeEventListener("keydown", onKey, { capture: true } as any);
+    window.addEventListener("blur", reset);
+    document.addEventListener("visibilitychange", reset);
+    return () => {
+      window.removeEventListener("keydown", onKey, { capture: true } as any);
+      window.removeEventListener("blur", reset);
+      document.removeEventListener("visibilitychange", reset);
+    };
   }, [fire]);
 
   return <Ctx.Provider value={{ subscribe }}>{children}</Ctx.Provider>;
@@ -107,4 +115,22 @@ export function useHidScanner(onCode: Handler, enabled = true) {
     if (!ctx || !enabled) return;
     return ctx.subscribe((code) => handlerRef.current(code));
   }, [ctx, enabled]);
+}
+
+/**
+ * Input invisível dedicado para capturar scanners HID em telas onde o foco
+ * tende a ir para outros inputs. Aplica `data-hid-capture="true"` para que
+ * o listener global não ignore o foco neste elemento específico.
+ */
+export function HidCaptureInput() {
+  return (
+    <input
+      data-hid-capture="true"
+      aria-hidden="true"
+      tabIndex={-1}
+      autoComplete="off"
+      className="pointer-events-none absolute h-0 w-0 opacity-0"
+      onChange={() => {}}
+    />
+  );
 }
