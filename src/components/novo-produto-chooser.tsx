@@ -59,7 +59,7 @@ export function NovoProdutoChooser({ open, onClose, onPickManual, onPickEdit }: 
       setStage(r.already ? "duplicate" : "success");
     } catch (e: any) {
       toast.error(e?.message ?? "Erro ao identificar produto");
-      setStage("scanner");
+      setStage("chooser");
     }
   };
 
@@ -115,6 +115,7 @@ export function NovoProdutoChooser({ open, onClose, onPickManual, onPickEdit }: 
                 <DialogTitle className="flex items-center gap-2 text-success">
                   <CheckCircle2 className="h-5 w-5" /> Produto cadastrado
                 </DialogTitle>
+                <DialogDescription>O produto foi adicionado ao catálogo. Defina preço e estoque depois.</DialogDescription>
               </DialogHeader>
               <div className="flex gap-3 rounded-lg border bg-muted/30 p-3">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
@@ -147,7 +148,7 @@ export function NovoProdutoChooser({ open, onClose, onPickManual, onPickEdit }: 
                 <button onClick={close} className="h-9 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
                   Concluir
                 </button>
-                <button onClick={() => { reset(); setStage("scanner"); }}
+                <button onClick={() => { setResult(null); setIdentified(false); setLastEan(""); setStage("scanner"); }}
                   className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
                   <Plus className="h-3.5 w-3.5" /> Novo
                 </button>
@@ -184,7 +185,7 @@ export function NovoProdutoChooser({ open, onClose, onPickManual, onPickEdit }: 
                     Adicionar estoque
                   </button>
                 )}
-                <button onClick={() => { reset(); setStage("scanner"); }}
+                <button onClick={() => { setResult(null); setIdentified(false); setLastEan(""); setStage("scanner"); }}
                   className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
                   <Plus className="h-3.5 w-3.5" /> Novo
                 </button>
