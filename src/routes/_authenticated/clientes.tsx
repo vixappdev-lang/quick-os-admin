@@ -6,7 +6,7 @@ import { SectionCard } from "@/components/section-card";
 import { useClientes } from "@/lib/queries";
 import { formatBRL } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/clientes/")({
+export const Route = createFileRoute("/_authenticated/clientes")({
   head: () => ({ meta: [{ title: "Clientes — Quick OS" }] }),
   component: ClientesPage,
 });
