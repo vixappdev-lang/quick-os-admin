@@ -8,6 +8,17 @@ import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuari
 
 export const Route = createFileRoute("/_authenticated/relatorios/catalogo")({
   head: () => ({ meta: [{ title: "Catálogo de Relatórios — Quick OS" }] }),
+  pendingComponent: () => (
+    <div className="flex min-h-[40vh] items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+    </div>
+  ),
+  errorComponent: ({ error }) => (
+    <div className="mx-auto max-w-md p-8 text-center">
+      <p className="text-sm font-semibold text-destructive">Não foi possível carregar o catálogo</p>
+      <p className="mt-2 text-xs text-muted-foreground">{error.message}</p>
+    </div>
+  ),
   component: CatalogoPage,
 });
 
