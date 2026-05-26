@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Download, FileBarChart2, Info, Printer, Search, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
@@ -42,6 +42,17 @@ function RelatoriosPage() {
   }, [selectedNum, grupos]);
 
   const report: RelReport | null = useMemo(() => (selected ? selected.build() : null), [selected]);
+
+  // Sheet só deve abrir em telas < lg (1024). Sem isso, o overlay do Radix
+  // aparece no desktop mesmo com o conteúdo `lg:hidden`, escurecendo a tela.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 1023.98px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   return (
     <div>
@@ -140,8 +151,8 @@ function RelatoriosPage() {
         </SectionCard>
       </div>
 
-      {/* Sheet mobile: abre quando seleciona relatório */}
-      <Sheet open={!!report && selectedNum != null} onOpenChange={(o) => !o && setSelectedNum(null)}>
+      {/* Sheet mobile: abre quando seleciona relatório (apenas em telas < lg) */}
+      <Sheet open={isMobile && !!report && selectedNum != null} onOpenChange={(o) => !o && setSelectedNum(null)}>
         <SheetContent side="right" className="lg:hidden w-full sm:max-w-md p-0 flex flex-col">
           {report && (
             <>
