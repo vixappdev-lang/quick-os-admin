@@ -224,12 +224,16 @@ export type Database = {
           email: string | null
           endereco: Json | null
           id: string
+          ie: string | null
           limite_credito: number | null
           nome: string
+          nome_fantasia: string | null
           observacoes: string | null
           saldo_fiado: number
           telefone: string | null
+          tipo_pessoa: string
           updated_at: string
+          vendedor_id: string | null
         }
         Insert: {
           created_at?: string
@@ -237,12 +241,16 @@ export type Database = {
           email?: string | null
           endereco?: Json | null
           id?: string
+          ie?: string | null
           limite_credito?: number | null
           nome: string
+          nome_fantasia?: string | null
           observacoes?: string | null
           saldo_fiado?: number
           telefone?: string | null
+          tipo_pessoa?: string
           updated_at?: string
+          vendedor_id?: string | null
         }
         Update: {
           created_at?: string
@@ -250,12 +258,16 @@ export type Database = {
           email?: string | null
           endereco?: Json | null
           id?: string
+          ie?: string | null
           limite_credito?: number | null
           nome?: string
+          nome_fantasia?: string | null
           observacoes?: string | null
           saldo_fiado?: number
           telefone?: string | null
+          tipo_pessoa?: string
           updated_at?: string
+          vendedor_id?: string | null
         }
         Relationships: []
       }
@@ -373,6 +385,53 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      faturamento_pedidos: {
+        Row: {
+          faturamento_id: string
+          pedido_id: string
+        }
+        Insert: {
+          faturamento_id: string
+          pedido_id: string
+        }
+        Update: {
+          faturamento_id?: string
+          pedido_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturamento_pedidos_faturamento_id_fkey"
+            columns: ["faturamento_id"]
+            isOneToOne: false
+            referencedRelation: "faturamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faturamentos: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          numero: string
+          total: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          numero?: string
+          total?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          numero?: string
+          total?: number
+        }
+        Relationships: []
       }
       fidelidade_pontos: {
         Row: {
