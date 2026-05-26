@@ -13,6 +13,7 @@ import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { hasSupabaseEnv } from "@/lib/supabase-env-check";
 import { ThemeProvider } from "@/lib/theme";
+import { HidScannerProvider } from "@/lib/hid-scanner";
 
 function NotFoundComponent() {
   return (
@@ -126,8 +127,10 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <Outlet />
-          <Toaster position="top-right" richColors />
+          <HidScannerProvider>
+            <Outlet />
+            <Toaster position="top-right" richColors />
+          </HidScannerProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

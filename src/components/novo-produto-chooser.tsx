@@ -52,7 +52,7 @@ export function NovoProdutoChooser({ open, onClose, onPickManual, onPickEdit }: 
   }, [open]);
 
   const handleDetected = async (code: string) => {
-    const ean = code.trim();
+    const ean = String(code).trim().replace(/\D+/g, "") || String(code).trim();
     if (!ean) return;
     setLastEan(ean);
     setStage("processing");
@@ -62,8 +62,12 @@ export function NovoProdutoChooser({ open, onClose, onPickManual, onPickEdit }: 
       setIdentified(r.identified);
       qc.invalidateQueries({ queryKey: ["produtos"] });
       setStage(r.already ? "duplicate" : "success");
+      if ((r as any).warning) toast.warning((r as any).warning);
     } catch (e: any) {
-      toast.error(e?.message ?? "Erro ao identificar produto");
+      const msg = e?.message ?? "Erro ao identificar produto";
+      console.error("[identifyAndCreateProduct]", e);
+      toast.error(msg);
+      // Volta para o chooser para o usuário escolher manual ou tentar de novo
       setStage("chooser");
     }
   };

@@ -14,13 +14,22 @@ export const Route = createFileRoute("/_authenticated/relatorios/catalogo")({
     </div>
   ),
   errorComponent: ({ error }) => (
-    <div className="mx-auto max-w-md p-8 text-center">
-      <p className="text-sm font-semibold text-destructive">Não foi possível carregar o catálogo</p>
-      <p className="mt-2 text-xs text-muted-foreground">{error.message}</p>
-    </div>
+    <CatalogoError error={error} />
   ),
   component: CatalogoPage,
 });
+
+function CatalogoError({ error }: { error: Error }) {
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  if (typeof window !== "undefined") console.error("[relatorios/catalogo]", error);
+  return (
+    <div className="mx-auto max-w-md p-8 text-center">
+      <p className="text-sm font-semibold text-destructive">Não foi possível carregar o catálogo</p>
+      <p className="mt-2 text-xs text-muted-foreground">{error.message}</p>
+      <a href="/relatorios" className="mt-4 inline-flex h-9 items-center justify-center rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">Voltar</a>
+    </div>
+  );
+}
 
 function CatalogoPage() {
   const { data: pedidos = [] } = usePedidos();
