@@ -1,10 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ArrowLeft, Printer, CheckCircle2, Clock, Receipt, Truck, User, Pencil, Save, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Printer, CheckCircle2, Clock, Receipt, Truck, User, Pencil, Save, X, Minus, Plus, Trash2, Search, PackagePlus } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge, statusTone } from "@/components/status-badge";
-import { usePedido, useUpdatePedidoStatus, useUpdatePedido, type Pedido } from "@/lib/queries";
+import { usePedido, useUpdatePedidoStatus, useUpdatePedido, useProdutos, type Pedido } from "@/lib/queries";
 import { formatBRL, formatDateTime, formatTime } from "@/lib/format";
 import { printRomaneio } from "@/components/romaneio-print";
 import { toast } from "sonner";
@@ -18,17 +18,23 @@ export const Route = createFileRoute("/_authenticated/pedidos/$id")({
 
 const FLOW: Pedido["status"][] = ["pendente", "autorizado", "separacao", "conferencia", "concluido"];
 
+type EditItem = { produto: { id: string; nome: string; sku?: string | null; unidade?: string | null; imagem_url?: string | null }; qtd: number; preco_unit: number; desconto: number };
+
 function PedidoDetail() {
   const { id } = Route.useParams();
   const { edit } = Route.useSearch();
   const navigate = useNavigate();
   const { data: pedido, isLoading } = usePedido(id);
+  const { data: produtos = [] } = useProdutos();
   const updateStatus = useUpdatePedidoStatus();
   const updatePedido = useUpdatePedido();
   const [editMode, setEditMode] = useState<boolean>(edit === 1);
   const [pagamento, setPagamento] = useState<string>("");
   const [observacoes, setObservacoes] = useState<string>("");
   const [desconto, setDesconto] = useState<string>("0");
+  const [editItens, setEditItens] = useState<EditItem[]>([]);
+  const [buscaProd, setBuscaProd] = useState("");
+  const [showProdList, setShowProdList] = useState(false);
 
   useEffect(() => { setEditMode(edit === 1); }, [edit]);
   useEffect(() => {
@@ -36,8 +42,55 @@ function PedidoDetail() {
       setPagamento(pedido.pagamento ?? "pix");
       setObservacoes(pedido.observacoes ?? "");
       setDesconto(String(Number(pedido.desconto ?? 0)));
+      setEditItens(
+        (pedido.itens ?? []).map((i: any) => ({
+          produto: {
+            id: i.produto?.id ?? i.produto_id,
+            nome: i.produto?.nome ?? "—",
+            sku: i.produto?.sku ?? null,
+            unidade: i.produto?.unidade ?? null,
+            imagem_url: i.produto?.imagem_url ?? null,
+          },
+          qtd: Number(i.qtd),
+          preco_unit: Number(i.preco_unit),
+          desconto: Number(i.desconto ?? 0),
+        }))
+      );
     }
   }, [pedido?.id]);
+
+  const prodFilt = useMemo(() => {
+    const t = buscaProd.trim().toLowerCase();
+    if (t.length < 1) return [];
+    return produtos
+      .filter((p: any) => p.ativo !== false && (p.nome.toLowerCase().includes(t) || p.sku?.toLowerCase().includes(t) || p.codigo_barras?.toLowerCase().includes(t)))
+      .slice(0, 10);
+  }, [produtos, buscaProd]);
+
+  const addProduto = (p: any) => {
+    setEditItens((prev) => {
+      const ix = prev.findIndex((x) => x.produto.id === p.id);
+      if (ix >= 0) {
+        const cp = [...prev];
+        cp[ix] = { ...cp[ix], qtd: cp[ix].qtd + 1 };
+        return cp;
+      }
+      return [...prev, { produto: { id: p.id, nome: p.nome, sku: p.sku, unidade: p.unidade, imagem_url: p.imagem_url }, qtd: 1, preco_unit: Number(p.preco_venda), desconto: 0 }];
+    });
+    setBuscaProd("");
+    setShowProdList(false);
+  };
+  const updItem = (i: number, patch: Partial<EditItem>) =>
+    setEditItens((prev) => prev.map((it, ix) => (ix === i ? { ...it, ...patch } : it)));
+  const removeItem = (i: number) => setEditItens((prev) => prev.filter((_, ix) => ix !== i));
+
+  const toCents = (v: number) => Math.round((Number.isFinite(v) ? v : 0) * 100);
+  const fromCents = (v: number) => v / 100;
+  const subtotalEdit = useMemo(
+    () => fromCents(editItens.reduce((s, i) => s + Math.max(0, toCents(i.preco_unit) * i.qtd - toCents(i.desconto)), 0)),
+    [editItens]
+  );
+  const totalEdit = useMemo(() => Math.max(0, subtotalEdit - (Number(desconto) || 0)), [subtotalEdit, desconto]);
 
   if (isLoading) return <div className="p-10 text-center text-sm text-muted-foreground">Carregando pedido...</div>;
   if (!pedido) return (
@@ -49,6 +102,7 @@ function PedidoDetail() {
     </div>
   );
 
+  const numeroCurto = pedido.numero ?? `#${String(pedido.id).slice(0, 8).toUpperCase()}`;
   const itens = pedido.itens ?? [];
   const ix = FLOW.indexOf(pedido.status);
   const nextStatus: Pedido["status"] | null = ix >= 0 && ix < FLOW.length - 1 ? FLOW[ix + 1] : null;
@@ -62,12 +116,19 @@ function PedidoDetail() {
   };
 
   const salvarEdicao = async () => {
+    if (editItens.length === 0) return toast.error("O pedido precisa ter ao menos 1 item");
     try {
       await updatePedido.mutateAsync({
         id: pedido.id,
         pagamento,
         observacoes,
         desconto: Number(desconto) || 0,
+        itens: editItens.map((i) => ({
+          produto_id: i.produto.id,
+          qtd: i.qtd,
+          preco_unit: i.preco_unit,
+          desconto: i.desconto,
+        })),
       });
       toast.success("Pedido atualizado");
       setEditMode(false);
@@ -91,7 +152,7 @@ function PedidoDetail() {
         <ArrowLeft className="h-3.5 w-3.5" /> Voltar para pedidos
       </Link>
       <PageHeader
-        title={`Pedido ${pedido.numero}`}
+        title={`Pedido ${numeroCurto}`}
         description={`Criado em ${formatDateTime(pedido.created_at)}${pedido.vendedor?.nome ? ` · Vendedor ${pedido.vendedor.nome}` : ""}`}
         actions={
           <>
@@ -120,8 +181,42 @@ function PedidoDetail() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
-          <SectionCard title={`Itens do pedido (${itens.length})`} padded={false}>
-            <div className="overflow-x-auto">
+          <SectionCard title={`Itens do pedido (${editMode ? editItens.length : itens.length})`} padded={false}>
+            {editMode && (
+              <div className="border-b p-3">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={buscaProd}
+                    onFocus={() => setShowProdList(true)}
+                    onChange={(e) => { setBuscaProd(e.target.value); setShowProdList(true); }}
+                    placeholder="Adicionar produto por nome, SKU ou código..."
+                    className="h-10 w-full rounded-md border border-input bg-background pl-10 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  {showProdList && buscaProd && (
+                    <div className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-md border bg-popover shadow-lg">
+                      {prodFilt.length === 0 && <p className="px-3 py-3 text-xs text-muted-foreground">Nenhum produto encontrado</p>}
+                      {prodFilt.map((p: any) => (
+                        <button key={p.id} type="button" onClick={() => addProduto(p)} className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+                            {p.imagem_url ? <img src={p.imagem_url} alt={p.nome} className="h-full w-full object-cover" /> : <PackagePlus className="h-4 w-4 text-muted-foreground" />}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{p.nome}</p>
+                            <p className="text-[11px] text-muted-foreground">{p.sku || "sem SKU"} · {Number(p.estoque)} {p.unidade}</p>
+                          </div>
+                          <span className="tabular text-sm font-semibold text-primary">{formatBRL(Number(p.preco_venda))}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Visualização (não edição) */}
+            {!editMode && (
+              <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b bg-muted/40">
                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Produto</th>
@@ -144,9 +239,61 @@ function PedidoDetail() {
                 ))}
               </tbody>
             </table>
-            </div>
+              </div>
+            )}
+
+            {/* Edição de itens — cards (mobile + desktop) */}
+            {editMode && (
+              <div className="divide-y">
+                {editItens.length === 0 && (
+                  <p className="px-4 py-10 text-center text-sm text-muted-foreground">Use o buscador acima para adicionar produtos.</p>
+                )}
+                {editItens.map((it, i) => {
+                  const tot = fromCents(Math.max(0, toCents(it.preco_unit) * it.qtd - toCents(it.desconto)));
+                  return (
+                    <div key={`${it.produto.id}-${i}`} className="p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+                          {it.produto.imagem_url ? <img src={it.produto.imagem_url} alt={it.produto.nome} className="h-full w-full object-cover" /> : <PackagePlus className="h-4 w-4 text-muted-foreground" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{it.produto.nome}</p>
+                          <p className="text-[11px] text-muted-foreground">{it.produto.sku || "sem SKU"} · {it.produto.unidade ?? "UN"}</p>
+                        </div>
+                        <button onClick={() => removeItem(i)} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive" aria-label="Remover">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                        <div>
+                          <label className="block text-[11px] text-muted-foreground">Qtd</label>
+                          <div className="mt-1 flex items-center gap-1">
+                            <button type="button" onClick={() => updItem(i, { qtd: Math.max(1, it.qtd - 1) })} className="flex h-9 w-9 items-center justify-center rounded-md border bg-background"><Minus className="h-3.5 w-3.5" /></button>
+                            <input type="number" min={1} value={it.qtd} onChange={(e) => updItem(i, { qtd: Math.max(1, Math.round(Number(e.target.value) || 1)) })} className="h-9 w-full rounded-md border border-input bg-background text-center text-sm tabular focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                            <button type="button" onClick={() => updItem(i, { qtd: it.qtd + 1 })} className="flex h-9 w-9 items-center justify-center rounded-md border bg-background"><Plus className="h-3.5 w-3.5" /></button>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] text-muted-foreground">Vlr. unit.</label>
+                          <input type="number" step="0.01" min={0} value={it.preco_unit} onChange={(e) => updItem(i, { preco_unit: Math.max(0, Number(e.target.value) || 0) })} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-right text-sm tabular focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] text-muted-foreground">Desconto</label>
+                          <input type="number" step="0.01" min={0} value={it.desconto} onChange={(e) => updItem(i, { desconto: Math.max(0, Number(e.target.value) || 0) })} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-right text-sm tabular focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] text-muted-foreground">Total</label>
+                          <p className="mt-1 flex h-9 items-center justify-end px-2 text-sm font-semibold tabular">{formatBRL(tot)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
             <div className="space-y-1 border-t bg-muted/30 px-4 py-3 text-sm">
-              <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span className="tabular">{formatBRL(Number(pedido.subtotal))}</span></div>
+              <div className="flex justify-between text-muted-foreground"><span>Subtotal</span><span className="tabular">{formatBRL(editMode ? subtotalEdit : Number(pedido.subtotal))}</span></div>
               <div className="flex justify-between text-muted-foreground"><span>Desconto</span>
                 {editMode ? (
                   <input type="number" step="0.01" min="0" value={desconto} onChange={(e) => setDesconto(e.target.value)} className="h-7 w-28 rounded border bg-background px-2 text-right text-sm tabular focus:outline-none focus:ring-2 focus:ring-primary/20" />
@@ -154,7 +301,7 @@ function PedidoDetail() {
                   <span className="tabular">- {formatBRL(Number(pedido.desconto))}</span>
                 )}
               </div>
-              <div className="flex justify-between border-t pt-1.5 font-semibold"><span>Total</span><span className="tabular text-base text-primary">{formatBRL(Number(pedido.total))}</span></div>
+              <div className="flex justify-between border-t pt-1.5 font-semibold"><span>Total</span><span className="tabular text-base text-primary">{formatBRL(editMode ? totalEdit : Number(pedido.total))}</span></div>
             </div>
           </SectionCard>
 
