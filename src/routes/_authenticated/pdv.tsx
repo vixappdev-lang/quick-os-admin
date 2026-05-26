@@ -139,8 +139,9 @@ function PdvPage() {
 
   const disabled = settings?.pdv_ativo === false;
 
-  // Captura GLOBAL de scanner HID — funciona sem abrir modal nem precisar focar input
-  useHidScanner(handleScanCode, !disabled);
+  // Captura GLOBAL de scanner HID. Desativada quando a câmera do BarcodeScanner está aberta
+  // para evitar captura dupla (o leitor manda Enter no input manual).
+  useHidScanner(handleScanCode, !disabled && !scanOpen);
 
   return (
     <div className="relative -mx-4 -my-4 min-h-[calc(100vh-3.5rem)] md:-mx-6 md:-my-6">

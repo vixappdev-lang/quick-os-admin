@@ -4,6 +4,9 @@ import { useProdutos, useClientes, useCreatePedido, type Produto, type Cliente }
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useHidScanner } from "@/lib/hid-scanner";
+import { normalizeEan } from "@/lib/ean";
+import { beepError, beepScan } from "@/lib/sounds";
 
 type Item = { produto: Produto; qtd: number };
 
@@ -27,6 +30,18 @@ export function PedidoBuilder({ vendedorId, origem = "balcao", onCreated, onCanc
   const [pagamento, setPagamento] = useState<"pix" | "credito" | "debito" | "dinheiro" | "fiado">("pix");
   const [observacoes, setObservacoes] = useState("");
   const [desconto, setDesconto] = useState(0);
+
+  const indexByCode = useMemo(() => {
+    const m = new Map<string, Produto>();
+    produtos.forEach((p: any) => {
+      if (p.ativo === false) return;
+      const cb = normalizeEan(String(p.codigo_barras ?? ""));
+      const sku = String(p.sku ?? "").trim().toLowerCase();
+      if (cb) m.set(cb, p);
+      if (sku) m.set(sku, p);
+    });
+    return m;
+  }, [produtos]);
 
   const produtosFiltrados = useMemo(() => {
     if (!busca) return produtos.slice(0, 24);
@@ -58,6 +73,12 @@ export function PedidoBuilder({ vendedorId, origem = "balcao", onCreated, onCanc
   };
   const updateQtd = (id: string, d: number) => setItens((prev) => prev.map((i) => i.produto.id === id ? { ...i, qtd: Math.max(1, i.qtd + d) } : i));
   const removeItem = (id: string) => setItens((prev) => prev.filter((i) => i.produto.id !== id));
+
+  useHidScanner((code) => {
+    const p = indexByCode.get(normalizeEan(code)) ?? indexByCode.get(code.trim().toLowerCase());
+    if (!p) { beepError(); toast.error(`Código não cadastrado: ${code}`); return; }
+    beepScan(); addItem(p); toast.success(p.nome);
+  });
 
   const salvar = async () => {
     if (itens.length === 0) { toast.error("Adicione ao menos um item"); return; }
