@@ -1,24 +1,27 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Search, Barcode, Plus, Minus, Trash2, User, Percent, CreditCard, Banknote, QrCode, HandCoins, CheckCircle2, Power, Settings, Package } from "lucide-react";
+import { Search, Barcode, Plus, Minus, Trash2, User, Percent, CreditCard, Banknote, QrCode, HandCoins, CheckCircle2, Power, Settings, Package, FileText, Receipt } from "lucide-react";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAppSettings, useCategorias, useCreatePedido, useProdutos, type Produto } from "@/lib/queries";
 import { useAuth } from "@/lib/auth";
+import { BarcodeScanner } from "@/components/barcode-scanner";
 
 export const Route = createFileRoute("/_authenticated/pdv")({
   head: () => ({ meta: [{ title: "PDV — Quick OS" }] }),
   component: PdvPage,
 });
 
-type PaymentId = "pix" | "credito" | "debito" | "dinheiro" | "fiado" | "outro";
+type PaymentId = "pix" | "dinheiro" | "nota_promissoria" | "cheque" | "debito" | "credito" | "fiado" | "outro";
 type CartItem = { produto: Produto; qtd: number };
 const PAGAMENTOS: { id: PaymentId; nome: string; icon: any }[] = [
   { id: "pix", nome: "PIX", icon: QrCode },
-  { id: "credito", nome: "Crédito", icon: CreditCard },
-  { id: "debito", nome: "Débito", icon: CreditCard },
   { id: "dinheiro", nome: "Dinheiro", icon: Banknote },
+  { id: "nota_promissoria", nome: "Nota promissória", icon: FileText },
+  { id: "cheque", nome: "Cheque", icon: Receipt },
+  { id: "debito", nome: "Débito", icon: CreditCard },
+  { id: "credito", nome: "Crédito", icon: CreditCard },
   { id: "fiado", nome: "Fiado", icon: HandCoins },
   { id: "outro", nome: "Outro", icon: CreditCard },
 ];
@@ -42,6 +45,7 @@ function PdvPage() {
   const [desconto, setDesconto] = useState(0);
   const [pag, setPag] = useState<PaymentId>("pix");
   const [recebido, setRecebido] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
 
   const paymentMap = (settings?.metodos_pagamento ?? {}) as Record<string, boolean>;
   const pagamentosAtivos = useMemo(() => {
@@ -120,7 +124,7 @@ function PdvPage() {
                   className="h-11 w-full rounded-md border border-input bg-background pl-10 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </div>
-              <button className="flex h-11 items-center justify-center gap-2 rounded-md border bg-background px-4 text-sm font-medium hover:bg-muted">
+              <button onClick={() => setScanOpen(true)} className="flex h-11 items-center justify-center gap-2 rounded-md border bg-background px-4 text-sm font-medium hover:bg-muted">
                 <Barcode className="h-4 w-4" /> Scanner
               </button>
             </div>
@@ -225,6 +229,20 @@ function PdvPage() {
           </div>
         </div>
       )}
+      <BarcodeScanner
+        open={scanOpen}
+        onClose={() => setScanOpen(false)}
+        onDetected={(code) => {
+          const norm = code.trim().toLowerCase();
+          const p = produtos.find((x: any) => (x.codigo_barras ?? "").toString().trim().toLowerCase() === norm || (x.sku ?? "").toLowerCase() === norm) as Produto | undefined;
+          if (!p) {
+            toast.error(`Código não cadastrado: ${code}`);
+            return;
+          }
+          addProduto(p);
+          toast.success(`${p.nome} · ${formatBRL(Number(p.preco_venda))} / ${p.unidade}`);
+        }}
+      />
     </div>
   );
 }
