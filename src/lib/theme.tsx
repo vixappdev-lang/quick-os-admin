@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 export type ThemeMode = "light" | "dark" | "system";
 const KEY = "quickos-theme";
 
-type Ctx = { theme: ThemeMode; resolved: "light" | "dark"; setTheme: (t: ThemeMode) => void; cycle: () => void };
+type Ctx = { theme: ThemeMode; resolved: "light" | "dark"; setTheme: (t: ThemeMode) => void; cycle: () => void; toggle: () => void };
 const ThemeCtx = createContext<Ctx | null>(null);
 
 function resolve(mode: ThemeMode): "light" | "dark" {
@@ -50,7 +50,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const cycle = () => setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light");
 
-  return <ThemeCtx.Provider value={{ theme, resolved, setTheme, cycle }}>{children}</ThemeCtx.Provider>;
+  // Alternância simples claro<->escuro (sem passar por "system"), evita ícone de PC
+  const toggle = () => setTheme(resolved === "dark" ? "light" : "dark");
+
+  return <ThemeCtx.Provider value={{ theme, resolved, setTheme, cycle, toggle }}>{children}</ThemeCtx.Provider>;
 }
 
 export function useTheme() {
