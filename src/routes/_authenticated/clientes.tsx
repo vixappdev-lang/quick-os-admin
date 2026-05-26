@@ -16,6 +16,10 @@ function ClientesPage() {
   const matches = useMatches();
   const hasChild = matches.some((m: any) => typeof m.routeId === "string" && m.routeId.startsWith("/_authenticated/clientes/"));
   if (hasChild) return <Outlet />;
+  return <ClientesList navigate={navigate} />;
+}
+
+function ClientesList({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
   const { data: clientes = [], isLoading } = useClientes();
   const [busca, setBusca] = useState("");
 
