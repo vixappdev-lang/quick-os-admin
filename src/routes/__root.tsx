@@ -85,6 +85,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Quick OS — Sistema Operacional Enterprise" },
+      { name: "twitter:description", content: "Plataforma operacional premium para conveniências, distribuidoras, adegas e varejo." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0ba2060b-7a8f-48a3-b9fb-f64effd99d08/id-preview-98c16ae6--a418c780-fb32-4dce-8cc0-a1990adaa079.lovable.app-1779832100260.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/0ba2060b-7a8f-48a3-b9fb-f64effd99d08/id-preview-98c16ae6--a418c780-fb32-4dce-8cc0-a1990adaa079.lovable.app-1779832100260.png" },
     ],
     links: [
       {
