@@ -1,14 +1,17 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Printer, CheckCircle2, Clock, Receipt, Truck, User, Pencil, Save, X, Minus, Plus, Trash2, Search, PackagePlus } from "lucide-react";
+import { ArrowLeft, Printer, CheckCircle2, Clock, Receipt, Truck, User, Pencil, Save, X, Minus, Plus, Trash2, Search, PackagePlus, MoreVertical, Wallet, Lock } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge, statusTone } from "@/components/status-badge";
-import { usePedido, useUpdatePedidoStatus, useUpdatePedido, useProdutos, type Pedido } from "@/lib/queries";
+import { usePedido, useUpdatePedidoStatus, useUpdatePedido, useProdutos, usePedidoPagamentos, useAddPedidoPagamento, useRemovePedidoPagamento, useEncerrarPedido, type Pedido } from "@/lib/queries";
 import { formatBRL, formatDateTime, formatTime } from "@/lib/format";
 import { printRomaneio } from "@/components/romaneio-print";
 import { toast } from "sonner";
 import { PAGAMENTO_LIST, pagamentoLabel } from "@/lib/pagamento";
+import { PaymentSplitter } from "@/components/payment-splitter";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
   head: () => ({ meta: [{ title: "Detalhes do pedido — Quick OS" }] }),
