@@ -446,6 +446,7 @@ export function useCreatePedido() {
       desconto?: number;
       observacoes?: string | null;
       itens: { produto_id: string; qtd: number; preco_unit: number; desconto?: number }[];
+      pagamentos?: { forma: string; condicao?: string | null; vencimento?: string | null; valor: number }[];
     }) => {
       const toCents = (v: number) => Math.round((Number.isFinite(v) ? v : 0) * 100);
       const fromCents = (v: number) => v / 100;
@@ -479,6 +480,22 @@ export function useCreatePedido() {
       }));
       const { error: ie } = await supabase.from("pedido_itens").insert(itensInsert);
       if (ie) throw ie;
+      // Múltiplas formas de pagamento (opcional)
+      if (input.pagamentos && input.pagamentos.length > 0) {
+        const rows = input.pagamentos
+          .filter((p) => Number(p.valor) > 0)
+          .map((p) => ({
+            pedido_id: pedido.id,
+            forma: p.forma,
+            condicao: p.condicao ?? null,
+            vencimento: p.vencimento ?? null,
+            valor: p.valor,
+          }));
+        if (rows.length > 0) {
+          const { error: pe2 } = await supabase.from("pedido_pagamentos" as any).insert(rows as any);
+          if (pe2) throw pe2;
+        }
+      }
       // Se a venda veio do PDV, lança movimento de venda no caixa atual (se houver)
       if (input.origem === "pdv" && total > 0) {
         try {
