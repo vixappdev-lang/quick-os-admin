@@ -8,6 +8,7 @@ import { usePedido, useUpdatePedidoStatus, useUpdatePedido, type Pedido } from "
 import { formatBRL, formatDateTime, formatTime } from "@/lib/format";
 import { printRomaneio } from "@/components/romaneio-print";
 import { toast } from "sonner";
+import { PAGAMENTO_LIST, pagamentoLabel } from "@/lib/pagamento";
 
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
   head: () => ({ meta: [{ title: "Detalhes do pedido — Quick OS" }] }),
@@ -200,11 +201,11 @@ function PedidoDetail() {
             <div className="space-y-2 text-sm">
               <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Método</span>
                 {editMode ? (
-                  <select value={pagamento} onChange={(e) => setPagamento(e.target.value)} className="h-8 rounded border bg-background px-2 text-sm capitalize focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    {["pix","credito","debito","dinheiro","fiado","outro"].map((m) => <option key={m} value={m}>{m}</option>)}
+                  <select value={pagamento} onChange={(e) => setPagamento(e.target.value)} className="h-8 rounded border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    {PAGAMENTO_LIST.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
                   </select>
                 ) : (
-                  <span className="font-medium capitalize">{pedido.pagamento ?? "—"}</span>
+                  <span className="font-medium">{pagamentoLabel(pedido.pagamento)}</span>
                 )}
               </div>
               <div className="flex justify-between"><span className="text-muted-foreground">Status</span><StatusBadge status={pedido.status} tone={statusTone(pedido.status)} /></div>
