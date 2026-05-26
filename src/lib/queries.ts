@@ -162,6 +162,121 @@ export function useUpsertCliente() {
   });
 }
 
+// Vendedores (profiles com role 'vendedor' ou staff)
+export function useVendedores() {
+  return useQuery({
+    queryKey: ["vendedores"],
+    queryFn: async () => {
+      const [{ data: profiles }, { data: roles }] = await Promise.all([
+        supabase.from("profiles").select("id, nome, email").order("nome"),
+        supabase.from("user_roles").select("user_id, role"),
+      ]);
+      const rmap = new Map<string, string[]>();
+      (roles ?? []).forEach((r: any) => {
+        const arr = rmap.get(r.user_id) ?? [];
+        arr.push(r.role);
+        rmap.set(r.user_id, arr);
+      });
+      return (profiles ?? []).map((p: any) => ({ ...p, roles: rmap.get(p.id) ?? [] }))
+        .filter((p: any) => p.roles.some((r: string) => ["vendedor", "admin", "gerente", "operador"].includes(r)));
+    },
+    staleTime: 60_000,
+  });
+}
+
+// Atualizar pedido (edição completa)
+export function useUpdatePedido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: string;
+      cliente_id?: string | null;
+      pagamento?: string | null;
+      observacoes?: string | null;
+      desconto?: number;
+      itens?: { produto_id: string; qtd: number; preco_unit: number; desconto?: number }[];
+    }) => {
+      const toCents = (v: number) => Math.round((Number.isFinite(v) ? v : 0) * 100);
+      const fromCents = (v: number) => v / 100;
+      const patch: any = { updated_at: new Date().toISOString() };
+      if (input.cliente_id !== undefined) patch.cliente_id = input.cliente_id;
+      if (input.pagamento !== undefined) patch.pagamento = input.pagamento;
+      if (input.observacoes !== undefined) patch.observacoes = input.observacoes;
+      if (input.itens) {
+        const subtotalCents = input.itens.reduce((s, i) => s + Math.max(0, toCents(i.preco_unit) * i.qtd - toCents(i.desconto ?? 0)), 0);
+        const descontoCents = Math.min(toCents(input.desconto ?? 0), subtotalCents);
+        patch.subtotal = fromCents(subtotalCents);
+        patch.desconto = fromCents(descontoCents);
+        patch.total = fromCents(Math.max(0, subtotalCents - descontoCents));
+        // substitui itens
+        await supabase.from("pedido_itens").delete().eq("pedido_id", input.id);
+        const itensInsert = input.itens.map((i) => ({
+          pedido_id: input.id,
+          produto_id: i.produto_id,
+          qtd: i.qtd,
+          preco_unit: i.preco_unit,
+          desconto: i.desconto ?? 0,
+          total: fromCents(Math.max(0, toCents(i.preco_unit) * i.qtd - toCents(i.desconto ?? 0))),
+        }));
+        if (itensInsert.length) await supabase.from("pedido_itens").insert(itensInsert);
+      } else if (input.desconto !== undefined) {
+        patch.desconto = input.desconto;
+      }
+      const { data, error } = await supabase.from("pedidos").update(patch).eq("id", input.id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["pedidos", v.id] });
+    },
+  });
+}
+
+// Histórico de caixa
+export function useCaixaHistorico(limit = 10) {
+  return useQuery({
+    queryKey: ["caixa", "historico", limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("caixa_sessoes")
+        .select("*")
+        .order("abertura", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return data ?? [];
+    },
+    staleTime: 30_000,
+  });
+}
+
+// Faturamentos
+export function useCriarFaturamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { pedidoIds: string[]; total: number; userId?: string | null }) => {
+      const { data: fat, error } = await supabase
+        .from("faturamentos" as any)
+        .insert({ total: input.total, created_by: input.userId ?? null } as any)
+        .select()
+        .single();
+      if (error) throw error;
+      if (input.pedidoIds.length) {
+        const rows = input.pedidoIds.map((pid) => ({ faturamento_id: (fat as any).id, pedido_id: pid }));
+        const { error: re } = await supabase.from("faturamento_pedidos" as any).insert(rows as any);
+        if (re) throw re;
+        // marca pedidos como concluido
+        await supabase.from("pedidos").update({ status: "concluido", updated_at: new Date().toISOString() }).in("id", input.pedidoIds);
+      }
+      return fat;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["faturamentos"] });
+    },
+  });
+}
+
 // PEDIDOS
 export function usePedidos(filters?: { vendedorId?: string }) {
   return useQuery({
