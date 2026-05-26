@@ -459,6 +459,39 @@ export type Database = {
           },
         ]
       }
+      gtin_global: {
+        Row: {
+          categoria_sugerida: string | null
+          created_at: string
+          fonte: string | null
+          gtin: string
+          imagem_url: string | null
+          marca: string | null
+          nome: string
+          unidade: string | null
+        }
+        Insert: {
+          categoria_sugerida?: string | null
+          created_at?: string
+          fonte?: string | null
+          gtin: string
+          imagem_url?: string | null
+          marca?: string | null
+          nome: string
+          unidade?: string | null
+        }
+        Update: {
+          categoria_sugerida?: string | null
+          created_at?: string
+          fonte?: string | null
+          gtin?: string
+          imagem_url?: string | null
+          marca?: string | null
+          nome?: string
+          unidade?: string | null
+        }
+        Relationships: []
+      }
       nfe_entradas: {
         Row: {
           chave: string | null
