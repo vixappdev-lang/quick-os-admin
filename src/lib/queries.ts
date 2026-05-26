@@ -379,9 +379,28 @@ export function useCreatePedido() {
       }));
       const { error: ie } = await supabase.from("pedido_itens").insert(itensInsert);
       if (ie) throw ie;
+      // Se a venda veio do PDV, lança movimento de venda no caixa atual (se houver)
+      if (input.origem === "pdv" && total > 0) {
+        try {
+          const { data: sessao } = await supabase
+            .from("caixa_sessoes").select("id").eq("status", "aberto")
+            .order("abertura", { ascending: false }).limit(1).maybeSingle();
+          if (sessao?.id) {
+            await supabase.from("caixa_movimentos").insert({
+              sessao_id: sessao.id,
+              tipo: "venda" as any,
+              valor: total,
+              descricao: `Venda ${pedido.numero} (${input.pagamento ?? "—"})`,
+            } as any);
+          }
+        } catch {}
+      }
       return pedido;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["pedidos"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["caixa"] });
+    },
   });
 }
 
