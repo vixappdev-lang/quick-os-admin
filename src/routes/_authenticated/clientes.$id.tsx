@@ -1,8 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Phone, Mail } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { ArrowLeft, Phone, Mail, Printer, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
-import { useCliente, usePedidos } from "@/lib/queries";
+import { ClienteForm } from "@/components/cliente-form";
+import { printCliente } from "@/components/cliente-print";
+import { useAppSettings, useCliente, usePedidos } from "@/lib/queries";
 import { formatBRL, formatDateTime } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/clientes/$id")({
@@ -12,18 +15,51 @@ export const Route = createFileRoute("/_authenticated/clientes/$id")({
 
 function ClienteDetalhe() {
   const { id } = Route.useParams();
+  const navigate = useNavigate();
   const { data: cliente, isLoading } = useCliente(id);
+  const { data: settings } = useAppSettings();
   const { data: pedidos = [] } = usePedidos();
+  const [editing, setEditing] = useState(false);
   const meusPedidos = pedidos.filter((p) => p.cliente_id === id);
   const totalGasto = meusPedidos.filter((p) => p.status === "concluido").reduce((s, p) => s + Number(p.total), 0);
 
   if (isLoading) return <div className="p-10 text-center text-sm text-muted-foreground">Carregando...</div>;
   if (!cliente) return <div className="p-10 text-center text-sm text-muted-foreground">Cliente não encontrado</div>;
 
+  if (editing) {
+    return (
+      <div>
+        <Link to="/clientes" className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3.5 w-3.5" /> Voltar</Link>
+        <ClienteForm cliente={cliente as any} onSaved={() => setEditing(false)} onCancel={() => setEditing(false)} />
+      </div>
+    );
+  }
+
+  const imprimir = () => printCliente(cliente, {
+    razao: settings?.empresa_razao,
+    cnpj: settings?.empresa_cnpj,
+    endereco: settings?.empresa_endereco,
+    telefone: settings?.empresa_telefone,
+    email: settings?.empresa_email,
+  });
+
   return (
     <div>
       <Link to="/clientes" className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"><ArrowLeft className="h-3.5 w-3.5" /> Voltar</Link>
-      <PageHeader title={cliente.nome} description={`${meusPedidos.length} pedidos · cadastrado em ${new Date(cliente.created_at).toLocaleDateString("pt-BR")}`} />
+      <PageHeader
+        title={cliente.nome}
+        description={`${meusPedidos.length} pedidos · cadastrado em ${new Date(cliente.created_at).toLocaleDateString("pt-BR")}`}
+        actions={
+          <>
+            <button onClick={imprimir} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
+              <Printer className="h-3.5 w-3.5" /> Imprimir
+            </button>
+            <button onClick={() => setEditing(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
+              <Pencil className="h-3.5 w-3.5" /> Editar
+            </button>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <SectionCard title="Histórico de pedidos" padded={false}>
