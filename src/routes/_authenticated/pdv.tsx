@@ -266,17 +266,7 @@ function PdvPage() {
       <BarcodeScanner
         open={scanOpen}
         onClose={() => setScanOpen(false)}
-        onDetected={(code) => {
-          const norm = code.trim().toLowerCase();
-          const p = produtos.find((x: any) => (x.codigo_barras ?? "").toString().trim().toLowerCase() === norm || (x.sku ?? "").toLowerCase() === norm) as Produto | undefined;
-          if (!p) {
-            beepError();
-            toast.error(`Código não cadastrado: ${code}`);
-            return;
-          }
-          addProduto(p);
-          toast.success(`${p.nome} · ${formatBRL(Number(p.preco_venda))} / ${p.unidade}`);
-        }}
+        onDetected={(code) => { setScanOpen(false); handleScanCode(code); }}
       />
     </div>
   );
