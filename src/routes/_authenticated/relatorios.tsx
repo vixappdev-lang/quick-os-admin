@@ -1,13 +1,10 @@
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { useMemo } from "react";
-import { Download, Calendar, DollarSign, ShoppingBag, TrendingUp, Package2, FileBarChart2 } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { ChevronRight, Download, FileBarChart2, Info, Printer, Search } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
-import { KpiCard } from "@/components/kpi-card";
-import { formatBRL } from "@/lib/format";
-import { usePedidos } from "@/lib/queries";
-import { PAGAMENTO_META } from "@/lib/pagamento";
+import { useRelatorios, exportRelatorioCSV, printRelatorio, type RelReport, type RelRow } from "@/components/relatorio-catalog";
+import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuarios } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — Quick OS" }] }),
@@ -16,141 +13,159 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
 
 function RelatoriosPage() {
   const { data: pedidos = [] } = usePedidos();
-  const navigate = useNavigate();
-  const router = useRouter();
+  const { data: produtos = [] } = useProdutos();
+  const { data: clientes = [] } = useClientes();
+  const { data: despesas = [] } = useDespesas();
+  const { data: contas = [] } = useContas();
+  const { data: usuarios = [] } = useUsuarios();
 
-  const { faturamento, itens, ticket, qtdPedidos, vendasDia, formas, topProdutos } = useMemo(() => {
-    const validos = pedidos.filter((p: any) => p.status !== "cancelado");
-    const fat = validos.reduce((s: number, p: any) => s + Number(p.total), 0);
-    const itensTotal = validos.reduce((s: number, p: any) => s + (p.itens ?? []).reduce((ss: number, i: any) => ss + Number(i.qtd), 0), 0);
+  const grupos = useRelatorios({ pedidos, produtos, clientes, despesas, contas, usuarios });
+  const [selectedNum, setSelectedNum] = useState<number | null>(null);
+  const [busca, setBusca] = useState("");
 
-    // vendas dos últimos 30 dias
-    const now = new Date();
-    const start = new Date(now); start.setDate(now.getDate() - 29); start.setHours(0, 0, 0, 0);
-    const arr: { dia: string; vendas: number }[] = [];
-    for (let i = 0; i < 30; i++) {
-      const d = new Date(start); d.setDate(start.getDate() + i);
-      const next = new Date(d); next.setDate(d.getDate() + 1);
-      const v = validos.filter((p: any) => new Date(p.created_at) >= d && new Date(p.created_at) < next)
-        .reduce((s: number, p: any) => s + Number(p.total), 0);
-      arr.push({ dia: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), vendas: v });
+  const filtered = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    if (!q) return grupos;
+    return grupos
+      .map((g) => ({ ...g, rows: g.rows.filter((r) => `${r.num} ${r.titulo}`.toLowerCase().includes(q)) }))
+      .filter((g) => g.rows.length > 0);
+  }, [grupos, busca]);
+
+  const selected: RelRow | null = useMemo(() => {
+    if (selectedNum == null) return null;
+    for (const g of grupos) {
+      const r = g.rows.find((x) => x.num === selectedNum);
+      if (r) return r;
     }
+    return null;
+  }, [selectedNum, grupos]);
 
-    // formas de pagamento
-    const fmap: Record<string, number> = {};
-    validos.filter((p: any) => p.pagamento).forEach((p: any) => {
-      fmap[p.pagamento] = (fmap[p.pagamento] ?? 0) + Number(p.total);
-    });
-    const formasArr = Object.entries(fmap).map(([k, v]) => ({
-      nome: (PAGAMENTO_META as any)[k]?.label ?? k,
-      valor: v,
-    }));
-
-    // top produtos
-    const pmap = new Map<string, { id: string; nome: string; qtd: number; receita: number }>();
-    validos.forEach((p: any) => (p.itens ?? []).forEach((i: any) => {
-      const id = i.produto?.id ?? i.produto_id;
-      if (!id) return;
-      const cur = pmap.get(id) ?? { id, nome: i.produto?.nome ?? "—", qtd: 0, receita: 0 };
-      cur.qtd += Number(i.qtd);
-      cur.receita += Number(i.total);
-      pmap.set(id, cur);
-    }));
-    const top = Array.from(pmap.values()).sort((a, b) => b.receita - a.receita).slice(0, 8);
-
-    return {
-      faturamento: fat,
-      itens: itensTotal,
-      ticket: validos.length ? fat / validos.length : 0,
-      qtdPedidos: validos.length,
-      vendasDia: arr,
-      formas: formasArr,
-      topProdutos: top,
-    };
-  }, [pedidos]);
+  const report: RelReport | null = useMemo(() => (selected ? selected.build() : null), [selected]);
 
   return (
     <div>
-      <PageHeader title="Relatórios" description="Análise consolidada de performance" actions={
-        <>
-          <button
-            type="button"
-            onMouseEnter={() => { try { router.preloadRoute({ to: "/relatorios/catalogo" }); } catch {} }}
-            onClick={() => {
-              try { navigate({ to: "/relatorios/catalogo" }); }
-              catch (err) { console.error("Falha ao navegar para Catálogo de Relatórios", err); window.location.assign("/relatorios/catalogo"); }
-            }}
-            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-[var(--primary-hover)] shadow-sm"
-          >
-            <FileBarChart2 className="h-3.5 w-3.5" /> Abrir Catálogo
-          </button>
-          <button className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Calendar className="h-3.5 w-3.5" /> Últimos 30 dias</button>
-          <button onClick={() => window.print()} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Download className="h-3.5 w-3.5" /> Exportar</button>
-        </>
-      } />
+      <PageHeader
+        title="Relatórios"
+        description="Selecione um relatório para visualizar, imprimir ou exportar em CSV"
+      />
 
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard label="Faturamento" value={formatBRL(faturamento)} icon={DollarSign} accent="primary" />
-        <KpiCard label="Pedidos" value={String(qtdPedidos)} icon={ShoppingBag} accent="info" />
-        <KpiCard label="Ticket médio" value={formatBRL(ticket)} icon={TrendingUp} accent="success" />
-        <KpiCard label="Itens vendidos" value={String(itens)} icon={Package2} accent="warning" />
-      </div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <SectionCard title="Vendas por dia" description="Receita diária — últimos 30 dias" className="lg:col-span-2" padded={false}>
-          <div className="h-72 p-4">
-            <ResponsiveContainer>
-              <BarChart data={vendasDia} margin={{ top: 8, right: 8, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gBar" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--primary)" stopOpacity={1} />
-                    <stop offset="100%" stopColor="var(--primary)" stopOpacity={0.55} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="dia" fontSize={10} stroke="var(--muted-foreground)" tickLine={false} axisLine={false} interval={3} />
-                <YAxis fontSize={11} stroke="var(--muted-foreground)" tickLine={false} axisLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip cursor={{ fill: "color-mix(in oklab, var(--primary) 8%, transparent)" }} contentStyle={{ backgroundColor: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => formatBRL(v)} />
-                <Bar dataKey="vendas" fill="url(#gBar)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
+        <SectionCard padded={false} className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-7rem)] overflow-hidden">
+          <div className="border-b p-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                placeholder="Buscar por nº ou nome..."
+                className="h-9 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </div>
           </div>
-        </SectionCard>
-        <SectionCard title="Métodos de pagamento" padded={false}>
-          <div className="h-72 p-4">
-            {formas.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Sem dados ainda</div>
-            ) : (
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie data={formas} dataKey="valor" nameKey="nome" innerRadius={55} outerRadius={85} paddingAngle={2}>
-                    {formas.map((_, i) => <Cell key={i} fill={`var(--chart-${(i % 5) + 1})`} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: "var(--popover)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => formatBRL(v)} />
-                </PieChart>
-              </ResponsiveContainer>
+          <div className="max-h-[60vh] lg:max-h-[calc(100vh-13rem)] overflow-y-auto">
+            {filtered.length === 0 && (
+              <p className="px-4 py-6 text-center text-xs text-muted-foreground">Nenhum relatório encontrado</p>
             )}
+            {filtered.map((g) => (
+              <div key={g.titulo} className="border-b last:border-b-0">
+                <div className="bg-muted/40 px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {g.titulo}
+                </div>
+                <ul>
+                  {g.rows.map((r) => {
+                    const active = r.num === selectedNum;
+                    return (
+                      <li key={r.num}>
+                        <button
+                          onClick={() => setSelectedNum(r.num)}
+                          className={`flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition ${
+                            active ? "bg-primary/10 text-primary" : "hover:bg-muted"
+                          }`}
+                        >
+                          <span className={`w-12 shrink-0 text-right font-mono text-xs ${active ? "text-primary" : "text-muted-foreground"}`}>
+                            {r.num} -
+                          </span>
+                          <span className="flex-1 truncate">{r.titulo}</span>
+                          <Info className={`h-3.5 w-3.5 shrink-0 ${active ? "text-primary" : "text-muted-foreground/60"}`} aria-label={r.info} />
+                          <ChevronRight className={`h-3.5 w-3.5 shrink-0 ${active ? "text-primary" : "text-muted-foreground/40"}`} />
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
           </div>
         </SectionCard>
-      </div>
-      <div className="mt-4">
-        <SectionCard title="Top produtos" padded={false}>
-          <div className="overflow-x-auto"><table className="w-full min-w-[420px] text-sm">
-            <thead>
-              <tr className="border-b bg-muted/40">
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Produto</th>
-                <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Qtd</th>
-                <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Receita</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topProdutos.length === 0 && (
-                <tr><td colSpan={3} className="px-4 py-8 text-center text-xs text-muted-foreground">Sem vendas ainda</td></tr>
+
+        <SectionCard padded={false}>
+          {!report ? (
+            <div className="flex min-h-[300px] flex-col items-center justify-center p-10 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
+                <FileBarChart2 className="h-7 w-7 text-primary" />
+              </div>
+              <h3 className="mt-4 text-base font-semibold">Selecione um relatório</h3>
+              <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                Escolha qualquer item numerado da lista ao lado para visualizar os dados, imprimir ou exportar em CSV.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-wrap items-center gap-2 border-b px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Relatório nº {selected?.num}</p>
+                  <h2 className="truncate text-base font-semibold">{report.titulo}</h2>
+                  {selected?.info && <p className="mt-0.5 truncate text-xs text-muted-foreground">{selected.info}</p>}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => exportRelatorioCSV(report)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-xs font-medium hover:bg-muted"
+                  >
+                    <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Exportar</span> CSV
+                  </button>
+                  <button
+                    onClick={() => printRelatorio(report)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"
+                  >
+                    <Printer className="h-3.5 w-3.5" /> Imprimir
+                  </button>
+                </div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[480px] text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/40">
+                      {report.colunas.map((c) => (
+                        <th key={c} className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          {c}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {report.linhas.length === 0 && (
+                      <tr>
+                        <td colSpan={report.colunas.length} className="px-3 py-12 text-center text-xs text-muted-foreground">
+                          Sem dados para este relatório
+                        </td>
+                      </tr>
+                    )}
+                    {report.linhas.map((r, i) => (
+                      <tr key={i} className="border-b hover:bg-muted/40">
+                        {r.map((c, j) => (
+                          <td key={j} className="px-3 py-2 tabular">{c}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {report.rodape && (
+                <p className="border-t bg-muted/40 px-4 py-2.5 text-right text-xs font-semibold">{report.rodape}</p>
               )}
-              {topProdutos.map((p) => (
-                <tr key={p.id} className="border-b"><td className="px-4 py-3 font-medium">{p.nome}</td><td className="px-4 py-3 text-right tabular">{p.qtd}</td><td className="px-4 py-3 text-right tabular font-semibold">{formatBRL(p.receita)}</td></tr>
-              ))}
-            </tbody>
-          </table></div>
+            </>
+          )}
         </SectionCard>
       </div>
     </div>

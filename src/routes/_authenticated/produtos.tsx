@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Plus, Search, Package, Eye, Pencil, Trash2, MoreHorizontal } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
@@ -9,7 +9,7 @@ import { formatBRL } from "@/lib/format";
 import { ProductFormPanel, type PanelMode } from "@/components/product-form-panel";
 import { Pagination } from "@/components/pagination";
 import { toast } from "sonner";
-import { NovoProdutoChooser } from "@/components/novo-produto-chooser";
+import { NovoProdutoChooser, type ManualPrefill } from "@/components/novo-produto-chooser";
 
 export const Route = createFileRoute("/_authenticated/produtos")({
   head: () => ({ meta: [{ title: "Produtos — Quick OS" }] }),
@@ -22,6 +22,7 @@ function ProdutosPage() {
   const { data: produtos = [], isLoading } = useProdutos();
   const { data: categorias = [] } = useCategorias();
   const del = useDeleteProduto();
+  const navigate = useNavigate();
   const [busca, setBusca] = useState("");
   const [cat, setCat] = useState("todas");
   const [page, setPage] = useState(1);
@@ -41,7 +42,17 @@ function ProdutosPage() {
   const ruptura = produtos.filter((p: any) => Number(p.estoque) <= 0).length;
 
   const openCreate = () => setChooserOpen(true);
-  const openManualCreate = () => setPanel({ open: true, mode: "create", produto: null });
+  const openManualCreate = (preFill?: ManualPrefill) => {
+    if (preFill?.ean) {
+      const search: Record<string, string> = { ean: preFill.ean };
+      if (preFill.sugestao?.nome) search.nome = preFill.sugestao.nome;
+      if (preFill.sugestao?.unidade) search.unidade = preFill.sugestao.unidade;
+      if (preFill.sugestao?.imagem_url) search.imagem = preFill.sugestao.imagem_url;
+      navigate({ to: "/produtos/novo", search });
+      return;
+    }
+    setPanel({ open: true, mode: "create", produto: null });
+  };
   const openEditById = (id: string) => {
     const p = produtos.find((x: any) => x.id === id);
     if (p) setPanel({ open: true, mode: "edit", produto: p });
