@@ -11,6 +11,7 @@ import {
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
+import { hasSupabaseEnv } from "@/lib/supabase-env-check";
 
 function NotFoundComponent() {
   return (
@@ -116,6 +117,10 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  if (!hasSupabaseEnv()) {
+    return <EnvMissingScreen />;
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
@@ -123,5 +128,29 @@ function RootComponent() {
         <Toaster position="top-right" richColors />
       </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function EnvMissingScreen() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
+      <div className="w-full max-w-xl rounded-lg border border-destructive/30 bg-card p-6 shadow-sm">
+        <h1 className="text-lg font-semibold text-destructive">Backend não configurado neste deploy</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          As variáveis de ambiente do backend não estão presentes no build atual.
+          No painel de hospedagem (ex.: Vercel) adicione as variáveis abaixo em
+          <strong> Settings → Environment Variables</strong> (para Production e Preview)
+          e refaça o deploy.
+        </p>
+        <ul className="mt-4 space-y-1.5 rounded-md border bg-muted/40 p-3 font-mono text-xs">
+          <li><strong>VITE_SUPABASE_URL</strong></li>
+          <li><strong>VITE_SUPABASE_PUBLISHABLE_KEY</strong></li>
+          <li><strong>VITE_SUPABASE_PROJECT_ID</strong></li>
+        </ul>
+        <p className="mt-4 text-xs text-muted-foreground">
+          Os valores estão no arquivo <code className="font-mono">.env</code> deste projeto. Após salvar, clique em <em>Redeploy</em>.
+        </p>
+      </div>
+    </div>
   );
 }
