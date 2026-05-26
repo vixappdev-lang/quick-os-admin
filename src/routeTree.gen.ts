@@ -32,6 +32,7 @@ import { Route as AuthenticatedProdutosIdRouteImport } from './routes/_authentic
 import { Route as AuthenticatedPedidosNovoRouteImport } from './routes/_authenticated/pedidos.novo'
 import { Route as AuthenticatedPedidosIdRouteImport } from './routes/_authenticated/pedidos.$id'
 import { Route as AuthenticatedEstoqueMovimentacoesRouteImport } from './routes/_authenticated/estoque.movimentacoes'
+import { Route as AuthenticatedClientesNovoRouteImport } from './routes/_authenticated/clientes.novo'
 import { Route as AuthenticatedClientesIdRouteImport } from './routes/_authenticated/clientes.$id'
 import { Route as ApiPublicV1ProdutosRouteImport } from './routes/api/public/v1/produtos'
 import { Route as ApiPublicV1PedidosRouteImport } from './routes/api/public/v1/pedidos'
@@ -155,6 +156,12 @@ const AuthenticatedEstoqueMovimentacoesRoute =
     path: '/movimentacoes',
     getParentRoute: () => AuthenticatedEstoqueRoute,
   } as any)
+const AuthenticatedClientesNovoRoute =
+  AuthenticatedClientesNovoRouteImport.update({
+    id: '/novo',
+    path: '/novo',
+    getParentRoute: () => AuthenticatedClientesRoute,
+  } as any)
 const AuthenticatedClientesIdRoute = AuthenticatedClientesIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -188,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/vendedor/novo': typeof VendedorNovoRoute
   '/vendedor/': typeof VendedorIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
+  '/clientes/novo': typeof AuthenticatedClientesNovoRoute
   '/estoque/movimentacoes': typeof AuthenticatedEstoqueMovimentacoesRoute
   '/pedidos/$id': typeof AuthenticatedPedidosIdRoute
   '/pedidos/novo': typeof AuthenticatedPedidosNovoRoute
@@ -214,6 +222,7 @@ export interface FileRoutesByTo {
   '/': typeof AuthenticatedIndexRoute
   '/vendedor': typeof VendedorIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
+  '/clientes/novo': typeof AuthenticatedClientesNovoRoute
   '/estoque/movimentacoes': typeof AuthenticatedEstoqueMovimentacoesRoute
   '/pedidos/$id': typeof AuthenticatedPedidosIdRoute
   '/pedidos/novo': typeof AuthenticatedPedidosNovoRoute
@@ -243,6 +252,7 @@ export interface FileRoutesById {
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/vendedor/': typeof VendedorIndexRoute
   '/_authenticated/clientes/$id': typeof AuthenticatedClientesIdRoute
+  '/_authenticated/clientes/novo': typeof AuthenticatedClientesNovoRoute
   '/_authenticated/estoque/movimentacoes': typeof AuthenticatedEstoqueMovimentacoesRoute
   '/_authenticated/pedidos/$id': typeof AuthenticatedPedidosIdRoute
   '/_authenticated/pedidos/novo': typeof AuthenticatedPedidosNovoRoute
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/vendedor/novo'
     | '/vendedor/'
     | '/clientes/$id'
+    | '/clientes/novo'
     | '/estoque/movimentacoes'
     | '/pedidos/$id'
     | '/pedidos/novo'
@@ -298,6 +309,7 @@ export interface FileRouteTypes {
     | '/'
     | '/vendedor'
     | '/clientes/$id'
+    | '/clientes/novo'
     | '/estoque/movimentacoes'
     | '/pedidos/$id'
     | '/pedidos/novo'
@@ -326,6 +338,7 @@ export interface FileRouteTypes {
     | '/_authenticated/'
     | '/vendedor/'
     | '/_authenticated/clientes/$id'
+    | '/_authenticated/clientes/novo'
     | '/_authenticated/estoque/movimentacoes'
     | '/_authenticated/pedidos/$id'
     | '/_authenticated/pedidos/novo'
@@ -507,6 +520,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEstoqueMovimentacoesRouteImport
       parentRoute: typeof AuthenticatedEstoqueRoute
     }
+    '/_authenticated/clientes/novo': {
+      id: '/_authenticated/clientes/novo'
+      path: '/novo'
+      fullPath: '/clientes/novo'
+      preLoaderRoute: typeof AuthenticatedClientesNovoRouteImport
+      parentRoute: typeof AuthenticatedClientesRoute
+    }
     '/_authenticated/clientes/$id': {
       id: '/_authenticated/clientes/$id'
       path: '/$id'
@@ -533,10 +553,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedClientesRouteChildren {
   AuthenticatedClientesIdRoute: typeof AuthenticatedClientesIdRoute
+  AuthenticatedClientesNovoRoute: typeof AuthenticatedClientesNovoRoute
 }
 
 const AuthenticatedClientesRouteChildren: AuthenticatedClientesRouteChildren = {
   AuthenticatedClientesIdRoute: AuthenticatedClientesIdRoute,
+  AuthenticatedClientesNovoRoute: AuthenticatedClientesNovoRoute,
 }
 
 const AuthenticatedClientesRouteWithChildren =
