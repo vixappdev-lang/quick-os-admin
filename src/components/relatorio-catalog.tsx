@@ -1,15 +1,11 @@
-import { useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Info, Printer, Download, X } from "lucide-react";
+import { useMemo } from "react";
 import { formatBRL } from "@/lib/format";
 
-type Row = { num: number; titulo: string; info: string; build: () => RelReport };
-type RelReport = { titulo: string; colunas: string[]; linhas: (string | number)[][]; rodape?: string };
+export type RelReport = { titulo: string; colunas: string[]; linhas: (string | number)[][]; rodape?: string };
+export type RelRow = { num: number; titulo: string; info: string; build: () => RelReport };
+export type RelGrupo = { titulo: string; rows: RelRow[] };
 
-interface Props {
-  open: boolean;
-  onClose: () => void;
+export interface RelDatasets {
   pedidos: any[];
   produtos: any[];
   clientes: any[];
@@ -23,12 +19,9 @@ const PAG_LABEL: Record<string, string> = {
   debito: "Débito", credito: "Crédito", fiado: "Fiado", outro: "Outro",
 };
 
-export function RelatorioCatalog({ open, onClose, pedidos, produtos, clientes, despesas, contas, usuarios }: Props) {
-  const [current, setCurrent] = useState<RelReport | null>(null);
-
+export function useRelatorios({ pedidos, produtos, clientes, despesas, contas, usuarios }: RelDatasets): RelGrupo[] {
   const validos = useMemo(() => pedidos.filter((p: any) => p.status !== "cancelado"), [pedidos]);
-
-  const grupos: { titulo: string; rows: Row[] }[] = useMemo(() => [
+  return useMemo(() => [
     {
       titulo: "Cadastros",
       rows: [
@@ -144,90 +137,34 @@ export function RelatorioCatalog({ open, onClose, pedidos, produtos, clientes, d
       ],
     },
   ], [validos, produtos, clientes, despesas, contas, usuarios]);
+}
 
-  const exportarCSV = () => {
-    if (!current) return;
-    const sep = ";";
-    const csv = [current.colunas.join(sep), ...current.linhas.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(sep))].join("\n");
-    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `${current.titulo}.csv`; a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
+export function exportRelatorioCSV(report: RelReport) {
+  const sep = ";";
+  const csv = [report.colunas.join(sep), ...report.linhas.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(sep))].join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `${report.titulo}.csv`; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
-  const imprimir = () => {
-    if (!current) return;
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${current.titulo}</title>
-      <style>body{font-family:Arial,sans-serif;color:#111;padding:20px;font-size:12px}
-      h1{font-size:18px;margin:0 0 10px}
-      table{width:100%;border-collapse:collapse;margin-top:10px}
-      th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}
-      th{background:#eef;font-size:11px;text-transform:uppercase}
-      .foot{margin-top:10px;font-weight:bold;text-align:right}
-      </style></head><body>
-      <h1>${current.titulo}</h1>
-      <table><thead><tr>${current.colunas.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
-      <tbody>${current.linhas.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>
-      ${current.rodape ? `<p class="foot">${current.rodape}</p>` : ""}
-      </body></html>`;
-    const w = window.open("", "_blank", "width=900,height=900");
-    if (!w) return;
-    w.document.open(); w.document.write(html); w.document.close();
-    w.onload = () => setTimeout(() => { w.focus(); w.print(); }, 200);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setCurrent(null); onClose(); } }}>
-      <DialogContent className="max-w-3xl p-0">
-        <DialogHeader className="border-b px-4 py-3">
-          <DialogTitle className="text-base">{current ? current.titulo : "Relatórios"}</DialogTitle>
-        </DialogHeader>
-        {!current ? (
-          <div className="max-h-[70vh] overflow-y-auto p-4">
-            <Accordion type="multiple" defaultValue={grupos.map((g) => g.titulo)} className="w-full">
-              {grupos.map((g) => (
-                <AccordionItem key={g.titulo} value={g.titulo}>
-                  <AccordionTrigger className="text-sm font-semibold">{g.titulo}</AccordionTrigger>
-                  <AccordionContent>
-                    <ul className="space-y-1">
-                      {g.rows.map((r) => (
-                        <li key={r.num}>
-                          <button onClick={() => setCurrent(r.build())} className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-muted">
-                            <span className="w-12 text-right font-mono text-xs text-muted-foreground">{r.num} -</span>
-                            <span className="flex-1 text-left">{r.titulo}</span>
-                            <Info className="h-3.5 w-3.5 text-muted-foreground" aria-label={r.info} />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </div>
-        ) : (
-          <div className="flex max-h-[80vh] flex-col">
-            <div className="flex items-center gap-2 border-b px-4 py-2">
-              <button onClick={() => setCurrent(null)} className="text-xs text-muted-foreground hover:text-foreground">← Voltar</button>
-              <div className="ml-auto flex gap-2">
-                <button onClick={exportarCSV} className="inline-flex h-8 items-center gap-1 rounded-md border bg-card px-2 text-xs hover:bg-muted"><Download className="h-3 w-3" /> CSV</button>
-                <button onClick={imprimir} className="inline-flex h-8 items-center gap-1 rounded-md bg-primary px-2 text-xs font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"><Printer className="h-3 w-3" /> Imprimir</button>
-              </div>
-            </div>
-            <div className="overflow-auto">
-              <table className="w-full text-sm">
-                <thead><tr className="border-b bg-muted/40">{current.colunas.map((c) => <th key={c} className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{c}</th>)}</tr></thead>
-                <tbody>
-                  {current.linhas.length === 0 && <tr><td colSpan={current.colunas.length} className="px-3 py-8 text-center text-xs text-muted-foreground">Sem dados</td></tr>}
-                  {current.linhas.map((r, i) => <tr key={i} className="border-b">{r.map((c, j) => <td key={j} className="px-3 py-2 tabular">{c}</td>)}</tr>)}
-                </tbody>
-              </table>
-              {current.rodape && <p className="border-t bg-muted/40 px-4 py-2 text-right text-xs font-semibold">{current.rodape}</p>}
-            </div>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
+export function printRelatorio(report: RelReport) {
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${report.titulo}</title>
+    <style>body{font-family:Arial,sans-serif;color:#111;padding:20px;font-size:12px}
+    h1{font-size:18px;margin:0 0 10px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}
+    th{background:#eef;font-size:11px;text-transform:uppercase}
+    .foot{margin-top:10px;font-weight:bold;text-align:right}
+    </style></head><body>
+    <h1>${report.titulo}</h1>
+    <table><thead><tr>${report.colunas.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
+    <tbody>${report.linhas.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>
+    ${report.rodape ? `<p class="foot">${report.rodape}</p>` : ""}
+    </body></html>`;
+  const w = window.open("", "_blank", "width=900,height=900");
+  if (!w) return;
+  w.document.open(); w.document.write(html); w.document.close();
+  w.onload = () => setTimeout(() => { w.focus(); w.print(); }, 200);
 }
