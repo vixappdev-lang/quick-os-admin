@@ -4,15 +4,17 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable, type DragEndEvent, type DragStartEvent,
 } from "@dnd-kit/core";
-import { Plus, Search, MoreVertical, Eye, Printer, CheckCircle2, XCircle, LayoutGrid, List, ChevronDown, ArrowRight, FileText, Package as PackageIcon } from "lucide-react";
+import { Plus, Search, MoreVertical, Eye, Printer, CheckCircle2, XCircle, LayoutGrid, List, ChevronDown, ArrowRight, ArrowLeft, FileText, Package as PackageIcon, CreditCard, AlertTriangle, MessageSquare, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge, statusTone, pedidoStatusTone, PEDIDO_STATUS_LABEL } from "@/components/status-badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatBRL, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { usePedidos, useUpdatePedidoStatus, type Pedido } from "@/lib/queries";
+import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, type Pedido } from "@/lib/queries";
 import { toast } from "sonner";
 import { printRomaneio, printRomaneios } from "@/components/romaneio-print";
+import { useState } from "react";
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
   // Index route for /pedidos. Path is normalized below via TanStack;
@@ -26,10 +28,14 @@ const COLUMNS: { id: Pedido["status"]; label: string; tone: string }[] = [
   { id: "autorizado", label: "Autorizado", tone: "border-info/40" },
   { id: "separacao", label: "Separação", tone: "border-info/40" },
   { id: "conferencia", label: "Conferência", tone: "border-primary/40" },
+  { id: "faturamento" as any, label: "Faturamento", tone: "border-primary/40" },
   { id: "concluido", label: "Finalizado", tone: "border-success/40" },
 ];
 const NEXT_OF: Record<string, Pedido["status"] | null> = {
-  pendente: "autorizado", autorizado: "separacao", separacao: "conferencia", conferencia: "concluido", concluido: null,
+  pendente: "autorizado", autorizado: "separacao", separacao: "conferencia", conferencia: "faturamento" as any, faturamento: "concluido" as any, concluido: null,
+};
+const PREV_OF: Record<string, Pedido["status"] | null> = {
+  pendente: null, autorizado: "pendente", separacao: "autorizado", conferencia: "separacao", faturamento: "conferencia" as any, concluido: "faturamento" as any,
 };
 
 function PedidosPage() {
