@@ -13,13 +13,13 @@ export function agregarSeparacao(pedidos: any[]): SeparacaoLinha[] {
     (p.itens ?? []).forEach((i: any) => {
       const id = i.produto?.id ?? i.produto_id;
       if (!id) return;
-      const cur = map.get(id) ?? {
+      const cur: SeparacaoLinha = map.get(id) ?? {
         produto_id: id,
         sku: i.produto?.sku ?? "—",
         nome: i.produto?.nome ?? "—",
         unidade: i.produto?.unidade ?? "UN",
         qtd: 0,
-        pedidos: [],
+        pedidos: [] as string[],
       };
       cur.qtd += Number(i.qtd);
       if (!cur.pedidos.includes(p.numero)) cur.pedidos.push(p.numero);
