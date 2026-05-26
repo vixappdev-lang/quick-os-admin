@@ -201,8 +201,8 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
   };
 
   return (
-    <div className="space-y-4 pb-24 lg:pb-0">
-      <div className="sticky top-0 z-20 -mx-4 border-b bg-surface/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+    <div className="space-y-4 pb-28 lg:pb-0">
+      <div className="sticky top-0 z-20 -mx-4 hidden border-b bg-surface/95 px-4 py-3 backdrop-blur md:-mx-6 md:block md:px-6">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -223,8 +223,29 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
         </div>
       </div>
 
-      <SectionCard title="Dados principais" description="Informações comerciais do pedido, cliente e operação" className="shadow-elegant">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-12">
+      <SectionCard title="Dados principais" description="Cliente e tipo da operação" className="shadow-elegant">
+        {/* Campos meta-administrativos colapsados no mobile */}
+        <details className="md:hidden -mt-1 mb-3 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+          <summary className="cursor-pointer select-none font-medium text-muted-foreground">Mais detalhes (orçamento, data, tipo, operação)</summary>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            <Field label="Data"><div className="relative"><CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /><input type="datetime-local" value={data} onChange={(e) => setData(e.target.value)} className={`${inputBase} pl-9`} /></div></Field>
+            <Field label="Tipo">
+              <select value={tipo} onChange={(e) => setTipo(e.target.value as any)} className={inputBase}>
+                <option value="pedido">Pedido</option>
+                <option value="orcamento">Orçamento</option>
+              </select>
+            </Field>
+            <Field label="Operação" className="col-span-2">
+              <select value={operacao} onChange={(e) => setOperacao(e.target.value as any)} className={inputBase}>
+                <option value="venda">Venda (Saída)</option>
+                <option value="devolucao">Devolução</option>
+              </select>
+            </Field>
+          </div>
+        </details>
+
+        {/* Layout desktop completo */}
+        <div className="hidden md:grid grid-cols-2 gap-3 lg:grid-cols-12">
           <Field label="Orçamento" className="lg:col-span-2"><div className="relative"><Hash className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" /><input disabled placeholder="—" className={`${inputBase} pl-9`} /></div></Field>
           <Field label="Pedido" className="lg:col-span-2"><input disabled value="Automático" className={inputBase} /></Field>
           <Field label="Nota" className="lg:col-span-2"><input disabled placeholder="Após faturar" className={inputBase} /></Field>
@@ -245,8 +266,11 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
             </select>
           </Field>
           <Field label="Origem" className="lg:col-span-3"><input disabled value={origem} className={`${inputBase} capitalize`} /></Field>
+        </div>
 
-          <Field label="Cliente / Fornecedor" className="col-span-2 lg:col-span-12">
+        {/* Cliente (visível em todos os tamanhos) */}
+        <div className="mt-3 md:mt-3">
+          <Field label="Cliente / Fornecedor">
             {cliente ? (
               <div className="flex flex-col gap-2 rounded-lg border bg-muted/25 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-2 text-sm">
@@ -280,7 +304,7 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
                     </div>
                   )}
                 </div>
-                <button type="button" onClick={() => setNovoCliOpen(true)} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
+                <button type="button" onClick={() => setNovoCliOpen(true)} className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted sm:w-auto">
                   <Plus className="h-3.5 w-3.5" /> Novo cliente
                 </button>
               </div>
@@ -324,7 +348,8 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Lista de itens — TABELA em md+ */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full min-w-[860px] text-sm">
                 <thead>
                   <tr className="border-b bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -367,6 +392,48 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
                   })}
                 </tbody>
               </table>
+            </div>
+
+            {/* Lista de itens — CARDS em mobile */}
+            <div className="md:hidden divide-y">
+              {itens.length === 0 && (
+                <p className="px-4 py-10 text-center text-sm text-muted-foreground">Pesquise um produto acima para montar o pedido.</p>
+              )}
+              {itens.map((it, i) => {
+                const tot = fromCents(Math.max(0, toCents(it.preco) * it.qtd - toCents(it.desconto)));
+                return (
+                  <div key={it.produto.id} className="p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-md bg-muted">
+                        {it.produto.imagem_url ? <img src={it.produto.imagem_url} alt={it.produto.nome} className="h-full w-full object-cover" /> : <PackagePlus className="h-4 w-4 text-muted-foreground" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{it.produto.nome}</p>
+                        <p className="text-[11px] text-muted-foreground">{it.produto.sku || "sem SKU"} · estoque {Number(it.produto.estoque)} {it.produto.unidade}</p>
+                      </div>
+                      <button type="button" onClick={() => removeItem(i)} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <button type="button" onClick={() => updItem(i, { qtd: Math.max(1, it.qtd - 1) })} className="flex h-9 w-9 items-center justify-center rounded-md border bg-background"><Minus className="h-3.5 w-3.5" /></button>
+                        <input type="number" min={1} value={it.qtd} onChange={(e) => updItem(i, { qtd: Math.max(1, Math.round(numericValue(e.target.value, 1))) })} className="h-9 w-14 rounded-md border border-input bg-background text-center text-sm tabular focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                        <button type="button" onClick={() => updItem(i, { qtd: it.qtd + 1 })} className="flex h-9 w-9 items-center justify-center rounded-md border bg-background"><Plus className="h-3.5 w-3.5" /></button>
+                      </div>
+                      <p className="tabular text-sm font-semibold">{formatBRL(tot)}</p>
+                    </div>
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <label className="text-[11px] text-muted-foreground">Vlr. unit.
+                        <input type="number" step="0.01" min={0} value={it.preco} onChange={(e) => updItem(i, { preco: money(Math.max(0, numericValue(e.target.value))) })} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-right text-sm tabular focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                      </label>
+                      <label className="text-[11px] text-muted-foreground">Vlr. desc.
+                        <input type="number" step="0.01" min={0} value={it.desconto} onChange={(e) => updItem(i, { desconto: money(Math.max(0, numericValue(e.target.value))) })} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-right text-sm tabular focus:outline-none focus:ring-2 focus:ring-primary/20" />
+                      </label>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </SectionCard>
 
