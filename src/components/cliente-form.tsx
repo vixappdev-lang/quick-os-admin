@@ -54,10 +54,10 @@ export function ClienteForm({ cliente, onSaved, onCancel }: Props) {
       .then((r) => r.json())
       .then((d) => {
         if (cancel || d.erro) return;
-        setLogradouro((v) => v || d.logradouro || "");
-        setBairro((v) => v || d.bairro || "");
-        setCidade((v) => v || d.localidade || "");
-        setUf((v) => v || d.uf || "");
+        setLogradouro((v: string) => v || d.logradouro || "");
+        setBairro((v: string) => v || d.bairro || "");
+        setCidade((v: string) => v || d.localidade || "");
+        setUf((v: string) => v || d.uf || "");
       })
       .catch(() => {});
     return () => { cancel = true; };
