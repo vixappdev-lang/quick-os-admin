@@ -8,6 +8,9 @@ import { useAppSettings, useCategorias, useCreatePedido, useProdutos, type Produ
 import { useAuth } from "@/lib/auth";
 import { BarcodeScanner } from "@/components/barcode-scanner";
 import { beepError } from "@/lib/sounds";
+import { beepScan } from "@/lib/sounds";
+import { useHidScanner } from "@/lib/hid-scanner";
+import { normalizeEan } from "@/lib/ean";
 
 export const Route = createFileRoute("/_authenticated/pdv")({
   head: () => ({ meta: [{ title: "PDV — Quick OS" }] }),
@@ -47,6 +50,35 @@ function PdvPage() {
   const [pag, setPag] = useState<PaymentId>("pix");
   const [recebido, setRecebido] = useState("");
   const [scanOpen, setScanOpen] = useState(false);
+
+  // Lookup O(1) por código de barras / SKU para reagir a scanner HID instantaneamente
+  const indexByCode = useMemo(() => {
+    const m = new Map<string, Produto>();
+    produtos.forEach((p: any) => {
+      if (p.ativo === false) return;
+      const cb = normalizeEan(String(p.codigo_barras ?? ""));
+      const sku = String(p.sku ?? "").trim().toLowerCase();
+      if (cb) m.set(cb, p);
+      if (sku) m.set(sku, p);
+    });
+    return m;
+  }, [produtos]);
+
+  const handleScanCode = (code: string) => {
+    const norm = normalizeEan(code);
+    const p = indexByCode.get(norm) ?? indexByCode.get(code.trim().toLowerCase());
+    if (!p) {
+      beepError();
+      toast.error(`Código não cadastrado: ${code}`);
+      return;
+    }
+    beepScan();
+    addProduto(p);
+    toast.success(`${p.nome} · ${formatBRL(Number(p.preco_venda))}`);
+  };
+
+  // Captura GLOBAL de scanner HID — funciona sem abrir modal nem precisar focar input
+  useHidScanner(handleScanCode, !disabled);
 
   const paymentMap = (settings?.metodos_pagamento ?? {}) as Record<string, boolean>;
   const pagamentosAtivos = useMemo(() => {
