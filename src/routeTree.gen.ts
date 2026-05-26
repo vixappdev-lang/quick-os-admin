@@ -27,6 +27,7 @@ import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedCaixaRouteImport } from './routes/_authenticated/caixa'
 import { Route as AuthenticatedPedidosIndexRouteImport } from './routes/_authenticated/pedidos.index'
 import { Route as ApiPublicV1RouteImport } from './routes/api/public/v1'
+import { Route as AuthenticatedRelatoriosCatalogoRouteImport } from './routes/_authenticated/relatorios.catalogo'
 import { Route as AuthenticatedProdutosNovoRouteImport } from './routes/_authenticated/produtos.novo'
 import { Route as AuthenticatedProdutosIdRouteImport } from './routes/_authenticated/produtos.$id'
 import { Route as AuthenticatedPedidosNovoRouteImport } from './routes/_authenticated/pedidos.novo'
@@ -128,6 +129,12 @@ const ApiPublicV1Route = ApiPublicV1RouteImport.update({
   path: '/api/public/v1',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRelatoriosCatalogoRoute =
+  AuthenticatedRelatoriosCatalogoRouteImport.update({
+    id: '/catalogo',
+    path: '/catalogo',
+    getParentRoute: () => AuthenticatedRelatoriosRoute,
+  } as any)
 const AuthenticatedProdutosNovoRoute =
   AuthenticatedProdutosNovoRouteImport.update({
     id: '/novo',
@@ -190,7 +197,7 @@ export interface FileRoutesByFullPath {
   '/nfe': typeof AuthenticatedNfeRoute
   '/pdv': typeof AuthenticatedPdvRoute
   '/produtos': typeof AuthenticatedProdutosRouteWithChildren
-  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/vendedor/novo': typeof VendedorNovoRoute
   '/vendedor/': typeof VendedorIndexRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/pedidos/novo': typeof AuthenticatedPedidosNovoRoute
   '/produtos/$id': typeof AuthenticatedProdutosIdRoute
   '/produtos/novo': typeof AuthenticatedProdutosNovoRoute
+  '/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
   '/pedidos/': typeof AuthenticatedPedidosIndexRoute
   '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
@@ -216,7 +224,7 @@ export interface FileRoutesByTo {
   '/nfe': typeof AuthenticatedNfeRoute
   '/pdv': typeof AuthenticatedPdvRoute
   '/produtos': typeof AuthenticatedProdutosRouteWithChildren
-  '/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/vendedor/novo': typeof VendedorNovoRoute
   '/': typeof AuthenticatedIndexRoute
@@ -228,6 +236,7 @@ export interface FileRoutesByTo {
   '/pedidos/novo': typeof AuthenticatedPedidosNovoRoute
   '/produtos/$id': typeof AuthenticatedProdutosIdRoute
   '/produtos/novo': typeof AuthenticatedProdutosNovoRoute
+  '/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
   '/pedidos': typeof AuthenticatedPedidosIndexRoute
   '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
@@ -246,7 +255,7 @@ export interface FileRoutesById {
   '/_authenticated/nfe': typeof AuthenticatedNfeRoute
   '/_authenticated/pdv': typeof AuthenticatedPdvRoute
   '/_authenticated/produtos': typeof AuthenticatedProdutosRouteWithChildren
-  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRoute
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/vendedor/novo': typeof VendedorNovoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -258,6 +267,7 @@ export interface FileRoutesById {
   '/_authenticated/pedidos/novo': typeof AuthenticatedPedidosNovoRoute
   '/_authenticated/produtos/$id': typeof AuthenticatedProdutosIdRoute
   '/_authenticated/produtos/novo': typeof AuthenticatedProdutosNovoRoute
+  '/_authenticated/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
   '/_authenticated/pedidos/': typeof AuthenticatedPedidosIndexRoute
   '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
@@ -288,6 +298,7 @@ export interface FileRouteTypes {
     | '/pedidos/novo'
     | '/produtos/$id'
     | '/produtos/novo'
+    | '/relatorios/catalogo'
     | '/api/public/v1'
     | '/pedidos/'
     | '/api/public/v1/pedidos'
@@ -315,6 +326,7 @@ export interface FileRouteTypes {
     | '/pedidos/novo'
     | '/produtos/$id'
     | '/produtos/novo'
+    | '/relatorios/catalogo'
     | '/api/public/v1'
     | '/pedidos'
     | '/api/public/v1/pedidos'
@@ -344,6 +356,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pedidos/novo'
     | '/_authenticated/produtos/$id'
     | '/_authenticated/produtos/novo'
+    | '/_authenticated/relatorios/catalogo'
     | '/api/public/v1'
     | '/_authenticated/pedidos/'
     | '/api/public/v1/pedidos'
@@ -485,6 +498,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicV1RouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/relatorios/catalogo': {
+      id: '/_authenticated/relatorios/catalogo'
+      path: '/catalogo'
+      fullPath: '/relatorios/catalogo'
+      preLoaderRoute: typeof AuthenticatedRelatoriosCatalogoRouteImport
+      parentRoute: typeof AuthenticatedRelatoriosRoute
+    }
     '/_authenticated/produtos/novo': {
       id: '/_authenticated/produtos/novo'
       path: '/novo'
@@ -593,6 +613,20 @@ const AuthenticatedProdutosRouteWithChildren =
     AuthenticatedProdutosRouteChildren,
   )
 
+interface AuthenticatedRelatoriosRouteChildren {
+  AuthenticatedRelatoriosCatalogoRoute: typeof AuthenticatedRelatoriosCatalogoRoute
+}
+
+const AuthenticatedRelatoriosRouteChildren: AuthenticatedRelatoriosRouteChildren =
+  {
+    AuthenticatedRelatoriosCatalogoRoute: AuthenticatedRelatoriosCatalogoRoute,
+  }
+
+const AuthenticatedRelatoriosRouteWithChildren =
+  AuthenticatedRelatoriosRoute._addFileChildren(
+    AuthenticatedRelatoriosRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedCaixaRoute: typeof AuthenticatedCaixaRoute
   AuthenticatedClientesRoute: typeof AuthenticatedClientesRouteWithChildren
@@ -602,7 +636,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNfeRoute: typeof AuthenticatedNfeRoute
   AuthenticatedPdvRoute: typeof AuthenticatedPdvRoute
   AuthenticatedProdutosRoute: typeof AuthenticatedProdutosRouteWithChildren
-  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRoute
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedPedidosIdRoute: typeof AuthenticatedPedidosIdRoute
@@ -619,7 +653,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNfeRoute: AuthenticatedNfeRoute,
   AuthenticatedPdvRoute: AuthenticatedPdvRoute,
   AuthenticatedProdutosRoute: AuthenticatedProdutosRouteWithChildren,
-  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRoute,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedPedidosIdRoute: AuthenticatedPedidosIdRoute,

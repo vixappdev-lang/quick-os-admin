@@ -3,6 +3,7 @@ import { BrowserMultiFormatReader } from "@zxing/browser";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Camera, RefreshCw, X } from "lucide-react";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Props {
   open: boolean;
@@ -38,6 +39,7 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [deviceIx, setDeviceIx] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   const handleCode = (code: string) => {
     const now = Date.now();
@@ -54,16 +56,9 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
     const start = async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) {
-          setError("Câmera não disponível neste dispositivo");
+          setError("Câmera não disponível neste dispositivo. Use o campo manual abaixo.");
           return;
         }
-        // Discover cameras
-        try {
-          const all = await navigator.mediaDevices.enumerateDevices();
-          const cams = all.filter((d) => d.kind === "videoinput");
-          if (!cancelled) setDevices(cams);
-        } catch {}
-
         const deviceId = devices[deviceIx]?.deviceId;
         const constraints: MediaStreamConstraints = {
           video: deviceId
@@ -80,6 +75,12 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
           const video = videoRef.current!;
           video.srcObject = stream;
           await video.play().catch(() => {});
+          // iOS Safari: enumerateDevices só devolve labels após permissão
+          try {
+            const all = await navigator.mediaDevices.enumerateDevices();
+            const cams = all.filter((d) => d.kind === "videoinput");
+            if (!cancelled && cams.length !== devices.length) setDevices(cams);
+          } catch {}
           const detector = new BD({
             formats: ["ean_13", "ean_8", "upc_a", "upc_e", "code_128", "code_39", "code_93", "itf", "qr_code"],
           });
@@ -107,8 +108,20 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
           if (cancelled) return;
           if (result) handleCode(result.getText().trim());
         });
+        try {
+          const all = await navigator.mediaDevices.enumerateDevices();
+          const cams = all.filter((d) => d.kind === "videoinput");
+          if (!cancelled && cams.length !== devices.length) setDevices(cams);
+        } catch {}
       } catch (e: any) {
-        setError(e?.message ?? "Erro ao iniciar a câmera");
+        const name = e?.name ?? "";
+        if (name === "NotAllowedError" || name === "SecurityError") {
+          setError("Permissão de câmera negada. Autorize nos ajustes do navegador ou use o campo manual abaixo.");
+        } else if (name === "NotFoundError" || name === "OverconstrainedError") {
+          setError("Nenhuma câmera encontrada. Use o campo manual abaixo.");
+        } else {
+          setError(e?.message ?? "Erro ao iniciar a câmera");
+        }
       }
     };
 
@@ -138,13 +151,13 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
+      <DialogContent className="p-0 overflow-hidden sm:max-w-lg max-sm:!w-screen max-sm:!max-w-none max-sm:!h-[100dvh] max-sm:!rounded-none max-sm:!translate-x-0 max-sm:!translate-y-0 max-sm:!top-0 max-sm:!left-0 max-sm:flex max-sm:flex-col">
         <DialogHeader className="px-4 py-3 border-b">
           <DialogTitle className="flex items-center gap-2 text-base">
             <Camera className="h-4 w-4" /> Scanner de código de barras
           </DialogTitle>
         </DialogHeader>
-        <div className="relative bg-black aspect-[4/3]">
+        <div className="relative bg-black sm:aspect-[4/3] max-sm:flex-1 max-sm:min-h-0">
           {error ? (
             <div className="flex h-full items-center justify-center p-6 text-center text-sm text-white/90">{error}</div>
           ) : (
@@ -154,8 +167,8 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
                 <div className="h-1/3 w-4/5 rounded-lg border-2 border-primary/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
               </div>
               {devices.length > 1 && (
-                <button onClick={() => setDeviceIx((i) => (i + 1) % devices.length)} className="absolute right-2 top-2 inline-flex h-8 items-center gap-1 rounded-md bg-black/60 px-2 text-[11px] font-medium text-white hover:bg-black/80">
-                  <RefreshCw className="h-3 w-3" /> Trocar câmera
+                <button onClick={() => setDeviceIx((i) => (i + 1) % devices.length)} className="absolute right-3 top-3 inline-flex h-10 items-center gap-1.5 rounded-md bg-black/70 px-3 text-xs font-medium text-white hover:bg-black/90 active:scale-95">
+                  <RefreshCw className="h-3.5 w-3.5" /> Trocar câmera
                 </button>
               )}
             </>
@@ -165,10 +178,11 @@ export function BarcodeScanner({ open, onClose, onDetected }: Props) {
           <p className="text-[11px] text-muted-foreground">Aponte o código para a área central. Ou digite manualmente:</p>
           <div className="flex gap-2">
             <input
-              autoFocus
+              autoFocus={!isMobile}
               value={manual}
               onChange={(e) => setManual(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") submitManual(); }}
+              inputMode="numeric"
               placeholder="Código de barras..."
               className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             />

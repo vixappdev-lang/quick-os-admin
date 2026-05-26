@@ -1,5 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
 import { Download, Calendar, DollarSign, ShoppingBag, TrendingUp, Package2, FileBarChart2, Users as UsersIcon, Wallet, Boxes } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { PageHeader } from "@/components/page-header";
@@ -8,7 +8,6 @@ import { KpiCard } from "@/components/kpi-card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { formatBRL } from "@/lib/format";
 import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuarios } from "@/lib/queries";
-import { RelatorioCatalog } from "@/components/relatorio-catalog";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — Quick OS" }] }),
@@ -26,7 +25,6 @@ function RelatoriosPage() {
   const { data: despesas = [] } = useDespesas();
   const { data: contas = [] } = useContas();
   const { data: usuarios = [] } = useUsuarios();
-  const [catOpen, setCatOpen] = useState(false);
 
   const { faturamento, itens, ticket, qtdPedidos, vendasDia, formas, topProdutos } = useMemo(() => {
     const validos = pedidos.filter((p: any) => p.status !== "cancelado");
@@ -80,7 +78,7 @@ function RelatoriosPage() {
       <PageHeader title="Relatórios" description="Análise consolidada de performance" actions={
         <>
           <button className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Calendar className="h-3.5 w-3.5" /> Últimos 30 dias</button>
-          <button onClick={() => setCatOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><FileBarChart2 className="h-3.5 w-3.5" /> Relatório</button>
+          <Link to="/relatorios/catalogo" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><FileBarChart2 className="h-3.5 w-3.5" /> Relatório</Link>
           <button onClick={() => window.print()} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"><Download className="h-3.5 w-3.5" /> Exportar</button>
         </>
       } />
@@ -238,16 +236,6 @@ function RelatoriosPage() {
           })()}
         </TabsContent>
       </Tabs>
-      <RelatorioCatalog
-        open={catOpen}
-        onClose={() => setCatOpen(false)}
-        pedidos={pedidos}
-        produtos={produtos}
-        clientes={clientes}
-        despesas={despesas}
-        contas={contas}
-        usuarios={usuarios}
-      />
     </div>
   );
 }
