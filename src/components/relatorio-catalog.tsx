@@ -220,7 +220,7 @@ export function RelatorioCatalog({ open, onClose, pedidos, produtos, clientes, d
                 <thead><tr className="border-b bg-muted/40">{current.colunas.map((c) => <th key={c} className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{c}</th>)}</tr></thead>
                 <tbody>
                   {current.linhas.length === 0 && <tr><td colSpan={current.colunas.length} className="px-3 py-8 text-center text-xs text-muted-foreground">Sem dados</td></tr>}
-                  {current.linhas.map((r, i) => <tr key={i} className="border-b"><{...{}} />{r.map((c, j) => <td key={j} className="px-3 py-2 tabular">{c}</td>)}</tr>)}
+                  {current.linhas.map((r, i) => <tr key={i} className="border-b">{r.map((c, j) => <td key={j} className="px-3 py-2 tabular">{c}</td>)}</tr>)}
                 </tbody>
               </table>
               {current.rodape && <p className="border-t bg-muted/40 px-4 py-2 text-right text-xs font-semibold">{current.rodape}</p>}
