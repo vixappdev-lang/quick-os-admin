@@ -67,7 +67,7 @@ function PedidosPage() {
 
   const filteredLista = useMemo(() => {
     return filtered.filter((p: any) => {
-      if (!incluirEncerrados && (p.status === "concluido" || p.status === "cancelado")) return false;
+      if (!incluirEncerrados && (p.status === "concluido" || p.status === "cancelado" || p.status === "encerrado")) return false;
       if (filtroCliente && p.cliente_id !== filtroCliente) return false;
       if (filtroVendedor && p.vendedor_id !== filtroVendedor) return false;
       if (filtroProduto) {
