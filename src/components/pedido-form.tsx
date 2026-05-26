@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRightLeft, Banknote, CalendarDays, CreditCard, Hash, Loader2, Minus, PackagePlus, Plus, QrCode, ReceiptText, Save, Search, Trash2, User as UserIcon, WalletCards, X } from "lucide-react";
+import { ArrowRightLeft, Banknote, CalendarDays, CreditCard, FileText, Hash, Loader2, Minus, PackagePlus, Plus, QrCode, Receipt, ReceiptText, Save, Search, Trash2, User as UserIcon, WalletCards, X } from "lucide-react";
 import { SectionCard } from "@/components/section-card";
 import {
   useAppSettings,
@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type PaymentMethod = "pix" | "credito" | "debito" | "dinheiro" | "fiado" | "outro";
+type PaymentMethod = "pix" | "dinheiro" | "nota_promissoria" | "cheque" | "debito" | "credito" | "fiado" | "outro";
 type Item = { produto: Produto; qtd: number; preco: number; desconto: number };
 
 interface Props {
@@ -32,9 +32,11 @@ interface Props {
 
 const PAYMENT_OPTIONS: { id: PaymentMethod; label: string; icon: any }[] = [
   { id: "pix", label: "PIX", icon: QrCode },
-  { id: "credito", label: "Crédito", icon: CreditCard },
-  { id: "debito", label: "Débito", icon: WalletCards },
   { id: "dinheiro", label: "Dinheiro", icon: Banknote },
+  { id: "nota_promissoria", label: "Nota promissória", icon: FileText },
+  { id: "cheque", label: "Cheque", icon: Receipt },
+  { id: "debito", label: "Débito", icon: WalletCards },
+  { id: "credito", label: "Crédito", icon: CreditCard },
   { id: "fiado", label: "Fiado", icon: ReceiptText },
   { id: "outro", label: "Outro", icon: ArrowRightLeft },
 ];
