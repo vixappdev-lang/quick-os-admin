@@ -1,87 +1,153 @@
-## Plano de correções — Relatórios, Scanner e Vendedor
+## Plano de correções e arquitetura HID do Scanner
 
-### 1. Relatórios — botão "Catálogo" e navegação
+### 1. Botão "Catálogo de Relatórios" — não navega
 
-**Diagnóstico:** A rota `/_authenticated/relatorios/catalogo` está registrada corretamente no `routeTree.gen.ts` e o botão em `relatorios.tsx` já usa `useNavigate`. O motivo de "não ir" é que o botão está como `<button onClick={navigate(...)}>` dentro do header de ações, mas o `PageHeader` pode estar engolindo o clique em mobile/desktop (sobreposição do z-index do header sticky) **e** o link de "Voltar" da página catálogo aponta corretamente — o problema real é que o botão de "Catálogo" não está renderizando como link com prefetch, então a rota faz um cold-load e a página parece travar quando os hooks de queries (`useDespesas`, `useContas`, `useUsuarios`) ainda não retornaram.
+**Diagnóstico real:** O `<Link to="/relatorios/catalogo" preload="intent">` já existe em `relatorios.tsx` (linhas 76-82) e a rota está registrada em `routeTree.gen.ts`. O motivo do botão "não fazer nada" não é navegação — é que a rota destino quebra silenciosamente: `relatorios.catalogo.tsx` chama `useDespesas`, `useContas`, `useUsuarios`. Se qualquer um falhar (RLS, query), o `errorComponent` aparece numa flash e o usuário interpreta como "não foi". Além disso o `<Link>` está dentro do bloco `actions` do `PageHeader` que tem `flex-wrap` — em telas estreitas vira a segunda linha e fica invisível abaixo do fold.
 
-**Correção em `src/routes/_authenticated/relatorios.tsx`:**
-- Trocar o `<button onClick={navigate}>` por `<Link to="/relatorios/catalogo" preload="intent">` estilizado igual ao botão atual (mantém visual, ganha prefetch + navegação garantida).
-- Garantir que o botão tem `type="button"` e está fora de qualquer `<form>`.
+**Correções em `src/routes/_authenticated/relatorios.tsx`:**
+- Trocar o `<Link>` por um botão visualmente igual mas que use `useNavigate` no `onClick` + `onMouseEnter` faz `router.preloadRoute`. Mantém o estilo, garante click handler explícito e log de erro no console se a navegação falhar.
+- Renderizar o botão **antes** dos botões "30 dias / Exportar" para nunca cair na segunda linha do flex-wrap.
+- Aumentar prioridade visual: `bg-primary`, ícone `FileBarChart2`, label "Abrir Catálogo".
 
-**Correção em `src/routes/_authenticated/relatorios.catalogo.tsx`:**
-- Adicionar `errorComponent` e `pendingComponent` à `createFileRoute` (skeleton enquanto as 6 queries carregam) para não dar tela branca.
-- Ajustar grid mobile: `grid-cols-1 lg:grid-cols-[340px_1fr]` já existe — adicionar `min-w-0` no painel direito para evitar overflow.
+**Correções em `src/routes/_authenticated/relatorios.catalogo.tsx`:**
+- Já tem `pendingComponent` e `errorComponent`. Adicionar `console.error(error)` no errorComponent para diagnóstico.
+- Defender contra falhas individuais: usar `data: ... = []` em todas as queries (já feito) e envolver `useRelatorios(...)` num try/catch para não quebrar a página inteira se uma agregação falhar.
 
----
+### 2. Vendedor — ícone do tema mostrando "PC"
 
-### 2. Scanner — solução robusta e independente
+**Diagnóstico:** O `ThemeToggle` cicla `light → dark → system` e o ícone reflete `theme` (não `resolved`). No primeiro carregamento o tema padrão é `"system"`, então aparece `Monitor` (ícone de monitor/PC). O usuário reclama disso.
 
-**Diagnóstico do erro do print anterior:** O servidor `identifyAndCreateProduct` lança `Error("LOVABLE_API_KEY ausente")` quando a env não está disponível no runtime do worker, e qualquer falha na chamada à AI quebra o fluxo. Em paralelo, o stream da câmera ainda continua ativo ao trocar de rota porque o `Dialog` é desmontado mas o `useEffect cleanup` depende do `open` virar `false` antes do unmount.
+**Correção em `src/components/theme-toggle.tsx`:**
+- Remover o modo `system` do ciclo: cycle simples `light ↔ dark`.
+- Ícone passa a refletir `resolved`: mostra `Sun` no light, `Moon` no dark.
+- Inicialização em `theme.tsx`: se não houver valor salvo, **resolver** `system` na hora e gravar `light` ou `dark` no estado público — internamente continua respeitando o prefers-color-scheme apenas até a primeira interação. Assim o usuário nunca vê o ícone de monitor.
 
-**Estratégia (sem mudar design):**
+### 3. Tela "Novo pedido" — 100% responsiva mobile
 
-**`src/lib/produto-scan.functions.ts`** — tornar resiliente:
-1. Se `LOVABLE_API_KEY` ausente OU AI falhar → **NÃO lançar erro**. Criar produto com `nome = "Produto " + ean`, `identified=false`, `imagem_url=null`. Usuário edita depois.
-2. Try/catch global no `.handler` retornando `{ already, produto, identified, warning?: string }` em vez de propagar exceções.
-3. Validar EAN: aceitar 8–14 dígitos numéricos puros (regex `^\d{8,14}$`) e rejeitar antes da query.
+**Diagnóstico:** `pedido-form.tsx` usa grid `lg:grid-cols-12` com muitos campos desabilitados (Orçamento, Pedido, Nota, Empresa) que poluem o mobile; a tabela de itens tem `min-w-[860px]` forçando scroll horizontal feio; o card lateral de Pagamento/Resumo só vira sidebar em `xl:`; barra sticky de ações usa flex-row.
 
-**`src/components/barcode-scanner.tsx`** — robustez do stream:
-1. Adicionar `useEffect` de unmount puro (sem deps) que sempre chama `stopAll()` — garante limpeza mesmo se o Dialog for desmontado por troca de rota.
-2. Listener `visibilitychange`: quando aba esconde, pausa o stream; ao voltar, reinicia.
-3. Adicionar fallback de 3 camadas (já existe 2): **BarcodeDetector nativo → ZXing → entrada manual sempre visível**. Se ambos os engines falharem em 8s, exibir aviso "Use o campo manual abaixo" sem fechar o modal.
-4. Após `handleCode`, além de `stopAll()`, setar `videoRef.current.srcObject = null` explicitamente e remover qualquer `<video>` órfão.
+**Correções em `src/components/pedido-form.tsx` (sem mudar lógica):**
+- **Esconder campos meta-administrativos no mobile**: Orçamento, Pedido (auto), Nota, Empresa, Entrada/Saída, Origem ficam dentro de `<details>` colapsado ("Mais detalhes") até `md:`. No `md:+` voltam ao grid de 12 colunas.
+- **Barra de ações sticky**: no mobile usar grid `grid-cols-2` (Cancelar | Salvar) fixo no rodapé com `safe-area-inset-bottom`. O `Salvar` mostra "Salvar · R$ X".
+- **Cliente**: campo single column no mobile, botão "Novo cliente" full-width abaixo do search.
+- **Lista de itens**: no mobile renderizar `cards` em vez da `<table>`. Cada card: imagem 48px, nome, SKU/estoque, controles qtd ± centrais, preço unit e desconto editáveis em duas colunas, total e botão remover. No `md:+` mantém a tabela atual.
+- **Pagamento + Resumo**: no mobile vira `Accordion` na ordem [Itens] → [Pagamento] → [Resumo] dentro do fluxo; no `xl:+` continua sticky aside.
+- **Header (`vendedor.novo.tsx`)**: adicionar `truncate` no nome do vendedor para não estourar.
+- **Dialog "Novo cliente"**: usar variante full-screen no mobile (`max-sm:!h-[100dvh] max-sm:!rounded-none`).
 
-**`src/components/novo-produto-chooser.tsx`:**
-1. No `catch` do `identify`, voltar para `chooser` (já faz) **e** chamar `stopAll` via prop callback exposta pelo Scanner — adicionar `ref` ou `onStopped` callback.
-2. Adicionar `useEffect` que, ao `open` virar `false`, força `setStage("chooser")` para resetar tudo.
+### 4. Revisar métodos de pagamento em pedidos antigos
 
----
+**Diagnóstico:** Enum no banco já contém `pix, credito, debito, dinheiro, fiado, outro, nota_promissoria, cheque`. As listas em PDV (`pdv.tsx`) e PedidoForm (`pedido-form.tsx`) já contemplam todos. O que está faltando é exibição consistente:
 
-### 3. Vendedor — layout desktop + dark mode
+**Correções:**
+- Criar `src/lib/pagamento.ts` com `PAGAMENTO_META: Record<PaymentMethod, { label, icon, color }>` exportável — centraliza labels (PIX, Crédito, Débito, Dinheiro, Fiado, Nota promissória, Cheque, Outro), ícones lucide e cor.
+- `src/routes/_authenticated/pedidos.$id.tsx`, `pedidos.index.tsx` e `relatorio-catalog.tsx` passam a importar de `PAGAMENTO_META` em vez de map local — garante que pedidos antigos com `nota_promissoria`/`cheque` apareçam corretamente (hoje provavelmente caem em fallback "—").
+- `relatorios.tsx` (gráfico Pizza) idem: usa `PAGAMENTO_META.label` para `nome`.
 
-**Diagnóstico (print):** A página `vendedor.index.tsx` foi pensada para mobile. No desktop (1252px) os KPIs ficam pequenos no canto, há muito espaço vazio à direita, o header não respeita o container central, e não há toggle de tema.
+### 5. Scanner HID — análise arquitetural completa
 
-**Redesign em `src/routes/vendedor.index.tsx` (sem mudar funcionalidade):**
+**Modelo HID = teclado.** Não exige `getUserMedia`, MediaStream, BarcodeDetector, ZXing nem permissão de câmera. O scanner físico digita no input focado e dispara Enter. A arquitetura atual (`barcode-scanner.tsx`) é **câmera-only** — totalmente inadequada para uso profissional contínuo em mercado/PDV.
 
-**Header:**
-- Manter altura, mas adicionar **3 botões à direita** na ordem: `[Novo pedido] [ToggleTema] [Sair]`.
-- ToggleTema: novo componente `<ThemeToggle />` (ícone Sun/Moon do lucide), tamanho `h-9 w-9`, igual aos outros botões-ícone.
+**Diagnóstico do que existe hoje:**
+- Modal de câmera para cada leitura → fluxo lento, mata performance, requer permissão, falha em desktop sem câmera, exige toque para abrir.
+- Sem captura global de Enter/Tab/CRLF.
+- Sem identificação de fonte (digitação humana vs scanner HID — diferenciada pela velocidade entre keystrokes, tipicamente <30ms).
+- Sem cache; cada leitura faz query no Supabase.
+- `produtos.codigo_barras` já é `text` (✅), mas não há índice único nem normalização (zeros à esquerda).
+- Sem multi-tenant — `produtos` é compartilhado por toda a instância.
+- Falta tabela global de GTIN (banco compartilhado entre tenants).
+- Sem integração com API externa de GTIN (cosmos/openfoodfacts/bluesoft).
 
-**Layout desktop:**
-- Aumentar KPI cards no `lg:` — `lg:p-5`, valor em `lg:text-2xl`, ícone maior.
-- Grid de pedidos: `md:grid-cols-2 xl:grid-cols-3` (já existe) → adicionar `2xl:grid-cols-4` e altura mínima dos cards.
-- Adicionar **painel lateral** opcional `lg:grid-cols-[1fr_320px]` com resumo do dia (próximos pedidos pendentes em destaque). Mantém mobile single-column.
-- Sticky toolbar de busca/filtros no desktop com sombra sutil.
+**Arquitetura proposta (a implementar nas próximas iterações):**
 
-**Dark mode:**
-- Criar `src/lib/theme.tsx`: contexto `ThemeProvider` que persiste em `localStorage` (`quickos-theme`: `light`|`dark`|`system`) e aplica classe `dark` em `<html>`.
-- Adicionar `<ThemeProvider>` no `__root.tsx` envolvendo o `<Outlet />`.
-- Componente `src/components/theme-toggle.tsx` — botão que cicla light → dark → system com ícone correspondente.
-- Revisar `src/styles.css`: confirmar que todos os tokens (`--background`, `--card`, `--muted`, `--primary`, `--success`, `--warning`, `--destructive`, `--info`, `--chart-*`) têm valores `oklch` definidos dentro de `.dark { ... }`. Se faltar algum, completar.
-- Substituir qualquer cor hardcoded (`text-white`, `bg-black`, `bg-amber-500`) por tokens semânticos no scanner e no chooser para não quebrar no dark.
+**A. Captura HID global (`src/lib/hid-scanner.tsx`)**
+- Hook `useHidScanner({ onCode, minLength=6, maxGapMs=35, terminators=["Enter","Tab"] })`.
+- Listener `keydown` na `window`. Acumula caracteres em buffer; se gap > 35ms entre teclas, descarta (é digitação humana). Quando recebe terminator (Enter/Tab) e buffer ≥ 6 dígitos → dispara `onCode(buffer)` e limpa.
+- Ignora quando o foco está em `<input type="text|number">` que NÃO seja o input invisível de captura.
+- Provider `<HidScannerProvider>` em `__root.tsx` para captura global; consumido pelas telas que querem reagir (PDV, Estoque, Conferência, Inventário, Produtos/Novo).
 
-**Arquivos novos:**
-- `src/lib/theme.tsx`
-- `src/components/theme-toggle.tsx`
+**B. Input invisível de foco permanente (`src/components/hid-capture-input.tsx`)**
+- Input `aria-hidden`, `tabIndex={-1}`, `opacity-0`, posicionado off-screen, **mas focável**.
+- `useEffect` re-foca a cada `blur` (com debounce 100ms para não brigar com outros inputs).
+- Cada tela que usa scanner monta este componente; quando o usuário clica num input visível (ex.: buscar produto), a captura passa a aquele input enquanto ele tiver foco.
 
-**Arquivos editados:**
-- `src/routes/__root.tsx` (envolver com ThemeProvider)
-- `src/routes/vendedor.index.tsx` (header + grid + toggle)
-- `src/routes/_authenticated/relatorios.tsx` (Link em vez de button)
-- `src/routes/_authenticated/relatorios.catalogo.tsx` (errorComponent/pendingComponent)
-- `src/components/barcode-scanner.tsx` (limpeza + visibilitychange + tokens)
-- `src/components/novo-produto-chooser.tsx` (reset robusto)
-- `src/lib/produto-scan.functions.ts` (resiliência + fallback sem AI)
-- `src/styles.css` (completar tokens dark se faltar)
+**C. Normalização e validação de EAN (`src/lib/ean.ts`)**
+- `normalizeEan(raw): string` — trim, remove não-dígitos, preserva zeros à esquerda, valida 8/12/13/14.
+- `validateChecksum(ean): boolean` — cálculo do dígito verificador EAN-13/8/UPC-A.
+- `codigo_barras` permanece `text` (já é). Adicionar índice `CREATE UNIQUE INDEX ux_produtos_codigo_barras ON produtos(codigo_barras) WHERE codigo_barras IS NOT NULL;` — impede duplicação.
 
-**Não tocar:**
-- `client.ts`, `client.server.ts`, `auth-middleware.ts`, `routeTree.gen.ts`, `types.ts`, migrations.
-- Funcionalidade do PDV, Pedidos, Produtos, Estoque (só dark-mode-safety pass se houver cor hardcoded).
+**D. Cache local + global + externo (fluxo cascata)**
+1. **Cache em memória (React Query)** — `useProdutos()` já carrega tudo; `findByEan(code)` faz lookup O(1) num `Map` mantido em `useMemo`.
+2. **Banco do tenant** (`produtos`) — fallback se não encontrou no cache (raro, só após sync).
+3. **Banco global compartilhado** — nova tabela `public.gtin_global` (read-only para `authenticated`, write para `service_role`): `gtin TEXT PRIMARY KEY, nome TEXT, marca, categoria_sugerida, unidade, imagem_url, fonte TEXT, created_at`. Quando um tenant cadastra um produto novo via scanner, o backend grava também aqui (best-effort, idempotente).
+4. **API externa GTIN** — server function `lookupGtinExternal(ean)` que tenta na ordem: Bluesoft Cosmos (se `BLUESOFT_TOKEN` setado), Open Food Facts (público, sem chave), fallback null. Resultado é persistido em `gtin_global` para nunca consultar de novo.
+5. **AI fallback** (`identifyAndCreateProduct` atual) só roda se externo falhar.
 
----
+**E. Multi-tenant (preparação)**
+- Adicionar `tenant_id UUID` em `produtos`, `pedidos`, `clientes`, `app_settings` (default tenant atual).
+- `gtin_global` é **cross-tenant** (sem `tenant_id`). RLS: SELECT para `authenticated`, INSERT via security definer function `register_gtin_global(...)`.
+- Tabela `tenants` + `tenant_members(user_id, tenant_id, role)`. Por enquanto criar um tenant default `'main'` e migrar registros existentes.
+
+**F. UX PDV rápido**
+- Scanner HID lê → busca cache → adiciona ao carrinho (incrementa se já existe) → beep + flash visual de 200ms no card "Venda em andamento". Sem modal, sem reload, sem confirmação.
+- Se não encontrar localmente: beep de erro + banner amarelo "Código X — produto não cadastrado [Cadastrar agora]" que abre `novo-produto` pré-preenchido.
+- Em "Cadastrar produto", a câmera permanece como alternativa para celular, mas o input HID é o caminho principal — modal de câmera vira um botão secundário "Usar câmera".
+
+**G. Estoque / Inventário / Conferência**
+- Mesma `HidCaptureInput` em telas de Movimentação de Estoque, NF-e (conferência item-a-item), e nova tela `/estoque/inventario` (contagem rolante: scan + qtd → registra ajuste).
+
+**H. Riscos e mitigações**
+- **Leitura duplicada** (HID dispara código 2x em <100ms): debounce de 1.2s por código (já existe no scanner câmera; mover para o hook HID).
+- **Foco perdido**: re-foco automático + indicador visual "🟢 Scanner ativo" no canto.
+- **Conflito com inputs**: hook só age quando `event.target === document.body` OU o `HidCaptureInput` está focado.
+- **Teclados internacionais**: scanners HID normalmente enviam dígitos puros + Enter; usar `event.key` (não `event.code`) e aceitar 0-9.
+- **Performance**: lookup O(1) via Map; não fazer round-trip ao Supabase para cada leitura.
+- **Zeros à esquerda**: sempre tratar como string, nunca cast para INT.
+
+**Arquivos a criar (fase de implementação):**
+- `src/lib/hid-scanner.tsx` (provider + hook)
+- `src/components/hid-capture-input.tsx`
+- `src/lib/ean.ts`
+- `src/lib/pagamento.ts`
+- `src/lib/gtin-lookup.functions.ts` (server fn cascata externa)
+
+**Arquivos a editar:**
+- `src/routes/__root.tsx` — montar `<HidScannerProvider>`
+- `src/routes/_authenticated/pdv.tsx` — usar HID + cache local
+- `src/routes/_authenticated/produtos.novo.tsx` — fluxo "scan → identifica → cadastra"
+- `src/routes/_authenticated/estoque.tsx` + `estoque.movimentacoes.tsx` — entrada por scan
+- `src/components/barcode-scanner.tsx` — vira fallback opcional (câmera)
+- `src/components/pedido-form.tsx` — redesenho mobile (item 3)
+- `src/components/theme-toggle.tsx` + `src/lib/theme.tsx` — corrigir ícone (item 2)
+- `src/routes/_authenticated/relatorios.tsx` + `relatorios.catalogo.tsx` — botão Catálogo (item 1)
+- `src/routes/_authenticated/pedidos.$id.tsx`, `pedidos.index.tsx`, `relatorio-catalog.tsx` — usar `PAGAMENTO_META` (item 4)
+
+**Migrações SQL (uma migração):**
+```sql
+-- Índice único para evitar duplicação por código de barras
+CREATE UNIQUE INDEX IF NOT EXISTS ux_produtos_codigo_barras
+  ON public.produtos(codigo_barras) WHERE codigo_barras IS NOT NULL;
+
+-- Banco global de GTIN (cross-tenant)
+CREATE TABLE public.gtin_global (
+  gtin TEXT PRIMARY KEY,
+  nome TEXT NOT NULL,
+  marca TEXT, categoria_sugerida TEXT, unidade TEXT,
+  imagem_url TEXT, fonte TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+GRANT SELECT ON public.gtin_global TO authenticated;
+GRANT ALL ON public.gtin_global TO service_role;
+ALTER TABLE public.gtin_global ENABLE ROW LEVEL SECURITY;
+CREATE POLICY gtin_read_auth ON public.gtin_global FOR SELECT TO authenticated USING (true);
+```
+
+**Não tocar:** `client.ts`, `client.server.ts`, `auth-middleware.ts`, `routeTree.gen.ts`, `types.ts`.
 
 ### Validação pós-implementação
-1. Build sem erros TS.
-2. Navegar `/relatorios` → clicar Catálogo → carrega `/relatorios/catalogo` com lista de relatórios numerados.
-3. Em `/produtos` → "Novo" → "Scanner" → simular EAN manual → produto criado mesmo sem AI key.
-4. Em `/vendedor` desktop → ver layout amplo + botão tema funcionando (light/dark/system) sem cores quebradas no scanner/PDV.
+1. Build TS limpo.
+2. `/relatorios` → botão "Abrir Catálogo" navega para `/relatorios/catalogo` em <300ms (preload no hover).
+3. `/vendedor` → toggle mostra Sun/Moon (nunca Monitor); alterna light↔dark e persiste.
+4. `/vendedor/novo` em 375×812 (iPhone SE): sem scroll horizontal; barra de ações sticky no rodapé; itens em cards; pagamento em accordion.
+5. Detalhe de pedido com `pagamento=nota_promissoria` ou `cheque` exibe label e ícone corretos.
+6. Scanner HID: teste com `Stream Deck`/teclado simulando 7894900011517 + Enter em 50ms — produto entra no carrinho sem modal; segunda leitura igual em 200ms é ignorada (debounce); leitura em 2s incrementa qtd.
