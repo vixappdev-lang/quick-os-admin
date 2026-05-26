@@ -35,13 +35,13 @@ export default defineConfig({
       "import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
         SUPABASE_PUBLISHABLE_KEY,
       ),
-      // Runtime fallback: NÃO inlinar `process.env.SUPABASE_*` como undefined.
-      // Redireciona para `globalThis.process?.env?....`, que casa com o
-      // `window.process.env` injetado pelo SSR em src/routes/__root.tsx.
-      "process.env.SUPABASE_URL":
-        "(typeof globalThis!=='undefined'&&globalThis.process&&globalThis.process.env&&globalThis.process.env.SUPABASE_URL)",
-      "process.env.SUPABASE_PUBLISHABLE_KEY":
-        "(typeof globalThis!=='undefined'&&globalThis.process&&globalThis.process.env&&globalThis.process.env.SUPABASE_PUBLISHABLE_KEY)",
+      // Also inline process.env.SUPABASE_* as string literals so any
+      // browser-side fallback resolves at build time. esbuild's `define`
+      // requires a JS literal — expressions are rejected.
+      "process.env.SUPABASE_URL": JSON.stringify(SUPABASE_URL),
+      "process.env.SUPABASE_PUBLISHABLE_KEY": JSON.stringify(
+        SUPABASE_PUBLISHABLE_KEY,
+      ),
     },
   },
 });
