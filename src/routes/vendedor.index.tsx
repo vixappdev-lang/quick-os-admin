@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { usePedidos } from "@/lib/queries";
 import { formatBRL, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Route = createFileRoute("/vendedor/")({
   head: () => ({ meta: [{ title: "Meus Pedidos | Quick OS" }] }),
@@ -56,6 +57,7 @@ function VendedorHome() {
             <Link to="/vendedor/novo" className="hidden h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-[var(--primary-hover)] sm:inline-flex">
               <Plus className="h-3.5 w-3.5" /> Novo pedido
             </Link>
+            <ThemeToggle />
             <button onClick={() => signOut().then(() => navigate({ to: "/login" }))} className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Sair">
               <LogOut className="h-4 w-4" />
             </button>
@@ -63,20 +65,20 @@ function VendedorHome() {
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl space-y-4 px-4 py-5 sm:px-6 lg:px-10 lg:py-6">
+      <main className="mx-auto w-full max-w-7xl space-y-4 px-4 py-5 sm:px-6 lg:px-10 lg:py-8">
         {/* KPIs */}
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 lg:gap-4">
           {[
             { l: "Hoje", v: String(totais.hoje), i: ShoppingBag, c: "text-primary bg-primary/10" },
             { l: "Valor", v: formatBRL(totais.valor), i: CheckCircle2, c: "text-success bg-success/10" },
             { l: "Pendentes", v: String(totais.pendentes), i: Clock, c: "text-warning bg-warning/15" },
           ].map((k) => (
-            <div key={k.l} className="rounded-xl border bg-card p-3 shadow-subtle">
-              <div className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md", k.c)}>
-                <k.i className="h-3.5 w-3.5" />
+            <div key={k.l} className="rounded-xl border bg-card p-3 shadow-subtle lg:p-5">
+              <div className={cn("inline-flex h-7 w-7 items-center justify-center rounded-md lg:h-10 lg:w-10", k.c)}>
+                <k.i className="h-3.5 w-3.5 lg:h-5 lg:w-5" />
               </div>
-              <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground">{k.l}</p>
-              <p className="text-base font-semibold tabular">{k.v}</p>
+              <p className="mt-2 text-[10px] uppercase tracking-wider text-muted-foreground lg:mt-3 lg:text-xs">{k.l}</p>
+              <p className="text-base font-semibold tabular lg:text-2xl">{k.v}</p>
             </div>
           ))}
         </div>
@@ -97,7 +99,7 @@ function VendedorHome() {
         </div>
 
         {/* Lista */}
-        <div className="grid gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {isLoading && <div className="col-span-full rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">Carregando...</div>}
           {!isLoading && filtrados.length === 0 && <div className="col-span-full rounded-xl border border-dashed bg-card/60 p-10 text-center text-sm text-muted-foreground">Nenhum pedido encontrado</div>}
           {filtrados.map((p) => (
