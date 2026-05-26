@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { ChevronRight, Download, FileBarChart2, Info, Printer, Search } from "lucide-react";
+import { ChevronRight, Download, FileBarChart2, Info, Printer, Search, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useRelatorios, exportRelatorioCSV, printRelatorio, type RelReport, type RelRow } from "@/components/relatorio-catalog";
 import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuarios } from "@/lib/queries";
 
@@ -62,7 +63,7 @@ function RelatoriosPage() {
               />
             </div>
           </div>
-          <div className="max-h-[60vh] lg:max-h-[calc(100vh-13rem)] overflow-y-auto">
+          <div className="max-h-[70vh] lg:max-h-[calc(100vh-13rem)] overflow-y-auto">
             {filtered.length === 0 && (
               <p className="px-4 py-6 text-center text-xs text-muted-foreground">Nenhum relatório encontrado</p>
             )}
@@ -98,7 +99,8 @@ function RelatoriosPage() {
           </div>
         </SectionCard>
 
-        <SectionCard padded={false}>
+        {/* Painel direito (desktop apenas) */}
+        <SectionCard padded={false} className="hidden lg:block">
           {!report ? (
             <div className="flex min-h-[300px] flex-col items-center justify-center p-10 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
@@ -122,7 +124,7 @@ function RelatoriosPage() {
                     onClick={() => exportRelatorioCSV(report)}
                     className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-xs font-medium hover:bg-muted"
                   >
-                    <Download className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Exportar</span> CSV
+                    <Download className="h-3.5 w-3.5" /> Exportar CSV
                   </button>
                   <button
                     onClick={() => printRelatorio(report)}
@@ -132,42 +134,87 @@ function RelatoriosPage() {
                   </button>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[480px] text-sm">
-                  <thead>
-                    <tr className="border-b bg-muted/40">
-                      {report.colunas.map((c) => (
-                        <th key={c} className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          {c}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {report.linhas.length === 0 && (
-                      <tr>
-                        <td colSpan={report.colunas.length} className="px-3 py-12 text-center text-xs text-muted-foreground">
-                          Sem dados para este relatório
-                        </td>
-                      </tr>
-                    )}
-                    {report.linhas.map((r, i) => (
-                      <tr key={i} className="border-b hover:bg-muted/40">
-                        {r.map((c, j) => (
-                          <td key={j} className="px-3 py-2 tabular">{c}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {report.rodape && (
-                <p className="border-t bg-muted/40 px-4 py-2.5 text-right text-xs font-semibold">{report.rodape}</p>
-              )}
+              <ReportTable report={report} />
             </>
           )}
         </SectionCard>
       </div>
+
+      {/* Sheet mobile: abre quando seleciona relatório */}
+      <Sheet open={!!report && selectedNum != null} onOpenChange={(o) => !o && setSelectedNum(null)}>
+        <SheetContent side="right" className="lg:hidden w-full sm:max-w-md p-0 flex flex-col">
+          {report && (
+            <>
+              <div className="flex items-start gap-2 border-b px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-mono uppercase tracking-wider text-muted-foreground">Relatório nº {selected?.num}</p>
+                  <h2 className="truncate text-base font-semibold">{report.titulo}</h2>
+                  {selected?.info && <p className="mt-0.5 text-xs text-muted-foreground">{selected.info}</p>}
+                </div>
+                <button onClick={() => setSelectedNum(null)} aria-label="Fechar" className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <ReportTable report={report} />
+              </div>
+              <div className="grid grid-cols-2 gap-2 border-t bg-card/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur">
+                <button
+                  onClick={() => exportRelatorioCSV(report)}
+                  className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"
+                >
+                  <Download className="h-4 w-4" /> Exportar
+                </button>
+                <button
+                  onClick={() => printRelatorio(report)}
+                  className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-[var(--primary-hover)]"
+                >
+                  <Printer className="h-4 w-4" /> Imprimir
+                </button>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
+  );
+}
+
+function ReportTable({ report }: { report: RelReport }) {
+  return (
+    <>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[480px] text-sm">
+          <thead>
+            <tr className="border-b bg-muted/40">
+              {report.colunas.map((c) => (
+                <th key={c} className="px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  {c}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {report.linhas.length === 0 && (
+              <tr>
+                <td colSpan={report.colunas.length} className="px-3 py-12 text-center text-xs text-muted-foreground">
+                  Sem dados para este relatório
+                </td>
+              </tr>
+            )}
+            {report.linhas.map((r, i) => (
+              <tr key={i} className="border-b hover:bg-muted/40">
+                {r.map((c, j) => (
+                  <td key={j} className="px-3 py-2 tabular">{c}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {report.rodape && (
+        <p className="border-t bg-muted/40 px-4 py-2.5 text-right text-xs font-semibold">{report.rodape}</p>
+      )}
+    </>
   );
 }
