@@ -48,8 +48,8 @@ function UsuariosPage() {
         }
       />
       <SectionCard padded={false}>
-        <div className="overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] text-sm">
             <thead>
               <tr className="border-b bg-muted/40">
                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Usuário</th>
