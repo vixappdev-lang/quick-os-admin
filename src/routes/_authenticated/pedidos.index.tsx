@@ -339,12 +339,15 @@ function PedidoActions({ pedido, onView }: { pedido: any; onView?: () => void })
   const navigate = useNavigate();
   const updateStatus = useUpdatePedidoStatus();
   const updatePedido = useUpdatePedido();
+  const encerrar = useEncerrarPedido();
   const { data: produtos = [] } = useProdutos();
   const [pagOpen, setPagOpen] = useState(false);
   const [obsOpen, setObsOpen] = useState(false);
   const [incOpen, setIncOpen] = useState(false);
-  const [pagamento, setPagamento] = useState<string>(pedido.pagamento ?? "pix");
   const [observacoes, setObservacoes] = useState<string>(pedido.observacoes ?? "");
+  const { data: pagamentos = [] } = usePedidoPagamentos(pagOpen ? pedido.id : undefined);
+  const addPagamento = useAddPedidoPagamento();
+  const removePagamento = useRemovePedidoPagamento();
   const next = NEXT_OF[pedido.status as string];
   const prev = PREV_OF[pedido.status as string];
   const inconsistencias = (pedido.itens ?? [])
@@ -365,10 +368,6 @@ function PedidoActions({ pedido, onView }: { pedido: any; onView?: () => void })
     } catch (e: any) { toast.error(e.message); }
   };
 
-  const savePag = async () => {
-    try { await updatePedido.mutateAsync({ id: pedido.id, pagamento }); toast.success("Pagamento atualizado"); setPagOpen(false); }
-    catch (e: any) { toast.error(e.message); }
-  };
   const saveObs = async () => {
     try { await updatePedido.mutateAsync({ id: pedido.id, observacoes }); toast.success("Observações salvas"); setObsOpen(false); }
     catch (e: any) { toast.error(e.message); }
@@ -413,9 +412,14 @@ function PedidoActions({ pedido, onView }: { pedido: any; onView?: () => void })
           <MessageSquare className="h-3.5 w-3.5" /> Observações
         </button>
         <div className="my-1 border-t" />
-        {pedido.status !== "concluido" && (
+        {pedido.status !== "concluido" && pedido.status !== "encerrado" && (
           <button onClick={() => handle("concluido", "concluído")} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-success hover:bg-success/10">
             <CheckCircle2 className="h-3.5 w-3.5" /> Concluir
+          </button>
+        )}
+        {pedido.status !== "encerrado" && pedido.status !== "cancelado" && (
+          <button onClick={async () => { try { await encerrar.mutateAsync(pedido.id); toast.success(`${pedido.numero} encerrado`); } catch (e: any) { toast.error(e.message); } }} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted">
+            <Lock className="h-3.5 w-3.5" /> Encerrar pedido
           </button>
         )}
         {pedido.status !== "cancelado" && (
@@ -426,20 +430,29 @@ function PedidoActions({ pedido, onView }: { pedido: any; onView?: () => void })
       </PopoverContent>
     </Popover>
 
-    <Dialog open={pagOpen} onOpenChange={setPagOpen}>
-      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
-        <DialogHeader><DialogTitle>Forma de pagamento — {pedido.numero}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-3 gap-2">
-          {(["pix","credito","debito","dinheiro","fiado","outro"] as const).map((m) => (
-            <button key={m} onClick={() => setPagamento(m)} className={cn("rounded-md border p-2 text-xs font-medium capitalize", pagamento === m ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted")}>{m}</button>
-          ))}
+    <Sheet open={pagOpen} onOpenChange={setPagOpen}>
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl" onClick={(e) => e.stopPropagation()}>
+        <SheetHeader>
+          <SheetTitle>Pagamentos — {pedido.numero}</SheetTitle>
+        </SheetHeader>
+        <div className="mt-4">
+          <PaymentSplitter
+            total={Number(pedido.total)}
+            pagamentos={pagamentos as any}
+            onAdd={async (p) => {
+              try {
+                await addPagamento.mutateAsync({ pedido_id: pedido.id, forma: p.forma, condicao: p.condicao ?? null, vencimento: p.vencimento ?? null, valor: p.valor });
+              } catch (e: any) { toast.error(e.message); }
+            }}
+            onRemove={async (i) => {
+              const row: any = (pagamentos as any[])[i];
+              if (!row?.id) return;
+              try { await removePagamento.mutateAsync({ id: row.id, pedido_id: pedido.id }); } catch (e: any) { toast.error(e.message); }
+            }}
+          />
         </div>
-        <DialogFooter>
-          <button onClick={() => setPagOpen(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
-          <button onClick={savePag} disabled={updatePedido.isPending} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-50">Salvar</button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
 
     <Dialog open={obsOpen} onOpenChange={setObsOpen}>
       <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
