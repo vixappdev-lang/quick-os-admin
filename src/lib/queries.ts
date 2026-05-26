@@ -120,6 +120,36 @@ export function useCategorias() {
     staleTime: 5 * 60_000,
   });
 }
+export function useUpsertCategoria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id?: string; nome: string; cor?: string | null; icone?: string | null; ativo?: boolean }) => {
+      if (input.id) {
+        const { id, ...rest } = input;
+        const { data, error } = await supabase.from("categorias").update(rest as any).eq("id", id).select().single();
+        if (error) throw error;
+        return data;
+      }
+      const { data, error } = await supabase.from("categorias").insert(input as any).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["categorias"] }),
+  });
+}
+export function useDeleteCategoria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("categorias").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["categorias"] });
+      qc.invalidateQueries({ queryKey: ["produtos"] });
+    },
+  });
+}
 
 // CLIENTES
 export function useClientes() {
