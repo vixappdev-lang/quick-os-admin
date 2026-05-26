@@ -11,7 +11,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatBRL, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, type Pedido } from "@/lib/queries";
+import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, useClientes, useVendedores, useCriarFaturamento, type Pedido } from "@/lib/queries";
+import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { printRomaneio, printRomaneios } from "@/components/romaneio-print";
 
@@ -40,20 +41,39 @@ const PREV_OF: Record<string, Pedido["status"] | null> = {
 function PedidosPage() {
   const navigate = useNavigate();
   const { data: pedidos = [], isLoading } = usePedidos();
+  const { data: clientesAll = [] } = useClientes();
+  const { data: vendedoresAll = [] } = useVendedores();
   const updateStatus = useUpdatePedidoStatus();
   const [view, setView] = useState<"kanban" | "lista">("kanban");
   const [busca, setBusca] = useState("");
   const [dragId, setDragId] = useState<string | null>(null);
+  const [incluirEncerrados, setIncluirEncerrados] = useState(false);
+  const [filtroCliente, setFiltroCliente] = useState<string>("");
+  const [filtroVendedor, setFiltroVendedor] = useState<string>("");
+  const [filtroProduto, setFiltroProduto] = useState("");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const filtered = useMemo(
-    () => pedidos.filter((p) =>
-      !busca ||
-      p.numero.toLowerCase().includes(busca.toLowerCase()) ||
-      p.cliente?.nome?.toLowerCase().includes(busca.toLowerCase()),
-    ),
+    () => pedidos.filter((p: any) => {
+      if (busca && !(p.numero.toLowerCase().includes(busca.toLowerCase()) || p.cliente?.nome?.toLowerCase().includes(busca.toLowerCase()))) return false;
+      return true;
+    }),
     [pedidos, busca],
   );
+
+  const filteredLista = useMemo(() => {
+    return filtered.filter((p: any) => {
+      if (!incluirEncerrados && (p.status === "concluido" || p.status === "cancelado")) return false;
+      if (filtroCliente && p.cliente_id !== filtroCliente) return false;
+      if (filtroVendedor && p.vendedor_id !== filtroVendedor) return false;
+      if (filtroProduto) {
+        const t = filtroProduto.toLowerCase();
+        const ok = (p.itens ?? []).some((i: any) => (i.produto?.nome ?? "").toLowerCase().includes(t) || (i.produto?.sku ?? "").toLowerCase().includes(t));
+        if (!ok) return false;
+      }
+      return true;
+    });
+  }, [filtered, incluirEncerrados, filtroCliente, filtroVendedor, filtroProduto]);
 
   const byCol = useMemo(() => {
     const map: Record<string, any[]> = {};
@@ -126,7 +146,7 @@ function PedidosPage() {
 
       {!isLoading && view === "kanban" && (
         <DndContext sensors={sensors} onDragStart={(e: DragStartEvent) => setDragId(e.active.id as string)} onDragEnd={onDragEnd}>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
             {COLUMNS.map((col) => (
               <KanbanColumn key={col.id} col={col} pedidos={byCol[col.id] ?? []} onView={(id) => navigate({ to: "/pedidos/$id", params: { id } })} />
             ))}
@@ -138,8 +158,33 @@ function PedidosPage() {
       )}
 
       {!isLoading && view === "lista" && (
+        <>
+        <div className="mb-3 flex flex-wrap items-end gap-2 rounded-lg border bg-card p-3">
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-wider text-muted-foreground">Cliente</label>
+            <select value={filtroCliente} onChange={(e) => setFiltroCliente(e.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-xs">
+              <option value="">Todos</option>
+              {clientesAll.map((c: any) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-wider text-muted-foreground">Vendedor</label>
+            <select value={filtroVendedor} onChange={(e) => setFiltroVendedor(e.target.value)} className="h-8 rounded-md border border-input bg-background px-2 text-xs">
+              <option value="">Todos</option>
+              {vendedoresAll.map((v: any) => <option key={v.id} value={v.id}>{v.nome ?? v.email}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1 block text-[10px] uppercase tracking-wider text-muted-foreground">Produto contido</label>
+            <input value={filtroProduto} onChange={(e) => setFiltroProduto(e.target.value)} placeholder="Nome ou SKU..." className="h-8 rounded-md border border-input bg-background px-2 text-xs" />
+          </div>
+          <label className="ml-auto inline-flex items-center gap-2 text-xs">
+            <input type="checkbox" checked={incluirEncerrados} onChange={(e) => setIncluirEncerrados(e.target.checked)} />
+            Incluir encerrados/cancelados
+          </label>
+        </div>
         <div className="overflow-hidden rounded-xl border bg-card">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-sm">
             <thead>
               <tr className="border-b bg-muted/40">
                 <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pedido</th>
@@ -152,10 +197,10 @@ function PedidosPage() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {filteredLista.length === 0 && (
                 <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">Nenhum pedido encontrado</td></tr>
               )}
-              {filtered.map((p) => (
+              {filteredLista.map((p: any) => (
                 <tr key={p.id} className="cursor-pointer border-b hover:bg-muted/40" onClick={() => navigate({ to: "/pedidos/$id", params: { id: p.id } })}>
                   <td className="px-4 py-3 font-semibold">{p.numero}</td>
                   <td className="px-4 py-3">{p.cliente?.nome ?? "—"}</td>
@@ -167,8 +212,9 @@ function PedidosPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
+        </>
       )}
     </div>
   );
@@ -177,6 +223,8 @@ function PedidosPage() {
 function KanbanColumn({ col, pedidos, onView }: { col: typeof COLUMNS[number]; pedidos: any[]; onView: (id: string) => void }) {
   const { setNodeRef, isOver } = useDroppable({ id: col.id });
   const updateStatus = useUpdatePedidoStatus();
+  const criarFat = useCriarFaturamento();
+  const { user } = useAuth();
   const next = NEXT_OF[col.id];
   const moverTodos = async (alvo: Pedido["status"]) => {
     for (const p of pedidos) {
@@ -184,12 +232,20 @@ function KanbanColumn({ col, pedidos, onView }: { col: typeof COLUMNS[number]; p
     }
     toast.success(`${pedidos.length} pedido(s) movidos para ${alvo}`);
   };
+  const faturarTodos = async () => {
+    if (pedidos.length === 0) return;
+    const total = pedidos.reduce((s, p) => s + Number(p.total), 0);
+    try {
+      const fat: any = await criarFat.mutateAsync({ pedidoIds: pedidos.map((p) => p.id), total, userId: user?.id ?? null });
+      toast.success(`Faturamento ${fat?.numero ?? ""} criado · ${pedidos.length} pedido(s)`);
+    } catch (e: any) { toast.error(e.message ?? "Erro ao faturar"); }
+  };
   return (
-    <div ref={setNodeRef} className={cn("flex flex-col rounded-xl border-t-2 bg-muted/30 transition-colors", col.tone, isOver && "bg-muted/60")}>
-      <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{col.label}</p>
+    <div ref={setNodeRef} className={cn("flex flex-col rounded-xl border-t-2 bg-muted/30 transition-colors min-w-0", col.tone, isOver && "bg-muted/60")}>
+      <div className="flex items-center justify-between gap-1 px-2 py-2">
+        <p className="truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{col.label}</p>
         <div className="flex items-center gap-1.5">
-          <span className="rounded bg-card px-1.5 py-0.5 text-[11px] font-medium tabular">{pedidos.length}</span>
+          <span className="rounded bg-card px-1.5 py-0.5 text-[10px] font-medium tabular">{pedidos.length}</span>
           <Popover>
             <PopoverTrigger asChild>
               <button disabled={pedidos.length === 0} className="flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-card hover:text-foreground disabled:opacity-40" aria-label="Ações da coluna">
@@ -197,8 +253,10 @@ function KanbanColumn({ col, pedidos, onView }: { col: typeof COLUMNS[number]; p
               </button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-56 p-1">
+              {col.id === ("faturamento" as any) && (
+                <ColAction icon={FileText} label="Faturar todos os pedidos" onClick={faturarTodos} />
+              )}
               <ColAction icon={CheckCircle2} label="Encerrar todos os pedidos" onClick={() => moverTodos("concluido")} />
-              <ColAction icon={FileText} label="Faturar todos" onClick={() => moverTodos("conferencia")} />
               <ColAction icon={Printer} label="Imprimir todos" onClick={() => printRomaneios(pedidos)} />
               {next && <ColAction icon={ArrowRight} label="Mover p/ o próximo processo" onClick={() => moverTodos(next)} />}
               <div className="my-1 border-t" />
