@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useAppSettings, useCategorias, useCreatePedido, useProdutos, type Produto } from "@/lib/queries";
 import { useAuth } from "@/lib/auth";
 import { BarcodeScanner } from "@/components/barcode-scanner";
+import { beepError } from "@/lib/sounds";
 
 export const Route = createFileRoute("/_authenticated/pdv")({
   head: () => ({ meta: [{ title: "PDV — Quick OS" }] }),
@@ -236,6 +237,7 @@ function PdvPage() {
           const norm = code.trim().toLowerCase();
           const p = produtos.find((x: any) => (x.codigo_barras ?? "").toString().trim().toLowerCase() === norm || (x.sku ?? "").toLowerCase() === norm) as Produto | undefined;
           if (!p) {
+            beepError();
             toast.error(`Código não cadastrado: ${code}`);
             return;
           }

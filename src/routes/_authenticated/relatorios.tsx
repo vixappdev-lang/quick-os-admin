@@ -78,8 +78,8 @@ function RelatoriosPage() {
       <PageHeader title="Relatórios" description="Análise consolidada de performance" actions={
         <>
           <button className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Calendar className="h-3.5 w-3.5" /> Últimos 30 dias</button>
-          <Link to="/relatorios/catalogo" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><FileBarChart2 className="h-3.5 w-3.5" /> Relatório</Link>
-          <button onClick={() => window.print()} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"><Download className="h-3.5 w-3.5" /> Exportar</button>
+          <button onClick={() => window.print()} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Download className="h-3.5 w-3.5" /> Exportar</button>
+          <Link to="/relatorios/catalogo" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] shadow-sm"><FileBarChart2 className="h-3.5 w-3.5" /> Catálogo de Relatórios</Link>
         </>
       } />
 
