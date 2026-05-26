@@ -359,3 +359,25 @@ function PedidoDetail() {
     </div>
   );
 }
+
+function PagamentoSection({ pedido }: { pedido: any }) {
+  const { data: pagamentos = [] } = usePedidoPagamentos(pedido.id);
+  const addPagamento = useAddPedidoPagamento();
+  const removePagamento = useRemovePedidoPagamento();
+  return (
+    <PaymentSplitter
+      total={Number(pedido.total)}
+      pagamentos={pagamentos as any}
+      onAdd={async (p) => {
+        try {
+          await addPagamento.mutateAsync({ pedido_id: pedido.id, forma: p.forma, condicao: p.condicao ?? null, vencimento: p.vencimento ?? null, valor: p.valor });
+        } catch (e: any) { toast.error(e.message); }
+      }}
+      onRemove={async (i) => {
+        const row: any = (pagamentos as any[])[i];
+        if (!row?.id) return;
+        try { await removePagamento.mutateAsync({ id: row.id, pedido_id: pedido.id }); } catch (e: any) { toast.error(e.message); }
+      }}
+    />
+  );
+}
