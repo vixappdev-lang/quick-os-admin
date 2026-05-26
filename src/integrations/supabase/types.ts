@@ -828,6 +828,8 @@ export type Database = {
         | "dinheiro"
         | "fiado"
         | "outro"
+        | "nota_promissoria"
+        | "cheque"
       pedido_origem: "balcao" | "pdv" | "vendedor" | "delivery"
       pedido_status:
         | "pendente"
@@ -978,6 +980,8 @@ export const Constants = {
         "dinheiro",
         "fiado",
         "outro",
+        "nota_promissoria",
+        "cheque",
       ],
       pedido_origem: ["balcao", "pdv", "vendedor", "delivery"],
       pedido_status: [
