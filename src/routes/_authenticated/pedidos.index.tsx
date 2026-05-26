@@ -4,13 +4,14 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable, type DragEndEvent, type DragStartEvent,
 } from "@dnd-kit/core";
-import { Plus, Search, MoreVertical, Eye, Printer, CheckCircle2, XCircle, LayoutGrid, List, ChevronDown, ArrowRight, FileText, Package as PackageIcon } from "lucide-react";
+import { Plus, Search, MoreVertical, Eye, Printer, CheckCircle2, XCircle, LayoutGrid, List, ChevronDown, ArrowRight, ArrowLeft, FileText, Package as PackageIcon, CreditCard, AlertTriangle, MessageSquare, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge, statusTone, pedidoStatusTone, PEDIDO_STATUS_LABEL } from "@/components/status-badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { formatBRL, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { usePedidos, useUpdatePedidoStatus, type Pedido } from "@/lib/queries";
+import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, type Pedido } from "@/lib/queries";
 import { toast } from "sonner";
 import { printRomaneio, printRomaneios } from "@/components/romaneio-print";
 
@@ -26,10 +27,14 @@ const COLUMNS: { id: Pedido["status"]; label: string; tone: string }[] = [
   { id: "autorizado", label: "Autorizado", tone: "border-info/40" },
   { id: "separacao", label: "Separação", tone: "border-info/40" },
   { id: "conferencia", label: "Conferência", tone: "border-primary/40" },
+  { id: "faturamento" as any, label: "Faturamento", tone: "border-primary/40" },
   { id: "concluido", label: "Finalizado", tone: "border-success/40" },
 ];
 const NEXT_OF: Record<string, Pedido["status"] | null> = {
-  pendente: "autorizado", autorizado: "separacao", separacao: "conferencia", conferencia: "concluido", concluido: null,
+  pendente: "autorizado", autorizado: "separacao", separacao: "conferencia", conferencia: "faturamento" as any, faturamento: "concluido" as any, concluido: null,
+};
+const PREV_OF: Record<string, Pedido["status"] | null> = {
+  pendente: null, autorizado: "pendente", separacao: "autorizado", conferencia: "separacao", faturamento: "conferencia" as any, concluido: "faturamento" as any,
 };
 
 function PedidosPage() {
@@ -266,25 +271,79 @@ function KanbanCardSimple({ pedido }: { pedido: any }) {
 function PedidoActions({ pedido, onView }: { pedido: any; onView?: () => void }) {
   const navigate = useNavigate();
   const updateStatus = useUpdatePedidoStatus();
+  const updatePedido = useUpdatePedido();
+  const { data: produtos = [] } = useProdutos();
+  const [pagOpen, setPagOpen] = useState(false);
+  const [obsOpen, setObsOpen] = useState(false);
+  const [incOpen, setIncOpen] = useState(false);
+  const [pagamento, setPagamento] = useState<string>(pedido.pagamento ?? "pix");
+  const [observacoes, setObservacoes] = useState<string>(pedido.observacoes ?? "");
+  const next = NEXT_OF[pedido.status as string];
+  const prev = PREV_OF[pedido.status as string];
+  const inconsistencias = (pedido.itens ?? [])
+    .map((i: any) => {
+      const p = produtos.find((x: any) => x.id === i.produto?.id || x.id === i.produto_id);
+      if (!p) return null;
+      const est = Number(p.estoque);
+      const min = Number(p.estoque_minimo ?? 0);
+      if (est < 0 || est <= min) return { nome: p.nome, estoque: est, min };
+      return null;
+    })
+    .filter(Boolean) as any[];
+
   const handle = async (status: Pedido["status"], label: string) => {
     try {
       await updateStatus.mutateAsync({ id: pedido.id, status });
       toast.success(`${pedido.numero} ${label}`);
     } catch (e: any) { toast.error(e.message); }
   };
+
+  const savePag = async () => {
+    try { await updatePedido.mutateAsync({ id: pedido.id, pagamento }); toast.success("Pagamento atualizado"); setPagOpen(false); }
+    catch (e: any) { toast.error(e.message); }
+  };
+  const saveObs = async () => {
+    try { await updatePedido.mutateAsync({ id: pedido.id, observacoes }); toast.success("Observações salvas"); setObsOpen(false); }
+    catch (e: any) { toast.error(e.message); }
+  };
+
   return (
+    <>
     <Popover>
       <PopoverTrigger asChild>
         <button onClick={(e) => e.stopPropagation()} className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Ações">
           <MoreVertical className="h-4 w-4" />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-44 p-1" onClick={(e) => e.stopPropagation()}>
+      <PopoverContent align="end" className="w-56 p-1" onClick={(e) => e.stopPropagation()}>
         <button onClick={() => (onView ? onView() : navigate({ to: "/pedidos/$id", params: { id: pedido.id } }))} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted">
           <Eye className="h-3.5 w-3.5" /> Ver detalhes
         </button>
+        <button onClick={() => navigate({ to: "/pedidos/$id", params: { id: pedido.id }, search: { edit: 1 } as any })} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted">
+          <Pencil className="h-3.5 w-3.5" /> Alterar pedido
+        </button>
         <button onClick={() => printRomaneio(pedido)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted">
           <Printer className="h-3.5 w-3.5" /> Imprimir
+        </button>
+        <div className="my-1 border-t" />
+        {next && (
+          <button onClick={() => handle(next, `movido para ${next}`)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted">
+            <ArrowRight className="h-3.5 w-3.5" /> Próximo processo
+          </button>
+        )}
+        {prev && (
+          <button onClick={() => handle(prev, `voltado para ${prev}`)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted">
+            <ArrowLeft className="h-3.5 w-3.5" /> Processo anterior
+          </button>
+        )}
+        <button onClick={() => setPagOpen(true)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted">
+          <CreditCard className="h-3.5 w-3.5" /> Pagamentos
+        </button>
+        <button onClick={() => setIncOpen(true)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted">
+          <AlertTriangle className="h-3.5 w-3.5" /> Inconsistências {inconsistencias.length > 0 && <span className="ml-auto rounded bg-warning/20 px-1.5 text-[10px] text-warning">{inconsistencias.length}</span>}
+        </button>
+        <button onClick={() => setObsOpen(true)} className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted">
+          <MessageSquare className="h-3.5 w-3.5" /> Observações
         </button>
         <div className="my-1 border-t" />
         {pedido.status !== "concluido" && (
@@ -299,6 +358,52 @@ function PedidoActions({ pedido, onView }: { pedido: any; onView?: () => void })
         )}
       </PopoverContent>
     </Popover>
+
+    <Dialog open={pagOpen} onOpenChange={setPagOpen}>
+      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader><DialogTitle>Forma de pagamento — {pedido.numero}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-3 gap-2">
+          {(["pix","credito","debito","dinheiro","fiado","outro"] as const).map((m) => (
+            <button key={m} onClick={() => setPagamento(m)} className={cn("rounded-md border p-2 text-xs font-medium capitalize", pagamento === m ? "border-primary bg-primary/10 text-primary" : "hover:bg-muted")}>{m}</button>
+          ))}
+        </div>
+        <DialogFooter>
+          <button onClick={() => setPagOpen(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
+          <button onClick={savePag} disabled={updatePedido.isPending} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-50">Salvar</button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={obsOpen} onOpenChange={setObsOpen}>
+      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader><DialogTitle>Observações — {pedido.numero}</DialogTitle></DialogHeader>
+        <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={5} className="w-full rounded-md border bg-background p-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Adicione observações..." />
+        <DialogFooter>
+          <button onClick={() => setObsOpen(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
+          <button onClick={saveObs} disabled={updatePedido.isPending} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-50">Salvar</button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={incOpen} onOpenChange={setIncOpen}>
+      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+        <DialogHeader><DialogTitle>Inconsistências — {pedido.numero}</DialogTitle></DialogHeader>
+        {inconsistencias.length === 0 ? (
+          <p className="rounded-md bg-success/10 p-3 text-sm text-success">Nenhuma inconsistência detectada.</p>
+        ) : (
+          <ul className="divide-y rounded-md border">
+            {inconsistencias.map((i, ix) => (
+              <li key={ix} className="flex items-center justify-between gap-2 p-3 text-sm">
+                <span className="font-medium">{i.nome}</span>
+                <span className="text-xs"><span className={i.estoque < 0 ? "text-destructive" : "text-warning"}>Estoque: {i.estoque}</span> <span className="text-muted-foreground">/ mín {i.min}</span></span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <DialogFooter><button onClick={() => setIncOpen(false)} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">Fechar</button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
 
