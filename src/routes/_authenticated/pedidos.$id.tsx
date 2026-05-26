@@ -348,19 +348,7 @@ function PedidoDetail() {
           </SectionCard>
 
           <SectionCard title="Pagamento">
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Método</span>
-                {editMode ? (
-                  <select value={pagamento} onChange={(e) => setPagamento(e.target.value)} className="h-8 rounded border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    {PAGAMENTO_LIST.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-                  </select>
-                ) : (
-                  <span className="font-medium">{pagamentoLabel(pedido.pagamento)}</span>
-                )}
-              </div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Status</span><StatusBadge status={pedido.status} tone={statusTone(pedido.status)} /></div>
-              <div className="flex justify-between border-t pt-2"><span className="text-muted-foreground">Valor</span><span className="tabular font-semibold">{formatBRL(Number(pedido.total))}</span></div>
-            </div>
+            <PagamentoSection pedido={pedido} />
           </SectionCard>
 
           <SectionCard title="Origem">
