@@ -26,6 +26,7 @@ import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authen
 import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticated/clientes'
 import { Route as AuthenticatedCaixaRouteImport } from './routes/_authenticated/caixa'
 import { Route as AuthenticatedPedidosIndexRouteImport } from './routes/_authenticated/pedidos.index'
+import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
 import { Route as ApiPublicV1RouteImport } from './routes/api/public/v1'
 import { Route as AuthenticatedRelatoriosCatalogoRouteImport } from './routes/_authenticated/relatorios.catalogo'
 import { Route as AuthenticatedProdutosNovoRouteImport } from './routes/_authenticated/produtos.novo'
@@ -124,6 +125,12 @@ const AuthenticatedPedidosIndexRoute =
     path: '/pedidos/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedEstoqueIndexRoute =
+  AuthenticatedEstoqueIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedEstoqueRoute,
+  } as any)
 const ApiPublicV1Route = ApiPublicV1RouteImport.update({
   id: '/api/public/v1',
   path: '/api/public/v1',
@@ -210,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/produtos/novo': typeof AuthenticatedProdutosNovoRoute
   '/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
+  '/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/pedidos/': typeof AuthenticatedPedidosIndexRoute
   '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
   '/api/public/v1/produtos': typeof ApiPublicV1ProdutosRoute
@@ -219,7 +227,6 @@ export interface FileRoutesByTo {
   '/caixa': typeof AuthenticatedCaixaRoute
   '/clientes': typeof AuthenticatedClientesRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
-  '/estoque': typeof AuthenticatedEstoqueRouteWithChildren
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/nfe': typeof AuthenticatedNfeRoute
   '/pdv': typeof AuthenticatedPdvRoute
@@ -238,6 +245,7 @@ export interface FileRoutesByTo {
   '/produtos/novo': typeof AuthenticatedProdutosNovoRoute
   '/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
+  '/estoque': typeof AuthenticatedEstoqueIndexRoute
   '/pedidos': typeof AuthenticatedPedidosIndexRoute
   '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
   '/api/public/v1/produtos': typeof ApiPublicV1ProdutosRoute
@@ -269,6 +277,7 @@ export interface FileRoutesById {
   '/_authenticated/produtos/novo': typeof AuthenticatedProdutosNovoRoute
   '/_authenticated/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
+  '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/_authenticated/pedidos/': typeof AuthenticatedPedidosIndexRoute
   '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
   '/api/public/v1/produtos': typeof ApiPublicV1ProdutosRoute
@@ -300,6 +309,7 @@ export interface FileRouteTypes {
     | '/produtos/novo'
     | '/relatorios/catalogo'
     | '/api/public/v1'
+    | '/estoque/'
     | '/pedidos/'
     | '/api/public/v1/pedidos'
     | '/api/public/v1/produtos'
@@ -309,7 +319,6 @@ export interface FileRouteTypes {
     | '/caixa'
     | '/clientes'
     | '/configuracoes'
-    | '/estoque'
     | '/financeiro'
     | '/nfe'
     | '/pdv'
@@ -328,6 +337,7 @@ export interface FileRouteTypes {
     | '/produtos/novo'
     | '/relatorios/catalogo'
     | '/api/public/v1'
+    | '/estoque'
     | '/pedidos'
     | '/api/public/v1/pedidos'
     | '/api/public/v1/produtos'
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/_authenticated/produtos/novo'
     | '/_authenticated/relatorios/catalogo'
     | '/api/public/v1'
+    | '/_authenticated/estoque/'
     | '/_authenticated/pedidos/'
     | '/api/public/v1/pedidos'
     | '/api/public/v1/produtos'
@@ -491,6 +502,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPedidosIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/estoque/': {
+      id: '/_authenticated/estoque/'
+      path: '/'
+      fullPath: '/estoque/'
+      preLoaderRoute: typeof AuthenticatedEstoqueIndexRouteImport
+      parentRoute: typeof AuthenticatedEstoqueRoute
+    }
     '/api/public/v1': {
       id: '/api/public/v1'
       path: '/api/public/v1'
@@ -588,11 +606,13 @@ const AuthenticatedClientesRouteWithChildren =
 
 interface AuthenticatedEstoqueRouteChildren {
   AuthenticatedEstoqueMovimentacoesRoute: typeof AuthenticatedEstoqueMovimentacoesRoute
+  AuthenticatedEstoqueIndexRoute: typeof AuthenticatedEstoqueIndexRoute
 }
 
 const AuthenticatedEstoqueRouteChildren: AuthenticatedEstoqueRouteChildren = {
   AuthenticatedEstoqueMovimentacoesRoute:
     AuthenticatedEstoqueMovimentacoesRoute,
+  AuthenticatedEstoqueIndexRoute: AuthenticatedEstoqueIndexRoute,
 }
 
 const AuthenticatedEstoqueRouteWithChildren =
@@ -702,13 +722,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

@@ -592,31 +592,37 @@ export type Database = {
         Row: {
           created_at: string
           desconto: number
+          embalagem_tipo: string
           id: string
           pedido_id: string
           preco_unit: number
           produto_id: string
           qtd: number
+          qtd_un_por_embalagem: number
           total: number
         }
         Insert: {
           created_at?: string
           desconto?: number
+          embalagem_tipo?: string
           id?: string
           pedido_id: string
           preco_unit?: number
           produto_id: string
           qtd?: number
+          qtd_un_por_embalagem?: number
           total?: number
         }
         Update: {
           created_at?: string
           desconto?: number
+          embalagem_tipo?: string
           id?: string
           pedido_id?: string
           preco_unit?: number
           produto_id?: string
           qtd?: number
+          qtd_un_por_embalagem?: number
           total?: number
         }
         Relationships: [
@@ -636,6 +642,50 @@ export type Database = {
           },
         ]
       }
+      pedido_pagamentos: {
+        Row: {
+          condicao: string | null
+          created_at: string
+          created_by: string | null
+          forma: string
+          id: string
+          observacao: string | null
+          pedido_id: string
+          valor: number
+          vencimento: string | null
+        }
+        Insert: {
+          condicao?: string | null
+          created_at?: string
+          created_by?: string | null
+          forma: string
+          id?: string
+          observacao?: string | null
+          pedido_id: string
+          valor?: number
+          vencimento?: string | null
+        }
+        Update: {
+          condicao?: string | null
+          created_at?: string
+          created_by?: string | null
+          forma?: string
+          id?: string
+          observacao?: string | null
+          pedido_id?: string
+          valor?: number
+          vencimento?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pedido_pagamentos_pedido_id_fkey"
+            columns: ["pedido_id"]
+            isOneToOne: false
+            referencedRelation: "pedidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pedidos: {
         Row: {
           cliente_id: string | null
@@ -647,9 +697,11 @@ export type Database = {
           operador_id: string | null
           origem: Database["public"]["Enums"]["pedido_origem"]
           pagamento: Database["public"]["Enums"]["pagamento_tipo"] | null
+          restante: number
           status: Database["public"]["Enums"]["pedido_status"]
           subtotal: number
           total: number
+          total_pago: number
           updated_at: string
           vendedor_id: string | null
         }
@@ -663,9 +715,11 @@ export type Database = {
           operador_id?: string | null
           origem?: Database["public"]["Enums"]["pedido_origem"]
           pagamento?: Database["public"]["Enums"]["pagamento_tipo"] | null
+          restante?: number
           status?: Database["public"]["Enums"]["pedido_status"]
           subtotal?: number
           total?: number
+          total_pago?: number
           updated_at?: string
           vendedor_id?: string | null
         }
@@ -679,9 +733,11 @@ export type Database = {
           operador_id?: string | null
           origem?: Database["public"]["Enums"]["pedido_origem"]
           pagamento?: Database["public"]["Enums"]["pagamento_tipo"] | null
+          restante?: number
           status?: Database["public"]["Enums"]["pedido_status"]
           subtotal?: number
           total?: number
+          total_pago?: number
           updated_at?: string
           vendedor_id?: string | null
         }
@@ -728,6 +784,7 @@ export type Database = {
           categoria_id: string | null
           codigo_barras: string | null
           created_at: string
+          embalagens: Json
           estoque: number
           estoque_minimo: number | null
           id: string
@@ -744,6 +801,7 @@ export type Database = {
           categoria_id?: string | null
           codigo_barras?: string | null
           created_at?: string
+          embalagens?: Json
           estoque?: number
           estoque_minimo?: number | null
           id?: string
@@ -760,6 +818,7 @@ export type Database = {
           categoria_id?: string | null
           codigo_barras?: string | null
           created_at?: string
+          embalagens?: Json
           estoque?: number
           estoque_minimo?: number | null
           id?: string
@@ -872,6 +931,7 @@ export type Database = {
         | "faturamento"
         | "concluido"
         | "cancelado"
+        | "encerrado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1025,6 +1085,7 @@ export const Constants = {
         "faturamento",
         "concluido",
         "cancelado",
+        "encerrado",
       ],
     },
   },

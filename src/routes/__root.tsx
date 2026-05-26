@@ -103,10 +103,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: React.ReactNode }) {
+  // Em produção (Cloudflare Worker / Vercel) as VITE_* podem não estar presentes
+  // no build, mas process.env.SUPABASE_* existem no runtime do servidor.
+  // Injetamos no window antes do bundle React rodar; o client.ts já tem
+  // fallback para process.env, que vai encontrar esses valores.
+  const envScript = (() => {
+    try {
+      const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "";
+      const key = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+      if (!url || !key) return "";
+      const payload = JSON.stringify({ SUPABASE_URL: url, SUPABASE_PUBLISHABLE_KEY: key });
+      return `window.process=window.process||{env:{}};Object.assign(window.process.env,${payload});`;
+    } catch {
+      return "";
+    }
+  })();
   return (
     <html lang="en">
       <head>
         <HeadContent />
+        {envScript ? (
+          <script dangerouslySetInnerHTML={{ __html: envScript }} />
+        ) : null}
       </head>
       <body>
         {children}
