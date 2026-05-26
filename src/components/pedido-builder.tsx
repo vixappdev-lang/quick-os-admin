@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useHidScanner } from "@/lib/hid-scanner";
 import { normalizeEan } from "@/lib/ean";
 import { beepError, beepScan } from "@/lib/sounds";
+import { PaymentSplitter, type PagamentoLinha } from "@/components/payment-splitter";
 
 type Item = { produto: Produto; qtd: number };
 
@@ -27,7 +28,7 @@ export function PedidoBuilder({ vendedorId, origem = "balcao", onCreated, onCanc
   const [itens, setItens] = useState<Item[]>([]);
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [buscaCliente, setBuscaCliente] = useState("");
-  const [pagamento, setPagamento] = useState<"pix" | "credito" | "debito" | "dinheiro" | "fiado">("pix");
+  const [pagamentos, setPagamentos] = useState<PagamentoLinha[]>([]);
   const [observacoes, setObservacoes] = useState("");
   const [desconto, setDesconto] = useState(0);
 
@@ -82,15 +83,21 @@ export function PedidoBuilder({ vendedorId, origem = "balcao", onCreated, onCanc
 
   const salvar = async () => {
     if (itens.length === 0) { toast.error("Adicione ao menos um item"); return; }
+    const totalPago = pagamentos.reduce((s, p) => s + Number(p.valor || 0), 0);
+    if (pagamentos.length > 0 && Math.abs(totalPago - total) > 0.009) {
+      toast.error("Soma das formas de pagamento difere do total. Ajuste antes de salvar.");
+      return;
+    }
     try {
       const pedido = await createPedido.mutateAsync({
         cliente_id: cliente?.id ?? null,
         vendedor_id: vendedorId ?? null,
         origem,
-        pagamento,
+        pagamento: (pagamentos[0]?.forma as any) ?? null,
         desconto,
         observacoes: observacoes || null,
         itens: itens.map((i) => ({ produto_id: i.produto.id, qtd: i.qtd, preco_unit: Number(i.produto.preco_venda) })),
+        pagamentos,
       });
       toast.success(`Pedido ${pedido.numero} criado`);
       onCreated(pedido.id);
@@ -188,11 +195,12 @@ export function PedidoBuilder({ vendedorId, origem = "balcao", onCreated, onCanc
         {/* Pagamento */}
         <div className="rounded-xl border bg-card p-3">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pagamento</p>
-          <div className="grid grid-cols-3 gap-1.5">
-            {(["pix", "credito", "debito", "dinheiro", "fiado"] as const).map((p) => (
-              <button key={p} type="button" onClick={() => setPagamento(p)} className={cn("h-9 rounded-md border text-xs font-medium capitalize transition", pagamento === p ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:bg-muted")}>{p}</button>
-            ))}
-          </div>
+          <PaymentSplitter
+            total={total}
+            pagamentos={pagamentos}
+            onAdd={(p) => setPagamentos((prev) => [...prev, p])}
+            onRemove={(i) => setPagamentos((prev) => prev.filter((_, ix) => ix !== i))}
+          />
         </div>
 
         <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} rows={2} placeholder="Observações (opcional)" className="w-full resize-none rounded-xl border border-input bg-card p-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
