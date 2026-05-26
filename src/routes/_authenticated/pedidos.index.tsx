@@ -15,6 +15,8 @@ import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, useCli
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { printRomaneio, printRomaneios } from "@/components/romaneio-print";
+import { printEntregas, exportEntregasCSV, formatEndereco } from "@/components/entregas-print";
+import { printSeparacao, agregarSeparacao } from "@/components/separacao-print";
 
 export const Route = createFileRoute("/_authenticated/pedidos/")({
   // Index route for /pedidos. Path is normalized below via TanStack;
@@ -225,6 +227,8 @@ function KanbanColumn({ col, pedidos, onView }: { col: typeof COLUMNS[number]; p
   const updateStatus = useUpdatePedidoStatus();
   const criarFat = useCriarFaturamento();
   const { user } = useAuth();
+  const [entregasOpen, setEntregasOpen] = useState(false);
+  const [separacaoOpen, setSeparacaoOpen] = useState(false);
   const next = NEXT_OF[col.id];
   const moverTodos = async (alvo: Pedido["status"]) => {
     for (const p of pedidos) {
@@ -260,8 +264,8 @@ function KanbanColumn({ col, pedidos, onView }: { col: typeof COLUMNS[number]; p
               <ColAction icon={Printer} label="Imprimir todos" onClick={() => printRomaneios(pedidos)} />
               {next && <ColAction icon={ArrowRight} label="Mover p/ o próximo processo" onClick={() => moverTodos(next)} />}
               <div className="my-1 border-t" />
-              <ColAction icon={Truck()} label="Relação de Entregas" onClick={() => toast.info("Em breve: relação de entregas")} />
-              <ColAction icon={PackageIcon} label="Separação por Produto" onClick={() => toast.info("Em breve: separação por produto")} />
+              <ColAction icon={Truck()} label="Relação de Entregas" onClick={() => setEntregasOpen(true)} />
+              <ColAction icon={PackageIcon} label="Separação por Produto" onClick={() => setSeparacaoOpen(true)} />
             </PopoverContent>
           </Popover>
         </div>
@@ -274,6 +278,8 @@ function KanbanColumn({ col, pedidos, onView }: { col: typeof COLUMNS[number]; p
         )}
         {pedidos.map((p) => <KanbanCard key={p.id} pedido={p} onView={onView} />)}
       </div>
+      <EntregasDialog open={entregasOpen} onOpenChange={setEntregasOpen} pedidos={pedidos} colLabel={col.label} />
+      <SeparacaoDialog open={separacaoOpen} onOpenChange={setSeparacaoOpen} pedidos={pedidos} colLabel={col.label} />
     </div>
   );
 }
