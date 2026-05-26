@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { Download, Calendar, DollarSign, ShoppingBag, TrendingUp, Package2, FileBarChart2 } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -16,6 +16,8 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
 
 function RelatoriosPage() {
   const { data: pedidos = [] } = usePedidos();
+  const navigate = useNavigate();
+  const router = useRouter();
 
   const { faturamento, itens, ticket, qtdPedidos, vendasDia, formas, topProdutos } = useMemo(() => {
     const validos = pedidos.filter((p: any) => p.status !== "cancelado");
@@ -71,15 +73,19 @@ function RelatoriosPage() {
     <div>
       <PageHeader title="Relatórios" description="Análise consolidada de performance" actions={
         <>
+          <button
+            type="button"
+            onMouseEnter={() => { try { router.preloadRoute({ to: "/relatorios/catalogo" }); } catch {} }}
+            onClick={() => {
+              try { navigate({ to: "/relatorios/catalogo" }); }
+              catch (err) { console.error("Falha ao navegar para Catálogo de Relatórios", err); window.location.assign("/relatorios/catalogo"); }
+            }}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground hover:bg-[var(--primary-hover)] shadow-sm"
+          >
+            <FileBarChart2 className="h-3.5 w-3.5" /> Abrir Catálogo
+          </button>
           <button className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Calendar className="h-3.5 w-3.5" /> Últimos 30 dias</button>
           <button onClick={() => window.print()} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><Download className="h-3.5 w-3.5" /> Exportar</button>
-          <Link
-            to="/relatorios/catalogo"
-            preload="intent"
-            className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] shadow-sm"
-          >
-            <FileBarChart2 className="h-3.5 w-3.5" /> Catálogo de Relatórios
-          </Link>
         </>
       } />
 
