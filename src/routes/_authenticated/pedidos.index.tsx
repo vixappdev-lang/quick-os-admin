@@ -9,7 +9,6 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge, statusTone, pedidoStatusTone, PEDIDO_STATUS_LABEL } from "@/components/status-badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatBRL, formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { usePedidos, useUpdatePedidoStatus, useUpdatePedido, useProdutos, useClientes, useVendedores, useCriarFaturamento, usePedidoPagamentos, useAddPedidoPagamento, useRemovePedidoPagamento, useEncerrarPedido, type Pedido } from "@/lib/queries";
@@ -430,12 +429,15 @@ function PedidoActions({ pedido, onView }: { pedido: any; onView?: () => void })
       </PopoverContent>
     </Popover>
 
-    <Sheet open={pagOpen} onOpenChange={setPagOpen}>
-      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl" onClick={(e) => e.stopPropagation()}>
-        <SheetHeader>
-          <SheetTitle>Pagamentos — {pedido.numero}</SheetTitle>
-        </SheetHeader>
-        <div className="mt-4">
+    <Dialog open={pagOpen} onOpenChange={setPagOpen}>
+      <DialogContent
+        className="max-h-[92vh] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto p-0 sm:w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DialogHeader className="border-b bg-muted/30 px-4 py-3 sm:px-6">
+          <DialogTitle className="text-base sm:text-lg">Pagamentos — {pedido.numero}</DialogTitle>
+        </DialogHeader>
+        <div className="px-4 py-4 sm:px-6">
           <PaymentSplitter
             total={Number(pedido.total)}
             pagamentos={pagamentos as any}
@@ -451,8 +453,8 @@ function PedidoActions({ pedido, onView }: { pedido: any; onView?: () => void })
             }}
           />
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
 
     <Dialog open={obsOpen} onOpenChange={setObsOpen}>
       <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
