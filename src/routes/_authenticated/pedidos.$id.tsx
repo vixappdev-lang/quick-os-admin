@@ -348,19 +348,7 @@ function PedidoDetail() {
           </SectionCard>
 
           <SectionCard title="Pagamento">
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center justify-between gap-2"><span className="text-muted-foreground">Método</span>
-                {editMode ? (
-                  <select value={pagamento} onChange={(e) => setPagamento(e.target.value)} className="h-8 rounded border bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    {PAGAMENTO_LIST.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-                  </select>
-                ) : (
-                  <span className="font-medium">{pagamentoLabel(pedido.pagamento)}</span>
-                )}
-              </div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Status</span><StatusBadge status={pedido.status} tone={statusTone(pedido.status)} /></div>
-              <div className="flex justify-between border-t pt-2"><span className="text-muted-foreground">Valor</span><span className="tabular font-semibold">{formatBRL(Number(pedido.total))}</span></div>
-            </div>
+            <PagamentoSection pedido={pedido} />
           </SectionCard>
 
           <SectionCard title="Origem">
@@ -369,5 +357,27 @@ function PedidoDetail() {
         </div>
       </div>
     </div>
+  );
+}
+
+function PagamentoSection({ pedido }: { pedido: any }) {
+  const { data: pagamentos = [] } = usePedidoPagamentos(pedido.id);
+  const addPagamento = useAddPedidoPagamento();
+  const removePagamento = useRemovePedidoPagamento();
+  return (
+    <PaymentSplitter
+      total={Number(pedido.total)}
+      pagamentos={pagamentos as any}
+      onAdd={async (p) => {
+        try {
+          await addPagamento.mutateAsync({ pedido_id: pedido.id, forma: p.forma, condicao: p.condicao ?? null, vencimento: p.vencimento ?? null, valor: p.valor });
+        } catch (e: any) { toast.error(e.message); }
+      }}
+      onRemove={async (i) => {
+        const row: any = (pagamentos as any[])[i];
+        if (!row?.id) return;
+        try { await removePagamento.mutateAsync({ id: row.id, pedido_id: pedido.id }); } catch (e: any) { toast.error(e.message); }
+      }}
+    />
   );
 }
