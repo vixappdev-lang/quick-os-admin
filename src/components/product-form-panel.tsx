@@ -58,7 +58,7 @@ export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }:
     }
   }, [open, mode, produto]);
 
-  const set = (k: keyof typeof form, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
   const ro = mode === "view";
 
   const custo = Number(form.preco_custo) || 0;
