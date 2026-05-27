@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ChevronRight, Download, FileBarChart2, Info, Printer, Search, X, Filter } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
@@ -87,38 +87,36 @@ function RelatoriosPage() {
         description="Selecione um relatório para visualizar, imprimir ou exportar em CSV"
       />
 
-      <SectionCard className="mb-4">
-        <div className="flex flex-wrap items-end gap-3">
+      <SectionCard className="mb-4" padded={false}>
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-2.5">
           <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             <Filter className="h-3.5 w-3.5" /> Filtros globais
           </div>
-          <div className="flex flex-col">
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">De</label>
-            <input type="date" value={dtIni} onChange={(e) => setDtIni(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
-          </div>
-          <div className="flex flex-col">
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Até</label>
-            <input type="date" value={dtFim} onChange={(e) => setDtFim(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
-          </div>
-          <div className="flex flex-col min-w-[180px]">
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Vendedor</label>
-            <select value={vendedorId} onChange={(e) => setVendedorId(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+          {filtrosAtivos && (
+            <button onClick={() => { setDtIni(""); setDtFim(""); setVendedorId(""); setFornecedorId(""); }} className="inline-flex h-7 items-center gap-1 rounded-md border bg-card px-2 text-[11px] font-medium text-muted-foreground hover:bg-muted">
+              <X className="h-3 w-3" /> Limpar
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-3 p-3 sm:grid-cols-4">
+          <Field label="De">
+            <input type="date" value={dtIni} onChange={(e) => setDtIni(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+          </Field>
+          <Field label="Até">
+            <input type="date" value={dtFim} onChange={(e) => setDtFim(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+          </Field>
+          <Field label="Vendedor">
+            <select value={vendedorId} onChange={(e) => setVendedorId(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
               <option value="">Todos</option>
               {usuarios.map((u: any) => <option key={u.id} value={u.id}>{u.nome || u.email}</option>)}
             </select>
-          </div>
-          <div className="flex flex-col min-w-[200px]">
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Fornecedor</label>
-            <select value={fornecedorId} onChange={(e) => setFornecedorId(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+          </Field>
+          <Field label="Fornecedor">
+            <select value={fornecedorId} onChange={(e) => setFornecedorId(e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
               <option value="">Todos</option>
               {fornecedores.map((f: any) => <option key={f.id} value={f.id}>{f.razao_social}</option>)}
             </select>
-          </div>
-          {filtrosAtivos && (
-            <button onClick={() => { setDtIni(""); setDtFim(""); setVendedorId(""); setFornecedorId(""); }} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-xs font-medium text-muted-foreground hover:bg-muted">
-              <X className="h-3.5 w-3.5" /> Limpar
-            </button>
-          )}
+          </Field>
         </div>
       </SectionCard>
 
@@ -253,6 +251,21 @@ function RelatoriosPage() {
 }
 
 function ReportTable({ report }: { report: RelReport }) {
+  return (
+    <ReportTableInner report={report} />
+  );
+}
+
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col">
+      <label className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function ReportTableInner({ report }: { report: RelReport }) {
   return (
     <>
       <div className="overflow-x-auto">

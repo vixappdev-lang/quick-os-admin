@@ -71,35 +71,34 @@ export function WelcomeOnboarding() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
-      <div className="w-full max-w-lg overflow-hidden rounded-2xl border bg-card shadow-2xl">
-        {/* hero */}
-        <div className="relative bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-8 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-            <Icon className="h-8 w-8" />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/70 backdrop-blur-sm p-4">
+      <div className="w-full max-w-md overflow-hidden rounded-xl border bg-card shadow-xl">
+        <div className="flex items-start gap-4 p-6">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border bg-muted/60 text-primary">
+            <Icon className="h-5 w-5" />
           </div>
-          <h2 className="mt-4 text-xl font-bold tracking-tight">{steps[step].title}</h2>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">{steps[step].body}</p>
+          <div className="min-w-0 flex-1">
+            <h2 className="text-base font-semibold leading-snug">{steps[step].title}</h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{steps[step].body}</p>
+          </div>
         </div>
 
-        {/* progress dots */}
-        <div className="flex items-center justify-center gap-2 px-8 pt-6">
+        <div className="flex items-center justify-center gap-1.5 px-6">
           {steps.map((_, i) => (
             <span
               key={i}
-              className={`h-1.5 rounded-full transition-all ${i === step ? "w-8 bg-primary" : i < step ? "w-1.5 bg-primary/40" : "w-1.5 bg-muted"}`}
+              className={`h-1 rounded-full transition-all ${i === step ? "w-6 bg-primary" : "w-1.5 bg-muted"}`}
             />
           ))}
         </div>
 
-        {/* actions */}
-        <div className="flex items-center justify-between gap-3 px-8 py-6">
-          <span className="text-xs text-muted-foreground">{step + 1} de {steps.length}</span>
+        <div className="mt-4 flex items-center justify-between gap-3 border-t bg-muted/30 px-6 py-3">
+          <span className="text-xs text-muted-foreground">Passo {step + 1} de {steps.length}</span>
           <div className="flex gap-2">
             {step > 0 && (
               <button
                 onClick={() => setStep((s) => s - 1)}
-                className="h-10 rounded-md border bg-card px-4 text-sm font-medium hover:bg-muted"
+                className="h-9 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"
               >
                 Voltar
               </button>
@@ -107,17 +106,17 @@ export function WelcomeOnboarding() {
             {!isLast ? (
               <button
                 onClick={() => setStep((s) => s + 1)}
-                className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"
               >
-                Próximo <ArrowRight className="h-4 w-4" />
+                Próximo <ArrowRight className="h-3.5 w-3.5" />
               </button>
             ) : (
               <button
                 onClick={concluir}
                 disabled={saving}
-                className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60"
+                className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60"
               >
-                <Check className="h-4 w-4" /> {saving ? "Salvando..." : "Configurar empresa agora"}
+                <Check className="h-3.5 w-3.5" /> {saving ? "Salvando..." : "Configurar empresa"}
               </button>
             )}
           </div>
