@@ -67,6 +67,20 @@ export const listTenants = createServerFn({ method: "GET" })
     return data ?? [];
   });
 
+/** Retorna o tenant ativo do usuário logado (ou null). */
+export const getMyTenant = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await supabaseAdmin
+      .from("tenants")
+      .select("slug, nome, supabase_url, supabase_anon_key")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    return { slug: data.slug, nome: data.nome, url: data.supabase_url, anon_key: data.supabase_anon_key };
+  });
+
 const PermSchema = z.object({
   user_id: z.string().uuid(),
   permissions: z.array(z.object({ menu: z.string().min(1).max(40), allowed: z.boolean() })),
