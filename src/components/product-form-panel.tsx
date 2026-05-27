@@ -20,10 +20,11 @@ interface Props {
   onModeChange: (m: PanelMode) => void;
 }
 
-const EMPTY = {
+const EMPTY: any = {
   nome: "", sku: "", codigo_barras: "", categoria_id: "",
   preco_custo: "0", preco_venda: "0", estoque: "0", estoque_minimo: "0", unidade: "UN",
-  ativo: true, imagem_url: "",
+  ativo: true, imagem_url: "", peso_kg: "0",
+  embalagens: [] as { tipo: string; qtd: number }[],
 };
 
 export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }: Props) {
@@ -51,6 +52,8 @@ export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }:
         unidade: produto.unidade ?? "UN",
         ativo: produto.ativo ?? true,
         imagem_url: produto.imagem_url ?? "",
+        peso_kg: String(produto.peso_kg ?? 0),
+        embalagens: Array.isArray(produto.embalagens) ? produto.embalagens : [],
       });
     }
   }, [open, mode, produto]);
@@ -88,6 +91,8 @@ export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }:
         unidade: form.unidade,
         ativo: form.ativo,
         imagem_url: form.imagem_url || null,
+        peso_kg: Number(form.peso_kg) || 0,
+        embalagens: form.embalagens ?? [],
       };
       if (mode === "edit" && produto?.id) payload.id = produto.id;
       await upsert.mutateAsync(payload);
