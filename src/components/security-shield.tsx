@@ -20,7 +20,7 @@ export function SecurityShield() {
       if (window.top !== window.self) {
         setReason("Esta aplicação não pode ser carregada dentro de um iframe.");
         setBlocked(true);
-        try { window.top!.location = window.self.location; } catch {/* cross-origin */}
+        try { window.top!.location.href = window.self.location.href; } catch {/* cross-origin */}
       }
     } catch {
       setReason("Esta aplicação não pode ser carregada dentro de um iframe.");
