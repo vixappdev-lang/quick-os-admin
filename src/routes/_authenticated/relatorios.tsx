@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Download, FileBarChart2, Info, Printer, Search, X } from "lucide-react";
+import { ChevronRight, Download, FileBarChart2, Info, Printer, Search, X, Filter } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useRelatorios, exportRelatorioCSV, printRelatorio, type RelReport, type RelRow } from "@/components/relatorio-catalog";
-import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuarios } from "@/lib/queries";
+import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuarios, useFornecedores } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — Quick OS" }] }),
@@ -13,12 +13,38 @@ export const Route = createFileRoute("/_authenticated/relatorios")({
 });
 
 function RelatoriosPage() {
-  const { data: pedidos = [] } = usePedidos();
-  const { data: produtos = [] } = useProdutos();
+  const { data: pedidosAll = [] } = usePedidos();
+  const { data: produtosAll = [] } = useProdutos();
   const { data: clientes = [] } = useClientes();
   const { data: despesas = [] } = useDespesas();
   const { data: contas = [] } = useContas();
   const { data: usuarios = [] } = useUsuarios();
+  const { data: fornecedores = [] } = useFornecedores();
+
+  // Filtros globais
+  const [dtIni, setDtIni] = useState<string>("");
+  const [dtFim, setDtFim] = useState<string>("");
+  const [vendedorId, setVendedorId] = useState<string>("");
+  const [fornecedorId, setFornecedorId] = useState<string>("");
+
+  const pedidos = useMemo(() => {
+    return pedidosAll.filter((p: any) => {
+      if (vendedorId && p.vendedor_id !== vendedorId) return false;
+      if (dtIni && new Date(p.created_at) < new Date(dtIni)) return false;
+      if (dtFim) {
+        const end = new Date(dtFim); end.setHours(23, 59, 59, 999);
+        if (new Date(p.created_at) > end) return false;
+      }
+      return true;
+    });
+  }, [pedidosAll, vendedorId, dtIni, dtFim]);
+
+  const produtos = useMemo(() => {
+    if (!fornecedorId) return produtosAll;
+    return produtosAll.filter((p: any) => p.fornecedor_id === fornecedorId);
+  }, [produtosAll, fornecedorId]);
+
+  const filtrosAtivos = !!(dtIni || dtFim || vendedorId || fornecedorId);
 
   const grupos = useRelatorios({ pedidos, produtos, clientes, despesas, contas, usuarios });
   const [selectedNum, setSelectedNum] = useState<number | null>(null);
@@ -60,6 +86,41 @@ function RelatoriosPage() {
         title="Relatórios"
         description="Selecione um relatório para visualizar, imprimir ou exportar em CSV"
       />
+
+      <SectionCard className="mb-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <Filter className="h-3.5 w-3.5" /> Filtros globais
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">De</label>
+            <input type="date" value={dtIni} onChange={(e) => setDtIni(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+          </div>
+          <div className="flex flex-col">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Até</label>
+            <input type="date" value={dtFim} onChange={(e) => setDtFim(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+          </div>
+          <div className="flex flex-col min-w-[180px]">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Vendedor</label>
+            <select value={vendedorId} onChange={(e) => setVendedorId(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+              <option value="">Todos</option>
+              {usuarios.map((u: any) => <option key={u.id} value={u.id}>{u.nome || u.email}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col min-w-[200px]">
+            <label className="text-[10px] uppercase tracking-wider text-muted-foreground">Fornecedor</label>
+            <select value={fornecedorId} onChange={(e) => setFornecedorId(e.target.value)} className="h-9 rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+              <option value="">Todos</option>
+              {fornecedores.map((f: any) => <option key={f.id} value={f.id}>{f.razao_social}</option>)}
+            </select>
+          </div>
+          {filtrosAtivos && (
+            <button onClick={() => { setDtIni(""); setDtFim(""); setVendedorId(""); setFornecedorId(""); }} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-xs font-medium text-muted-foreground hover:bg-muted">
+              <X className="h-3.5 w-3.5" /> Limpar
+            </button>
+          )}
+        </div>
+      </SectionCard>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[340px_1fr]">
         <SectionCard padded={false} className="lg:sticky lg:top-4 lg:max-h-[calc(100vh-7rem)] overflow-hidden">
