@@ -298,8 +298,8 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
                     </div>
                   )}
                 </div>
-                <button type="button" onClick={() => setNovoCliOpen(true)} className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted sm:w-auto">
-                  <Plus className="h-3.5 w-3.5" /> Novo cliente
+                <button type="button" onClick={irParaNovoCliente} className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted sm:w-auto">
+                  <UserPlus className="h-3.5 w-3.5" /> Novo cliente
                 </button>
               </div>
             )}
@@ -472,21 +472,6 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
           </SectionCard>
         </aside>
       </div>
-
-      <Dialog open={novoCliOpen} onOpenChange={setNovoCliOpen}>
-        <DialogContent className="max-sm:!w-screen max-sm:!max-w-none max-sm:!h-[100dvh] max-sm:!rounded-none max-sm:!translate-x-0 max-sm:!translate-y-0 max-sm:!top-0 max-sm:!left-0">
-          <DialogHeader><DialogTitle>Cadastrar cliente</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <Field label="Nome"><input autoFocus value={novoCli.nome} onChange={(e) => setNovoCli((s) => ({ ...s, nome: e.target.value }))} className={inputBase} /></Field>
-            <Field label="Telefone"><input value={novoCli.telefone} onChange={(e) => setNovoCli((s) => ({ ...s, telefone: e.target.value }))} className={inputBase} /></Field>
-            <Field label="CPF/CNPJ"><input value={novoCli.documento} onChange={(e) => setNovoCli((s) => ({ ...s, documento: e.target.value }))} className={inputBase} /></Field>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setNovoCliOpen(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
-              <button type="button" onClick={criarCliente} disabled={upsertCliente.isPending} className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-50">{upsertCliente.isPending ? "Salvando..." : "Salvar cliente"}</button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Barra de ações MOBILE — fixa no rodapé com safe-area */}
       <div className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 gap-2 border-t bg-card/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
