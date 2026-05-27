@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { setActiveTenant } from "@/integrations/supabase/active-client";
+import { logEvent } from "@/lib/queries";
 
 export type AppRole = "admin" | "gerente" | "operador" | "vendedor";
 
@@ -109,8 +110,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (error) throw new Error(error.message);
+    const e = email.trim();
+    const { error } = await supabase.auth.signInWithPassword({ email: e, password });
+    if (error) {
+      logEvent("erro", `Falha de login: ${e}`, { email: e, motivo: error.message });
+      throw new Error(error.message);
+    }
+    logEvent("login", `Login efetuado: ${e}`, { email: e, em: new Date().toISOString() });
   };
 
   const signUp = async (email: string, password: string, nome: string) => {
@@ -123,6 +129,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    try {
+      const email = (await supabase.auth.getUser()).data.user?.email ?? "—";
+      await logEvent("login", `Logout: ${email}`, { email, em: new Date().toISOString(), acao: "logout" });
+    } catch {/* ignore */}
     await supabase.auth.signOut();
     setActiveTenant(null);
     setUser(null);
