@@ -54,12 +54,13 @@ function Fluxo() {
   const { data: pedidos = [] } = usePedidos();
   const { data: despesas = [] } = useDespesas();
   const { data: caixa } = useCaixaAtual();
+  const [range, setRange] = useState<7 | 15 | 30 | 60 | 90>(30);
   const { entradas, saidas, dias } = useMemo(() => {
     const now = new Date();
-    const start = new Date(now); start.setDate(now.getDate() - 29); start.setHours(0, 0, 0, 0);
+    const start = new Date(now); start.setDate(now.getDate() - (range - 1)); start.setHours(0, 0, 0, 0);
     const arr: { dia: string; entradas: number; saidas: number }[] = [];
     let totalIn = 0, totalOut = 0;
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < range; i++) {
       const d = new Date(start); d.setDate(start.getDate() + i);
       const next = new Date(d); next.setDate(d.getDate() + 1);
       const e = pedidos
@@ -72,7 +73,7 @@ function Fluxo() {
       arr.push({ dia: d.toLocaleDateString("pt-BR", { day: "2-digit" }), entradas: e, saidas: s });
     }
     return { entradas: totalIn, saidas: totalOut, dias: arr };
-  }, [pedidos, despesas]);
+  }, [pedidos, despesas, range]);
   const caixaTotal = caixa
     ? Number(caixa.valor_inicial) + (caixa.movimentos ?? []).reduce(
         (s: number, m: any) => s + (m.tipo === "suprimento" || m.tipo === "venda" ? Number(m.valor) : -Number(m.valor)), 0)
@@ -85,7 +86,20 @@ function Fluxo() {
         <KpiCard label="Saldo líquido" value={formatBRL(entradas - saidas)} icon={CircleDollarSign} accent="primary" />
         <KpiCard label="Caixa" value={caixa ? formatBRL(caixaTotal) : "Fechado"} icon={Wallet} accent="info" />
       </div>
-      <SectionCard title="Movimentação diária" padded={false}>
+      <SectionCard
+        title="Movimentação diária"
+        padded={false}
+        action={
+          <div className="flex gap-1 rounded-md border bg-card p-0.5">
+            {([7, 15, 30, 60, 90] as const).map((d) => (
+              <button key={d} onClick={() => setRange(d)}
+                className={`h-7 rounded px-2.5 text-[11px] font-medium transition ${range === d ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}>
+                {d}d
+              </button>
+            ))}
+          </div>
+        }
+      >
         <div className="h-80 p-4">
           <ResponsiveContainer>
             <AreaChart data={dias}>
