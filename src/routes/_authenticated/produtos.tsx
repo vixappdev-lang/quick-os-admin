@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Search, Package, Eye, Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { Plus, Search, Package, Eye, Pencil, Trash2, MoreHorizontal, PackagePlus } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,6 +10,7 @@ import { ProductFormPanel, type PanelMode } from "@/components/product-form-pane
 import { Pagination } from "@/components/pagination";
 import { toast } from "sonner";
 import { NovoProdutoChooser, type ManualPrefill } from "@/components/novo-produto-chooser";
+import { NovaEntradaDialog } from "@/components/nova-entrada-dialog";
 
 export const Route = createFileRoute("/_authenticated/produtos")({
   head: () => ({ meta: [{ title: "Produtos — Quick OS" }] }),
@@ -28,6 +29,7 @@ function ProdutosPage() {
   const [page, setPage] = useState(1);
   const [panel, setPanel] = useState<{ open: boolean; mode: PanelMode; produto: any | null }>({ open: false, mode: "view", produto: null });
   const [chooserOpen, setChooserOpen] = useState(false);
+  const [entradaOpen, setEntradaOpen] = useState(false);
 
   const filtrados = useMemo(() => produtos.filter((p: any) =>
     (cat === "todas" || p.categoria_id === cat) &&
@@ -69,6 +71,7 @@ function ProdutosPage() {
     <div>
       <PageHeader title="Produtos" description={`${produtos.length} produto${produtos.length === 1 ? "" : "s"} cadastrado${produtos.length === 1 ? "" : "s"}`} actions={
         <div className="flex flex-wrap gap-2">
+          <button onClick={() => setEntradaOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"><PackagePlus className="h-3.5 w-3.5" /> Nova entrada</button>
           <button onClick={openCreate} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"><Plus className="h-3.5 w-3.5" /> Novo produto</button>
         </div>
       } />
@@ -175,6 +178,7 @@ function ProdutosPage() {
         onPickManual={openManualCreate}
         onPickEdit={openEditById}
       />
+      <NovaEntradaDialog open={entradaOpen} onClose={() => setEntradaOpen(false)} />
     </div>
   );
 }
