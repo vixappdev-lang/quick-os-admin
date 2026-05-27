@@ -134,7 +134,7 @@ function ProdutosPage() {
                       </td>
                       <td className="px-4 py-3"><span className="font-mono text-xs text-muted-foreground">{p.sku}</span></td>
                       <td className="px-4 py-3 text-right tabular">
-                        <span className={Number(p.estoque) < Number(p.estoque_minimo ?? 0) ? "text-destructive font-semibold" : ""}>{Number(p.estoque)} {p.unidade}</span>
+                        <span className={Number(p.estoque) < Number(p.estoque_minimo ?? 0) ? "text-destructive font-semibold" : ""}>{Math.round(Number(p.estoque))} UN</span>
                       </td>
                       <td className="px-4 py-3 text-right tabular text-muted-foreground">{formatBRL(Number(p.preco_custo ?? 0))}</td>
                       <td className="px-4 py-3 text-right tabular font-semibold">{formatBRL(Number(p.preco_venda))}</td>
