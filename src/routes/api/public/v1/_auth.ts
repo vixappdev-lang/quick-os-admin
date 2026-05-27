@@ -10,15 +10,19 @@ export async function authenticateApiKey(request: Request) {
   const hash = createHash("sha256").update(raw).digest("hex");
   const { data } = await supabaseAdmin
     .from("api_keys")
-    .select("id, ativo, prefix, key_hash")
+    .select("id, ativo, prefix, key_hash, expires_at, usage_count, scopes")
     .eq("prefix", prefix)
     .maybeSingle();
   if (!data || !data.ativo || data.key_hash !== hash) return null;
+  if ((data as any).expires_at && new Date((data as any).expires_at).getTime() < Date.now()) return null;
   await supabaseAdmin
     .from("api_keys")
-    .update({ last_used_at: new Date().toISOString() })
+    .update({
+      last_used_at: new Date().toISOString(),
+      usage_count: ((data as any).usage_count ?? 0) + 1,
+    } as any)
     .eq("id", data.id);
-  return { keyId: data.id };
+  return { keyId: data.id, scopes: ((data as any).scopes as string[]) ?? ["read", "write"] };
 }
 
 export const corsHeaders = {
