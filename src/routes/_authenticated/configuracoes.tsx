@@ -27,11 +27,11 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 });
 
 const PAYMENT_LABELS: Record<string, string> = { pix: "PIX", credito: "Cartão de crédito", debito: "Cartão de débito", dinheiro: "Dinheiro", nota_promissoria: "Nota promissória", cheque: "Cheque", outro: "Outro" };
+const inp = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
 
 function ConfiguracoesPage() {
   const { data: settings } = useAppSettings();
   const updateSettings = useUpdateAppSettings();
-  const inp = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
   const [empresa, setEmpresa] = useState({ razao: "", cnpj: "", ie: "", telefone: "", email: "", endereco: "" });
 
   const paymentMap = useMemo<Record<string, boolean>>(() => ({ pix: true, credito: true, debito: true, dinheiro: true, nota_promissoria: true, cheque: false, outro: false, ...((settings?.metodos_pagamento ?? {}) as Record<string, boolean>) }), [settings]);
