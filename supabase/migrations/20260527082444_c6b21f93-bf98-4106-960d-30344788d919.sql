@@ -1,0 +1,15 @@
+ALTER TABLE public.fornecedores
+  ADD COLUMN IF NOT EXISTS cep text,
+  ADD COLUMN IF NOT EXISTS endereco text,
+  ADD COLUMN IF NOT EXISTS numero text,
+  ADD COLUMN IF NOT EXISTS bairro text,
+  ADD COLUMN IF NOT EXISTS complemento text,
+  ADD COLUMN IF NOT EXISTS contato_nome text,
+  ADD COLUMN IF NOT EXISTS whatsapp text,
+  ADD COLUMN IF NOT EXISTS site text,
+  ADD COLUMN IF NOT EXISTS prazo_pagamento text,
+  ADD COLUMN IF NOT EXISTS condicoes text,
+  ADD COLUMN IF NOT EXISTS banco text,
+  ADD COLUMN IF NOT EXISTS agencia text,
+  ADD COLUMN IF NOT EXISTS conta text,
+  ADD COLUMN IF NOT EXISTS pix text;

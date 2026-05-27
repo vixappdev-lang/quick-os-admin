@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ShieldAlert } from "lucide-react";
-import { activeSupabase } from "@/integrations/supabase/active-client";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Camada de proteção avançada do painel:
@@ -25,7 +25,7 @@ export function SecurityShield() {
     if (loggedRef.current.has(key)) return;
     loggedRef.current.add(key);
     try {
-      activeSupabase.from("app_logs").insert({
+      supabase.from("app_logs").insert({
         categoria: "seguranca",
         mensagem,
         payload: { ua: navigator.userAgent, ...(payload ?? {}) } as any,

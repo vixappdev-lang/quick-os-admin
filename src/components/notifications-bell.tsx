@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/co
 import { useProdutos, usePedidos, useCaixaAtual, useAppSettings } from "@/lib/queries";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { activeSupabase } from "@/integrations/supabase/active-client";
+import { supabase as centralSupabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
 type DbNotif = {
@@ -56,7 +56,7 @@ export function NotificationsBell() {
   const { data: dbNotifs = [] } = useQuery<DbNotif[]>({
     queryKey: ["notificacoes"],
     queryFn: async () => {
-      const { data, error } = await activeSupabase
+      const { data, error } = await centralSupabase
         .from("notificacoes")
         .select("*")
         .is("lida_em", null)
@@ -72,7 +72,7 @@ export function NotificationsBell() {
   // Realtime — escuta inserts e refaz a query.
   useEffect(() => {
     if (!user) return;
-    const ch = activeSupabase
+    const ch = centralSupabase
       .channel("notif-bell")
       .on("postgres_changes", { event: "*", schema: "public", table: "notificacoes" }, () => {
         qc.invalidateQueries({ queryKey: ["notificacoes"] });
@@ -95,7 +95,7 @@ export function NotificationsBell() {
 
   const markAllRead = async () => {
     if (dbNotifs.length === 0) return;
-    await activeSupabase
+    await centralSupabase
       .from("notificacoes")
       .update({ lida_em: new Date().toISOString() })
       .in("id", dbNotifs.map((n) => n.id));
