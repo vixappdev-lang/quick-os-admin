@@ -38,7 +38,10 @@ function SupabasePage() {
   const [open, setOpen] = useState(false);
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["tenants"] }); toast.success("Removido"); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["tenants"] });
+      toast.success("Conexão removida. O usuário verá o banco central no próximo login.");
+    },
     onError: (e: any) => toast.error(e.message ?? "Erro"),
   });
 
@@ -112,7 +115,7 @@ function NewTenantDialog({ open, onOpenChange, usuarios }: { open: boolean; onOp
     mutationFn: (input: typeof form) => createFn({ data: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tenants"] });
-      toast.success("Tenant conectado");
+      toast.success("Tenant conectado. O painel do usuário será limpo e recarregará com o banco dele no próximo login.");
       onOpenChange(false);
       setForm({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "" });
     },
