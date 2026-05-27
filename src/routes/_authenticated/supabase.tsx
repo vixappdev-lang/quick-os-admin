@@ -159,7 +159,10 @@ function NewTenantDialog({ open, onOpenChange, usuarios }: { open: boolean; onOp
     mutationFn: (input: typeof form) => createFn({ data: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tenants"] });
-      toast.success("Tenant conectado. O painel do usuário será limpo e recarregará com o banco dele no próximo login.");
+      toast.success("Tenant conectado.", {
+        description: "Importante: certifique-se de ter executado o setup.sql no SQL Editor do Supabase do cliente. Sem o schema as queries falharão.",
+        duration: 8000,
+      });
       onOpenChange(false);
       setForm({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "" });
     },
