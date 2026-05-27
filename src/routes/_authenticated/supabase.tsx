@@ -31,7 +31,7 @@ function SupabasePage() {
   const { data: tenants = [], isLoading } = useQuery({
     queryKey: ["tenants"],
     queryFn: () => listFn(),
-    enabled: user?.role === "admin",
+    enabled: !!user?.isSuperAdmin,
   });
   const { data: usuarios = [] } = useUsuarios();
 
@@ -42,8 +42,8 @@ function SupabasePage() {
     onError: (e: any) => toast.error(e.message ?? "Erro"),
   });
 
-  if (user?.role !== "admin") {
-    return <div className="p-8 text-sm text-muted-foreground">Acesso restrito a administradores.</div>;
+  if (!user?.isSuperAdmin) {
+    return <div className="p-8 text-sm text-muted-foreground">Acesso restrito ao super-administrador (admin@loja.com).</div>;
   }
 
   return (

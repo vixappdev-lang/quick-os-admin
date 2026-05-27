@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: ConfiguracoesPage,
 });
 
-const PAYMENT_LABELS: Record<string, string> = { pix: "PIX", credito: "Cartão de crédito", debito: "Cartão de débito", dinheiro: "Dinheiro", fiado: "Fiado", outro: "Outro" };
+const PAYMENT_LABELS: Record<string, string> = { pix: "PIX", credito: "Cartão de crédito", debito: "Cartão de débito", dinheiro: "Dinheiro", nota_promissoria: "Nota promissória", cheque: "Cheque", outro: "Outro" };
 
 function ConfiguracoesPage() {
   const { data: settings } = useAppSettings();

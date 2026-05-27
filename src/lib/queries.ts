@@ -19,6 +19,151 @@ export type Profile = Tables<"profiles">;
 export type UserRole = Tables<"user_roles">;
 export type AppSettings = Tables<"app_settings">;
 
+// FORNECEDORES
+export function useFornecedores() {
+  return useQuery({
+    queryKey: ["fornecedores"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("fornecedores" as any).select("*").order("razao_social");
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    staleTime: 60_000,
+  });
+}
+export function useUpsertFornecedor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: any & { id?: string }) => {
+      if (input.id) {
+        const { id, ...rest } = input;
+        const { data, error } = await supabase.from("fornecedores" as any).update(rest as any).eq("id", id).select().single();
+        if (error) throw error;
+        return data;
+      }
+      const { data, error } = await supabase.from("fornecedores" as any).insert(input as any).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fornecedores"] }),
+  });
+}
+export function useDeleteFornecedor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("fornecedores" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["fornecedores"] }),
+  });
+}
+
+// PATRIMONIO
+export function usePatrimonio() {
+  return useQuery({
+    queryKey: ["patrimonio"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("patrimonio" as any).select("*").order("data_aquisicao", { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    staleTime: 60_000,
+  });
+}
+export function useUpsertPatrimonio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: any & { id?: string }) => {
+      if (input.id) {
+        const { id, ...rest } = input;
+        const { error } = await supabase.from("patrimonio" as any).update(rest as any).eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("patrimonio" as any).insert(input as any);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["patrimonio"] }),
+  });
+}
+export function useDeletePatrimonio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("patrimonio" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["patrimonio"] }),
+  });
+}
+
+// CONTAS (insert/update/delete)
+export function useUpsertConta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: any & { id?: string }) => {
+      if (input.id) {
+        const { id, ...rest } = input;
+        const { error } = await supabase.from("contas").update(rest as any).eq("id", id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("contas").insert(input as any);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["contas"] }),
+  });
+}
+export function useDeleteConta() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("contas").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["contas"] }),
+  });
+}
+
+// ENTRADA DE ESTOQUE (manual, com flag fiscal)
+export function useNovaEntradaEstoque() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      produto_id: string;
+      qtd_un: number; // já em unidades
+      preco_custo?: number | null;
+      fornecedor_id?: string | null;
+      tem_nota_fiscal: boolean;
+      observacao?: string | null;
+    }) => {
+      // lê estoque atual
+      const { data: prod, error: pe } = await supabase.from("produtos").select("estoque").eq("id", input.produto_id).single();
+      if (pe) throw pe;
+      const novo = Number(prod.estoque) + Math.abs(input.qtd_un);
+      const patch: any = { estoque: novo };
+      if (input.tem_nota_fiscal) patch.tem_nota_fiscal = true;
+      if (input.fornecedor_id) patch.fornecedor_id = input.fornecedor_id;
+      if (input.preco_custo != null) patch.preco_custo = input.preco_custo;
+      const { error: ue } = await supabase.from("produtos").update(patch).eq("id", input.produto_id);
+      if (ue) throw ue;
+      const motivo = `Entrada${input.tem_nota_fiscal ? " (NF)" : " (sem NF)"}${input.observacao ? " — " + input.observacao : ""}`;
+      const { error: me } = await supabase.from("estoque_movimentos").insert({
+        produto_id: input.produto_id,
+        tipo: "entrada" as any,
+        qtd: Math.abs(input.qtd_un),
+        motivo,
+      } as any);
+      if (me) throw me;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["produtos"] });
+      qc.invalidateQueries({ queryKey: ["estoque"] });
+    },
+  });
+}
+
 // APP SETTINGS
 export function useAppSettings() {
   return useQuery({

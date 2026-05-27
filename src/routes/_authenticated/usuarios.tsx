@@ -36,6 +36,7 @@ function UsuariosPage() {
   });
 
   const isAdmin = me?.role === "admin";
+  const isSuper = !!me?.isSuperAdmin;
 
   return (
     <div>
@@ -94,14 +95,16 @@ function UsuariosPage() {
                   <td className="px-4 py-3 text-right">
                     {isAdmin && (
                       <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => setPermFor(u)}
-                          className="rounded p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                          aria-label="Permissões"
-                          title="Permissões de menu"
-                        >
-                          <ShieldCheck className="h-3.5 w-3.5" />
-                        </button>
+                        {isSuper && (
+                          <button
+                            onClick={() => setPermFor(u)}
+                            className="rounded p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                            aria-label="Permissões"
+                            title="Permissões de menu"
+                          >
+                            <ShieldCheck className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                         {u.id !== me?.id && (
                           <button
                             onClick={() => { if (confirm(`Remover ${u.nome}?`)) del.mutate(u.id); }}

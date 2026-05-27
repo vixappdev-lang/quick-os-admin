@@ -21,6 +21,7 @@ import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authentic
 import { Route as AuthenticatedProdutosRouteImport } from './routes/_authenticated/produtos'
 import { Route as AuthenticatedPdvRouteImport } from './routes/_authenticated/pdv'
 import { Route as AuthenticatedNfeRouteImport } from './routes/_authenticated/nfe'
+import { Route as AuthenticatedFornecedoresRouteImport } from './routes/_authenticated/fornecedores'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticated/estoque'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
@@ -99,6 +100,12 @@ const AuthenticatedNfeRoute = AuthenticatedNfeRouteImport.update({
   path: '/nfe',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedFornecedoresRoute =
+  AuthenticatedFornecedoresRouteImport.update({
+    id: '/fornecedores',
+    path: '/fornecedores',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedFinanceiroRoute = AuthenticatedFinanceiroRouteImport.update({
   id: '/financeiro',
   path: '/financeiro',
@@ -207,6 +214,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/estoque': typeof AuthenticatedEstoqueRouteWithChildren
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/fornecedores': typeof AuthenticatedFornecedoresRoute
   '/nfe': typeof AuthenticatedNfeRoute
   '/pdv': typeof AuthenticatedPdvRoute
   '/produtos': typeof AuthenticatedProdutosRouteWithChildren
@@ -235,6 +243,7 @@ export interface FileRoutesByTo {
   '/clientes': typeof AuthenticatedClientesRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/fornecedores': typeof AuthenticatedFornecedoresRoute
   '/nfe': typeof AuthenticatedNfeRoute
   '/pdv': typeof AuthenticatedPdvRoute
   '/produtos': typeof AuthenticatedProdutosRouteWithChildren
@@ -268,6 +277,7 @@ export interface FileRoutesById {
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/estoque': typeof AuthenticatedEstoqueRouteWithChildren
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
+  '/_authenticated/fornecedores': typeof AuthenticatedFornecedoresRoute
   '/_authenticated/nfe': typeof AuthenticatedNfeRoute
   '/_authenticated/pdv': typeof AuthenticatedPdvRoute
   '/_authenticated/produtos': typeof AuthenticatedProdutosRouteWithChildren
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/estoque'
     | '/financeiro'
+    | '/fornecedores'
     | '/nfe'
     | '/pdv'
     | '/produtos'
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/clientes'
     | '/configuracoes'
     | '/financeiro'
+    | '/fornecedores'
     | '/nfe'
     | '/pdv'
     | '/produtos'
@@ -362,6 +374,7 @@ export interface FileRouteTypes {
     | '/_authenticated/configuracoes'
     | '/_authenticated/estoque'
     | '/_authenticated/financeiro'
+    | '/_authenticated/fornecedores'
     | '/_authenticated/nfe'
     | '/_authenticated/pdv'
     | '/_authenticated/produtos'
@@ -477,6 +490,13 @@ declare module '@tanstack/react-router' {
       path: '/nfe'
       fullPath: '/nfe'
       preLoaderRoute: typeof AuthenticatedNfeRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/fornecedores': {
+      id: '/_authenticated/fornecedores'
+      path: '/fornecedores'
+      fullPath: '/fornecedores'
+      preLoaderRoute: typeof AuthenticatedFornecedoresRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/financeiro': {
@@ -672,6 +692,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedEstoqueRoute: typeof AuthenticatedEstoqueRouteWithChildren
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
+  AuthenticatedFornecedoresRoute: typeof AuthenticatedFornecedoresRoute
   AuthenticatedNfeRoute: typeof AuthenticatedNfeRoute
   AuthenticatedPdvRoute: typeof AuthenticatedPdvRoute
   AuthenticatedProdutosRoute: typeof AuthenticatedProdutosRouteWithChildren
@@ -690,6 +711,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedEstoqueRoute: AuthenticatedEstoqueRouteWithChildren,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
+  AuthenticatedFornecedoresRoute: AuthenticatedFornecedoresRoute,
   AuthenticatedNfeRoute: AuthenticatedNfeRoute,
   AuthenticatedPdvRoute: AuthenticatedPdvRoute,
   AuthenticatedProdutosRoute: AuthenticatedProdutosRouteWithChildren,
