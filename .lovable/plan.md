@@ -1,48 +1,107 @@
-## Plano final — encerramento
+## Escopo desta entrega
 
-### 1. NF-e: botão "Visualizar modelo real"
-- Em `src/routes/_authenticated/nfe.tsx` adicionar botão **"Visualizar modelo DANFE"**.
-- Criar `src/components/danfe-preview.tsx` — DANFE Modelo 55 fiel ao padrão SEFAZ (cabeçalho emitente, destinatário, dados NF, produtos, cálculo impostos, transportador, dados adicionais), renderizado em `<Dialog>` grande com botão imprimir. Usa dados de `app_settings` (emitente) + dados mock/preview de exemplo.
+Vou trabalhar em 6 frentes, com cuidado para não bagunçar o design atual nem o que já funciona. Detalho abaixo o que muda em cada uma.
 
-### 2. Tela Supabase — refatorar
-- **Remover** botão "Schema SQL" do header (mantém o `SchemaDialog` aparecendo só após criar tenant novo).
-- **Adicionar linha fixa "Banco principal (Lovable Cloud)"** no topo da tabela com badge "Atual", mostrando `VITE_SUPABASE_URL` e `VITE_SUPABASE_PROJECT_ID`. Ações: **Ver** (drawer com métricas), **Editar** (desabilitado/tooltip "gerenciado"), **Rastreio em tempo real** (drawer com últimos logs auth + DB usando `app_logs` realtime + IP atual).
-- Para tenants: ações **Ver** (detalhes + URL/key mascarada), **Editar** (form), **Rastrear** (eventos realtime), **Remover**.
-- Responsividade: tabela vira cards em `<md`.
+---
 
-### 3. Logs — captura real
-- Migração: trigger/helper `log_event(categoria, mensagem, payload)` já existe via `app_logs`. Adicionar coluna `ip` (text) e `user_agent` (text) em `app_logs`.
-- Em `src/lib/auth.tsx`: no `signIn` sucesso → inserir log `login` com email, IP (via `https://api.ipify.org?format=json`), user agent, timestamp. No `signOut` → log `logout`. Falha de login → log `erro`.
-- Tela Logs em Configurações: já existe; adicionar coluna IP, filtros por usuário e busca textual.
+### 1. Configurações → Integrações (reorganização)
 
-### 4. Modal boas-vindas (1º acesso admin)
-- Adicionar coluna `onboarding_completed_at` em `profiles` (migração).
-- Componente `src/components/welcome-onboarding.tsx`: `<Dialog>` com `modal=true`, sem botão fechar, backdrop com `backdrop-blur`, slider de 4 steps (Boas-vindas → Como funciona → Recursos → Configure empresa). Botão "Próximo" → "Concluir" no último step grava `onboarding_completed_at=now()` e redireciona para `/configuracoes`.
-- Disparado em `_authenticated.tsx` quando `profile.onboarding_completed_at IS NULL`.
+**Hoje:** a aba "Integrações" mostra um card largo de NF-e com os formulários já abertos inline.
 
-### 5. API Keys — completar
-- Painel `src/components/api-keys-panel.tsx` já existe; enriquecer com: descrição, escopos (leitura/escrita), data expiração opcional, contador de uso, botão "Testar chave" que faz `GET /api/public/v1` autenticado e mostra resposta.
-- Migração: adicionar `scopes text[]`, `expires_at timestamptz`, `usage_count int default 0` em `api_keys`. Atualizar `_auth.ts` para incrementar `usage_count` e validar `expires_at`.
+**Novo layout:**
+- Grid uniforme de cards (3 colunas no desktop, 1 no mobile), cada card com mesmo tamanho — `aspect-square`/altura fixa, ícone grande no topo, título, descrição curta, status (Conectado/Não conectado).
+- Card **NF-e** (único hoje, com placeholders preparados para futuros — WhatsApp, E-mail, Pagamentos).
+- Clique no card NF-e → abre **modal A: Escolher provedor** (nfe.io / Brasil NFe), reaproveitando o chooser já existente.
+- Após escolha → abre **modal B: Configurar provedor** com os campos certos (mantém toda a lógica de validação já implementada de nfe.io e Brasil NFe).
+- Mantém os dados salvos. Apenas refatora a apresentação.
 
-### 6. Responsividade mobile (sweep)
-- `fornecedores.tsx`, `configuracoes.tsx`, `supabase.tsx`, `produtos.tsx`, `pedidos.index.tsx`, `relatorios.tsx`, `clientes.tsx`, `financeiro.tsx`, `nfe.tsx`:
-  - Tabelas com `overflow-x-auto` + min-width já existe; adicionar render alternativo em cards para `md:hidden`.
-  - PageHeader actions stack vertical em mobile.
-  - Tabs com `overflow-x-auto whitespace-nowrap`.
-  - Padding lateral reduzido em mobile (`p-3 md:p-6`).
-  - Forms em `<Dialog>` com `max-h-[90vh] overflow-y-auto`.
+---
 
-### 7. Ordem de execução
-1. Migrações (app_logs.ip/ua, api_keys campos, profiles.onboarding_completed_at)
-2. `danfe-preview.tsx` + botão em nfe.tsx
-3. Refatorar supabase.tsx (remover Schema btn, banco principal row, ações drawer)
-4. Logs IP no auth.tsx + filtros na UI
-5. Welcome onboarding modal
-6. API keys panel enriquecido
-7. Sweep responsividade
+### 2. Usuários → permissões por papel
 
-### Não mexer
-- Design tokens, paleta, fontes
-- `client.ts`, `types.ts`, `auth-middleware.ts`
-- Triggers de estoque e numeração de pedidos
-- Funcionalidades já entregues (NF-e config, fornecedores, kanban, faturamento)
+- Ao escolher **vendedor** no formulário de novo usuário, esconder o painel de permissões de menus admin (Supabase, Usuários, Configurações, Financeiro etc).
+- Vendedor recebe automaticamente um conjunto fixo: PDV, Pedidos (próprios), Clientes — sem opção de marcar mais.
+- Permissões granulares de menu continuam aparecendo apenas para papel **operador** e **gerente**.
+- Reforço no `useMyPermissions`: rota `/supabase` é **bloqueada em código** para qualquer papel ≠ admin/super-admin, independente do que esteja na tabela `user_permissions`.
+
+---
+
+### 3. Tela Supabase + segurança da conexão tenant
+
+- **Bug do SQL travado/cortado:** o modal "Schema do banco" está com a área de prévia atrás do bloco de instruções. Vou:
+  - Trocar o layout para `flex-col` com a prévia em `ScrollArea` com altura própria.
+  - Adicionar botão "Copiar SQL completo" funcional com feedback (toast) e botão "Baixar setup.sql".
+  - Mostrar contador de linhas e busca por texto dentro do SQL.
+- **Banco do novo usuário começa vazio:** vou ajustar o `setup.sql` para conter apenas DDL (tipos, tabelas, RLS, funções, triggers, seeds mínimos como categorias padrão) — **sem** os dados de produtos/clientes/pedidos do banco atual.
+- **Lista de tenants** redesenhada seguindo o padrão do painel (cards/tabela com mesma estética das outras telas, sem exageros).
+- **Segurança da conexão tenant:**
+  - Validação no momento de conectar: ping em `/auth/v1/health` e checagem de RLS habilitado nas tabelas críticas antes de salvar.
+  - Armazenar `anon_key` cifrada com `pgcrypto` (server-side) e nunca expô-la em listagens — mostra só os 6 primeiros + 4 últimos.
+  - Audit log automático em toda troca de tenant ativo (já existe `app_logs`, vou padronizar a categoria `tenant`).
+
+---
+
+### 4. Sistema de notificações
+
+- Tabela `notificacoes` (id, user_id nullable=broadcast, tipo, severidade, titulo, mensagem, payload, lida_em, created_at) com RLS.
+- Triggers no Postgres para gerar notificações automáticas:
+  - **estoque_baixo**: quando `produtos.estoque <= estoque_minimo` após UPDATE.
+  - **estoque_zerado**: quando `estoque <= 0`.
+  - **pedido_novo**: INSERT em `pedidos`.
+  - **pedido_cancelado**: status → cancelado.
+  - **conta_vencendo**: cron diário (3 dias antes do vencimento).
+  - **caixa_aberto_24h**: sessão aberta há > 24h.
+  - **falha_nfe**: webhook nfe.io/Brasil NFe com erro.
+  - **login_suspeito**: 3+ falhas seguidas para o mesmo e-mail.
+- `notifications-bell` (componente já existe) passa a consumir essa tabela em realtime (`postgres_changes`) e mostra badge com contador, severidade colorida e marcar como lida.
+
+---
+
+### 5. Configurações → Backup
+
+Nova aba **Backup** com:
+- **Exportar agora**: gera um único arquivo `.json.gz` contendo dump de todas as tabelas do tenant ativo (produtos, clientes, pedidos, itens, pagamentos, contas, caixa, fornecedores, categorias, configurações, api_keys sem hash, perfis sem auth). Server function em streaming.
+- **Importar backup**: upload do `.json.gz`, valida assinatura/versão, mostra preview (quantas linhas por tabela) e confirma. Usa transação por tabela respeitando ordem de FKs.
+- **Backups automáticos**: agendamento opcional (diário/semanal) gravando em `pdv-assets/backups/{tenant}/` com retenção configurável.
+- **Histórico**: tabela `backups_log` com data, tamanho, autor, status, link de download (signed URL 7 dias).
+
+---
+
+### 6. Segurança avançada do painel
+
+Conjunto de proteções aplicadas no shell autenticado:
+- **Anti-DevTools** (frontend): detector via `debugger`-loop + dimensão da janela; em produção, ao detectar, desloga e registra `app_logs` categoria `seguranca`.
+- **Anti-cópia/print de telas sensíveis** (Supabase, Configurações > API keys): bloqueia `oncontextmenu`, `copy`, `cut` e impressão (CSS `@media print { body { display:none } }`).
+- **CSP estrita** + `X-Frame-Options: DENY` + `Referrer-Policy: no-referrer` via headers do server route raiz (anti-clickjacking).
+- **Rate limit** nas server functions sensíveis (`createUser`, `validate*`, `createTenant`) — bucket em memória por IP+userId, 10 req/min.
+- **Bloqueio de iframe**: refuse renderizar se `window.top !== window.self`.
+- **Reautenticação** obrigatória ao abrir Configurações, Supabase e Backup (modal pede senha — válida por 10 min).
+- **Bloqueio de menu /supabase** para qualquer papel ≠ admin/super-admin (rota faz `redirect` no `beforeLoad`).
+- **Audit completo**: toda ação privilegiada (criar usuário, conectar tenant, gerar backup, gerar API key, alterar role) entra em `audit_logs` com IP+UA.
+- **HIBP** habilitado no Supabase Auth (senha vazada).
+
+---
+
+## Detalhes técnicos
+
+- Migrations:
+  1. `notificacoes` + triggers + cron (`pg_cron` se disponível, senão server fn agendada via `/api/public/cron/notify`).
+  2. `backups_log` + bucket `backups` (privado).
+  3. `pgcrypto` para cifrar `tenants.supabase_anon_key`.
+- Server functions novas: `exportBackup`, `importBackup`, `requireReauth`, `rateLimit` helper.
+- Não toco em: schema de produtos/pedidos/clientes/categorias, lógica do PDV, design tokens em `styles.css`, layout das demais telas.
+- Refatorações apenas onde citado; sem mover arquivos sem necessidade.
+
+---
+
+## Ordem de execução
+
+1. Migrations (notificações, backups_log, pgcrypto, ajustes profile/tenants).
+2. Reorganização da aba Integrações.
+3. Fix do modal SQL + redesign da lista Supabase + setup.sql limpo.
+4. Permissões por papel + bloqueio /supabase para não-admin.
+5. Sistema de notificações + bell em realtime.
+6. Aba Backup (export/import/histórico).
+7. Camada de segurança (anti-devtools, CSP, rate limit, reauth, audit).
+
+Confirma que posso seguir com tudo isso? É bastante coisa — se quiser priorizar (por exemplo, fechar 1+2+3+4 hoje e deixar 5+6+7 para a próxima), me diz que eu corto exatamente nesse ponto.
