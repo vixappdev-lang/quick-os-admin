@@ -52,6 +52,7 @@ export type Database = {
           empresa_cnpj: string | null
           empresa_email: string | null
           empresa_endereco: string | null
+          empresa_ie: string | null
           empresa_razao: string | null
           empresa_telefone: string | null
           id: string
@@ -66,6 +67,7 @@ export type Database = {
           empresa_cnpj?: string | null
           empresa_email?: string | null
           empresa_endereco?: string | null
+          empresa_ie?: string | null
           empresa_razao?: string | null
           empresa_telefone?: string | null
           id?: string
@@ -80,6 +82,7 @@ export type Database = {
           empresa_cnpj?: string | null
           empresa_email?: string | null
           empresa_endereco?: string | null
+          empresa_ie?: string | null
           empresa_razao?: string | null
           empresa_telefone?: string | null
           id?: string
@@ -273,6 +276,8 @@ export type Database = {
       }
       contas: {
         Row: {
+          anexo_url: string | null
+          categoria: string | null
           cliente_id: string | null
           created_at: string
           descricao: string
@@ -283,6 +288,8 @@ export type Database = {
           vencimento: string
         }
         Insert: {
+          anexo_url?: string | null
+          categoria?: string | null
           cliente_id?: string | null
           created_at?: string
           descricao: string
@@ -293,6 +300,8 @@ export type Database = {
           vencimento: string
         }
         Update: {
+          anexo_url?: string | null
+          categoria?: string | null
           cliente_id?: string | null
           created_at?: string
           descricao?: string
@@ -459,6 +468,54 @@ export type Database = {
           },
         ]
       }
+      fornecedores: {
+        Row: {
+          ativo: boolean
+          cidade: string | null
+          cpf_cnpj: string | null
+          created_at: string
+          email: string | null
+          estado: string | null
+          id: string
+          ie: string | null
+          nome_fantasia: string | null
+          observacoes: string | null
+          razao_social: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cidade?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          estado?: string | null
+          id?: string
+          ie?: string | null
+          nome_fantasia?: string | null
+          observacoes?: string | null
+          razao_social: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cidade?: string | null
+          cpf_cnpj?: string | null
+          created_at?: string
+          email?: string | null
+          estado?: string | null
+          id?: string
+          ie?: string | null
+          nome_fantasia?: string | null
+          observacoes?: string | null
+          razao_social?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gtin_global: {
         Row: {
           categoria_sugerida: string | null
@@ -588,6 +645,39 @@ export type Database = {
           },
         ]
       }
+      patrimonio: {
+        Row: {
+          categoria: string | null
+          created_at: string
+          data_aquisicao: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          categoria?: string | null
+          created_at?: string
+          data_aquisicao?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Update: {
+          categoria?: string | null
+          created_at?: string
+          data_aquisicao?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: []
+      }
       pedido_itens: {
         Row: {
           created_at: string
@@ -692,6 +782,9 @@ export type Database = {
           created_at: string
           desconto: number
           id: string
+          nfe_chave: string | null
+          nfe_emitida_em: string | null
+          nfe_numero: string | null
           numero: string
           observacoes: string | null
           operador_id: string | null
@@ -710,6 +803,9 @@ export type Database = {
           created_at?: string
           desconto?: number
           id?: string
+          nfe_chave?: string | null
+          nfe_emitida_em?: string | null
+          nfe_numero?: string | null
           numero?: string
           observacoes?: string | null
           operador_id?: string | null
@@ -728,6 +824,9 @@ export type Database = {
           created_at?: string
           desconto?: number
           id?: string
+          nfe_chave?: string | null
+          nfe_emitida_em?: string | null
+          nfe_numero?: string | null
           numero?: string
           observacoes?: string | null
           operador_id?: string | null
@@ -787,6 +886,7 @@ export type Database = {
           embalagens: Json
           estoque: number
           estoque_minimo: number | null
+          fornecedor_id: string | null
           id: string
           imagem_url: string | null
           nome: string
@@ -794,6 +894,7 @@ export type Database = {
           preco_custo: number | null
           preco_venda: number
           sku: string
+          tem_nota_fiscal: boolean
           unidade: string
           updated_at: string
         }
@@ -805,6 +906,7 @@ export type Database = {
           embalagens?: Json
           estoque?: number
           estoque_minimo?: number | null
+          fornecedor_id?: string | null
           id?: string
           imagem_url?: string | null
           nome: string
@@ -812,6 +914,7 @@ export type Database = {
           preco_custo?: number | null
           preco_venda?: number
           sku: string
+          tem_nota_fiscal?: boolean
           unidade?: string
           updated_at?: string
         }
@@ -823,6 +926,7 @@ export type Database = {
           embalagens?: Json
           estoque?: number
           estoque_minimo?: number | null
+          fornecedor_id?: string | null
           id?: string
           imagem_url?: string | null
           nome?: string
@@ -830,6 +934,7 @@ export type Database = {
           preco_custo?: number | null
           preco_venda?: number
           sku?: string
+          tem_nota_fiscal?: boolean
           unidade?: string
           updated_at?: string
         }
@@ -839,6 +944,13 @@ export type Database = {
             columns: ["categoria_id"]
             isOneToOne: false
             referencedRelation: "categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produtos_fornecedor_id_fkey"
+            columns: ["fornecedor_id"]
+            isOneToOne: false
+            referencedRelation: "fornecedores"
             referencedColumns: ["id"]
           },
         ]
