@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ApiKeysPanel } from "@/components/api-keys-panel";
+import { BackupTab } from "@/components/backup-tab";
 import {
   useAppSettings,
   useUpdateAppSettings,
@@ -78,6 +79,7 @@ function ConfiguracoesPage() {
           <TabsTrigger value="logs">Logs</TabsTrigger>
           <TabsTrigger value="impressao">Impressão</TabsTrigger>
           <TabsTrigger value="api">API</TabsTrigger>
+          <TabsTrigger value="backup">Backup</TabsTrigger>
           <TabsTrigger value="tema">Tema</TabsTrigger>
         </TabsList>
         <TabsContent value="empresa" className="mt-4">
@@ -108,6 +110,7 @@ function ConfiguracoesPage() {
         </TabsContent>
         <TabsContent value="impressao" className="mt-4"><SectionCard title="Impressora térmica"><div className="grid grid-cols-1 gap-4 md:grid-cols-2"><div><label className="mb-1.5 block text-xs font-medium">Modelo</label><select className={inp}><option>Bematech MP-4200 TH</option><option>Epson TM-T20</option></select></div><div><label className="mb-1.5 block text-xs font-medium">Largura</label><select className={inp}><option>80mm</option><option>58mm</option></select></div></div></SectionCard></TabsContent>
         <TabsContent value="api" className="mt-4"><ApiKeysPanel /></TabsContent>
+        <TabsContent value="backup" className="mt-4"><BackupTab /></TabsContent>
         <TabsContent value="tema" className="mt-4"><SectionCard title="Aparência"><ToggleRow label="Modo escuro" /></SectionCard></TabsContent>
         <TabsContent value="nfe" className="mt-4"><NfeTab /></TabsContent>
         <TabsContent value="logs" className="mt-4"><LogsTab /></TabsContent>
