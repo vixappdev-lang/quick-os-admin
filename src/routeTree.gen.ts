@@ -16,6 +16,7 @@ import { Route as VendedorIndexRouteImport } from './routes/vendedor.index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as VendedorNovoRouteImport } from './routes/vendedor.novo'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
+import { Route as AuthenticatedSupabaseRouteImport } from './routes/_authenticated/supabase'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProdutosRouteImport } from './routes/_authenticated/produtos'
 import { Route as AuthenticatedPdvRouteImport } from './routes/_authenticated/pdv'
@@ -71,6 +72,11 @@ const VendedorNovoRoute = VendedorNovoRouteImport.update({
 const AuthenticatedUsuariosRoute = AuthenticatedUsuariosRouteImport.update({
   id: '/usuarios',
   path: '/usuarios',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedSupabaseRoute = AuthenticatedSupabaseRouteImport.update({
+  id: '/supabase',
+  path: '/supabase',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/pdv': typeof AuthenticatedPdvRoute
   '/produtos': typeof AuthenticatedProdutosRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
+  '/supabase': typeof AuthenticatedSupabaseRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/vendedor/novo': typeof VendedorNovoRoute
   '/vendedor/': typeof VendedorIndexRoute
@@ -232,6 +239,7 @@ export interface FileRoutesByTo {
   '/pdv': typeof AuthenticatedPdvRoute
   '/produtos': typeof AuthenticatedProdutosRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
+  '/supabase': typeof AuthenticatedSupabaseRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
   '/vendedor/novo': typeof VendedorNovoRoute
   '/': typeof AuthenticatedIndexRoute
@@ -264,6 +272,7 @@ export interface FileRoutesById {
   '/_authenticated/pdv': typeof AuthenticatedPdvRoute
   '/_authenticated/produtos': typeof AuthenticatedProdutosRouteWithChildren
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
+  '/_authenticated/supabase': typeof AuthenticatedSupabaseRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
   '/vendedor/novo': typeof VendedorNovoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
@@ -297,6 +306,7 @@ export interface FileRouteTypes {
     | '/pdv'
     | '/produtos'
     | '/relatorios'
+    | '/supabase'
     | '/usuarios'
     | '/vendedor/novo'
     | '/vendedor/'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/pdv'
     | '/produtos'
     | '/relatorios'
+    | '/supabase'
     | '/usuarios'
     | '/vendedor/novo'
     | '/'
@@ -355,6 +366,7 @@ export interface FileRouteTypes {
     | '/_authenticated/pdv'
     | '/_authenticated/produtos'
     | '/_authenticated/relatorios'
+    | '/_authenticated/supabase'
     | '/_authenticated/usuarios'
     | '/vendedor/novo'
     | '/_authenticated/'
@@ -430,6 +442,13 @@ declare module '@tanstack/react-router' {
       path: '/usuarios'
       fullPath: '/usuarios'
       preLoaderRoute: typeof AuthenticatedUsuariosRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/supabase': {
+      id: '/_authenticated/supabase'
+      path: '/supabase'
+      fullPath: '/supabase'
+      preLoaderRoute: typeof AuthenticatedSupabaseRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/relatorios': {
@@ -657,6 +676,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPdvRoute: typeof AuthenticatedPdvRoute
   AuthenticatedProdutosRoute: typeof AuthenticatedProdutosRouteWithChildren
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
+  AuthenticatedSupabaseRoute: typeof AuthenticatedSupabaseRoute
   AuthenticatedUsuariosRoute: typeof AuthenticatedUsuariosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedPedidosIdRoute: typeof AuthenticatedPedidosIdRoute
@@ -674,6 +694,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPdvRoute: AuthenticatedPdvRoute,
   AuthenticatedProdutosRoute: AuthenticatedProdutosRouteWithChildren,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
+  AuthenticatedSupabaseRoute: AuthenticatedSupabaseRoute,
   AuthenticatedUsuariosRoute: AuthenticatedUsuariosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedPedidosIdRoute: AuthenticatedPedidosIdRoute,

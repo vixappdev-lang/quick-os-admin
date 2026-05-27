@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Trash2, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Plus, Trash2, Loader2, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { useUsuarios } from "@/lib/queries";
 import { createUser, deleteUser } from "@/lib/admin-users.functions";
+import { setUserPermissions } from "@/lib/tenants.functions";
+import { useUserPermissions, MENU_KEYS, MENU_LABEL } from "@/lib/permissions";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
@@ -22,6 +24,7 @@ function UsuariosPage() {
   const { user: me } = useAuth();
   const { data: usuarios = [], isLoading } = useUsuarios();
   const [open, setOpen] = useState(false);
+  const [permFor, setPermFor] = useState<any | null>(null);
   const qc = useQueryClient();
   const createFn = useServerFn(createUser);
   const deleteFn = useServerFn(deleteUser);
@@ -89,14 +92,26 @@ function UsuariosPage() {
                     {u.created_at ? new Date(u.created_at).toLocaleDateString("pt-BR") : ""}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {isAdmin && u.id !== me?.id && (
-                      <button
-                        onClick={() => { if (confirm(`Remover ${u.nome}?`)) del.mutate(u.id); }}
-                        className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                        aria-label="Remover"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                    {isAdmin && (
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() => setPermFor(u)}
+                          className="rounded p-1.5 text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                          aria-label="Permissões"
+                          title="Permissões de menu"
+                        >
+                          <ShieldCheck className="h-3.5 w-3.5" />
+                        </button>
+                        {u.id !== me?.id && (
+                          <button
+                            onClick={() => { if (confirm(`Remover ${u.nome}?`)) del.mutate(u.id); }}
+                            className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            aria-label="Remover"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -107,7 +122,67 @@ function UsuariosPage() {
       </SectionCard>
 
       <NewUserDialog open={open} onOpenChange={setOpen} createFn={createFn} />
+      <PermissionsDialog user={permFor} onClose={() => setPermFor(null)} />
     </div>
+  );
+}
+
+function PermissionsDialog({ user, onClose }: { user: any | null; onClose: () => void }) {
+  const qc = useQueryClient();
+  const setFn = useServerFn(setUserPermissions);
+  const { data: rows = [] } = useUserPermissions(user?.id);
+  const [state, setState] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (!user) { setState({}); return; }
+    const m: Record<string, boolean> = {};
+    MENU_KEYS.forEach((k) => (m[k] = true));
+    (rows ?? []).forEach((r: any) => (m[r.menu] = r.allowed));
+    setState(m);
+  }, [user, rows]);
+
+  const m = useMutation({
+    mutationFn: () => setFn({
+      data: {
+        user_id: user!.id,
+        permissions: MENU_KEYS.map((k) => ({ menu: k, allowed: state[k] ?? true })),
+      },
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["user_permissions"] });
+      toast.success("Permissões salvas");
+      onClose();
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro"),
+  });
+
+  return (
+    <Dialog open={!!user} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Permissões — {user?.nome}</DialogTitle>
+        </DialogHeader>
+        <div className="grid max-h-[60vh] grid-cols-1 gap-1 overflow-y-auto pr-1">
+          {MENU_KEYS.map((k) => (
+            <label key={k} className="flex items-center justify-between rounded-md border bg-card px-3 py-2 text-sm">
+              <span>{MENU_LABEL[k] ?? k}</span>
+              <input
+                type="checkbox"
+                checked={state[k] ?? true}
+                onChange={(e) => setState({ ...state, [k]: e.target.checked })}
+                className="h-4 w-4"
+              />
+            </label>
+          ))}
+        </div>
+        <DialogFooter className="mt-2">
+          <button type="button" onClick={onClose} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
+          <button type="button" onClick={() => m.mutate()} disabled={m.isPending} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">
+            {m.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Salvar
+          </button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 

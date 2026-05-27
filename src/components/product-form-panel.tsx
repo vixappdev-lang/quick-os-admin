@@ -20,10 +20,11 @@ interface Props {
   onModeChange: (m: PanelMode) => void;
 }
 
-const EMPTY = {
+const EMPTY: any = {
   nome: "", sku: "", codigo_barras: "", categoria_id: "",
   preco_custo: "0", preco_venda: "0", estoque: "0", estoque_minimo: "0", unidade: "UN",
-  ativo: true, imagem_url: "",
+  ativo: true, imagem_url: "", peso_kg: "0",
+  embalagens: [] as { tipo: string; qtd: number }[],
 };
 
 export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }: Props) {
@@ -51,11 +52,13 @@ export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }:
         unidade: produto.unidade ?? "UN",
         ativo: produto.ativo ?? true,
         imagem_url: produto.imagem_url ?? "",
+        peso_kg: String(produto.peso_kg ?? 0),
+        embalagens: Array.isArray(produto.embalagens) ? produto.embalagens : [],
       });
     }
   }, [open, mode, produto]);
 
-  const set = (k: keyof typeof form, v: any) => setForm((f) => ({ ...f, [k]: v }));
+  const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
   const ro = mode === "view";
 
   const custo = Number(form.preco_custo) || 0;
@@ -88,6 +91,8 @@ export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }:
         unidade: form.unidade,
         ativo: form.ativo,
         imagem_url: form.imagem_url || null,
+        peso_kg: Number(form.peso_kg) || 0,
+        embalagens: form.embalagens ?? [],
       };
       if (mode === "edit" && produto?.id) payload.id = produto.id;
       await upsert.mutateAsync(payload);
@@ -186,6 +191,52 @@ export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }:
             </Field>
             <Field label="Estoque atual"><input disabled={ro} type="number" value={form.estoque} onChange={(e) => set("estoque", e.target.value)} className={inp} /></Field>
             <Field label="Estoque mínimo"><input disabled={ro} type="number" value={form.estoque_minimo} onChange={(e) => set("estoque_minimo", e.target.value)} className={inp} /></Field>
+            <Field label="Peso (kg por UN)" full>
+              <input disabled={ro} type="number" step="0.001" value={form.peso_kg} onChange={(e) => set("peso_kg", e.target.value)} className={inp} />
+            </Field>
+            <Field label="Embalagens (FD / CX / etc.)" full>
+              <div className="space-y-2">
+                {(form.embalagens ?? []).map((emb: any, i: number) => (
+                  <div key={i} className="flex gap-2">
+                    <input
+                      disabled={ro}
+                      placeholder="Tipo (FD, CX...)"
+                      value={emb.tipo}
+                      onChange={(e) => {
+                        const arr = [...form.embalagens];
+                        arr[i] = { ...arr[i], tipo: e.target.value.toUpperCase().slice(0, 6) };
+                        set("embalagens", arr);
+                      }}
+                      className={inp + " w-28"}
+                    />
+                    <input
+                      disabled={ro}
+                      type="number"
+                      min={1}
+                      placeholder="UN por embalagem"
+                      value={emb.qtd}
+                      onChange={(e) => {
+                        const arr = [...form.embalagens];
+                        arr[i] = { ...arr[i], qtd: Number(e.target.value) || 0 };
+                        set("embalagens", arr);
+                      }}
+                      className={inp + " flex-1"}
+                    />
+                    {!ro && (
+                      <button type="button" onClick={() => set("embalagens", form.embalagens.filter((_: any, j: number) => j !== i))} className="h-9 w-9 shrink-0 rounded-md border text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+                        <Trash2 className="mx-auto h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {!ro && (
+                  <button type="button" onClick={() => set("embalagens", [...(form.embalagens ?? []), { tipo: "FD", qtd: 12 }])} className="h-8 w-full rounded-md border border-dashed text-xs text-muted-foreground hover:border-primary hover:text-primary">
+                    + Adicionar embalagem
+                  </button>
+                )}
+                <p className="text-[10px] text-muted-foreground">Ex.: FD com 12 UN. O estoque é sempre contado em unidades.</p>
+              </div>
+            </Field>
             <Field label="Status" full>
               <label className="flex h-9 items-center justify-between rounded-md border bg-card px-3 text-sm">
                 <span>Produto ativo</span>
