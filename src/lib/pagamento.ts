@@ -25,7 +25,7 @@ export const PAGAMENTO_META: Record<PaymentMethod, PagamentoMeta> = {
   cheque:           { id: "cheque",           label: "Cheque",           short: "Cheq.", icon: Receipt },
   debito:           { id: "debito",           label: "Cartão Débito",    short: "Déb.",  icon: WalletCards },
   credito:          { id: "credito",          label: "Cartão Crédito",   short: "Créd.", icon: CreditCard },
-  fiado:            { id: "fiado",            label: "Fiado",            short: "Fiado", icon: HandCoins },
+  fiado:            { id: "fiado",            label: "Nota promissória", short: "Nota",  icon: FileText },
   outro:            { id: "outro",            label: "Outro",            short: "Outro", icon: ArrowRightLeft },
 };
 
@@ -36,7 +36,6 @@ export const PAGAMENTO_LIST: PagamentoMeta[] = [
   PAGAMENTO_META.cheque,
   PAGAMENTO_META.debito,
   PAGAMENTO_META.credito,
-  PAGAMENTO_META.fiado,
   PAGAMENTO_META.outro,
 ];
 

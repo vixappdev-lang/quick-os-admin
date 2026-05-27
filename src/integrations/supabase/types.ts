@@ -790,6 +790,7 @@ export type Database = {
           id: string
           imagem_url: string | null
           nome: string
+          peso_kg: number
           preco_custo: number | null
           preco_venda: number
           sku: string
@@ -807,6 +808,7 @@ export type Database = {
           id?: string
           imagem_url?: string | null
           nome: string
+          peso_kg?: number
           preco_custo?: number | null
           preco_venda?: number
           sku: string
@@ -824,6 +826,7 @@ export type Database = {
           id?: string
           imagem_url?: string | null
           nome?: string
+          peso_kg?: number
           preco_custo?: number | null
           preco_venda?: number
           sku?: string
@@ -848,6 +851,7 @@ export type Database = {
           id: string
           nome: string
           telefone: string | null
+          tenant_slug: string | null
           updated_at: string
         }
         Insert: {
@@ -857,6 +861,7 @@ export type Database = {
           id: string
           nome: string
           telefone?: string | null
+          tenant_slug?: string | null
           updated_at?: string
         }
         Update: {
@@ -866,7 +871,62 @@ export type Database = {
           id?: string
           nome?: string
           telefone?: string | null
+          tenant_slug?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      tenants: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          nome: string | null
+          slug: string
+          supabase_anon_key: string
+          supabase_url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome?: string | null
+          slug: string
+          supabase_anon_key: string
+          supabase_url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome?: string | null
+          slug?: string
+          supabase_anon_key?: string
+          supabase_url?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_permissions: {
+        Row: {
+          allowed: boolean
+          menu: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allowed?: boolean
+          menu: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allowed?: boolean
+          menu?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

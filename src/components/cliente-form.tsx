@@ -20,15 +20,16 @@ interface Props {
   cliente?: Cliente | null;
   onSaved: (c: any) => void;
   onCancel: () => void;
+  initialNome?: string;
 }
 
-export function ClienteForm({ cliente, onSaved, onCancel }: Props) {
+export function ClienteForm({ cliente, onSaved, onCancel, initialNome }: Props) {
   const upsert = useUpsertCliente();
   const { data: vendedores = [] } = useVendedores();
   const end = ((cliente?.endereco as any) ?? {}) as any;
 
   const [tipo, setTipo] = useState<"PF" | "PJ">(((cliente as any)?.tipo_pessoa ?? "PF") as any);
-  const [nome, setNome] = useState(cliente?.nome ?? "");
+  const [nome, setNome] = useState(cliente?.nome ?? initialNome ?? "");
   const [fantasia, setFantasia] = useState((cliente as any)?.nome_fantasia ?? "");
   const [documento, setDocumento] = useState(cliente?.documento ?? "");
   const [ie, setIe] = useState((cliente as any)?.ie ?? "");

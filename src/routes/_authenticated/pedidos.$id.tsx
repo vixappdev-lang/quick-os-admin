@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Printer, CheckCircle2, Clock, Receipt, Truck, User, Pencil, Save, X, Minus, Plus, Trash2, Search, PackagePlus, MoreVertical, Wallet, Lock } from "lucide-react";
+import { ArrowLeft, Printer, CheckCircle2, Clock, Receipt, Truck, User, Pencil, Save, X, Minus, Plus, Trash2, Search, PackagePlus, MoreVertical, Wallet, Lock, Archive, FileText } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge, statusTone } from "@/components/status-badge";
@@ -10,6 +10,8 @@ import { printRomaneio } from "@/components/romaneio-print";
 import { toast } from "sonner";
 import { PAGAMENTO_LIST, pagamentoLabel } from "@/lib/pagamento";
 import { PaymentSplitter } from "@/components/payment-splitter";
+import { printNotaFiscal } from "@/components/nf-print";
+import { useAppSettings } from "@/lib/queries";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
@@ -29,8 +31,11 @@ function PedidoDetail() {
   const navigate = useNavigate();
   const { data: pedido, isLoading } = usePedido(id);
   const { data: produtos = [] } = useProdutos();
+  const { data: settings } = useAppSettings();
+  const { data: pagamentosPedido = [] } = usePedidoPagamentos(id);
   const updateStatus = useUpdatePedidoStatus();
   const updatePedido = useUpdatePedido();
+  const encerrar = useEncerrarPedido();
   const [editMode, setEditMode] = useState<boolean>(edit === 1);
   const [pagamento, setPagamento] = useState<string>("");
   const [observacoes, setObservacoes] = useState<string>("");
@@ -140,6 +145,15 @@ function PedidoDetail() {
   };
 
   const imprimir = () => printRomaneio(pedido);
+  const gerarNF = () => printNotaFiscal(pedido, settings ?? null, pagamentosPedido as any[]);
+  const encerrarPedido = async () => {
+    if (!confirm(`Encerrar pedido ${numeroCurto}? Ele sairá do Kanban e ficará apenas na lista.`)) return;
+    try {
+      await encerrar.mutateAsync(pedido.id);
+      toast.success("Pedido encerrado");
+      navigate({ to: "/pedidos" });
+    } catch (e: any) { toast.error(e.message); }
+  };
 
   const timeline = [
     { icon: Receipt, label: "Pedido criado", time: formatTime(pedido.created_at), done: true },
@@ -172,6 +186,14 @@ function PedidoDetail() {
             <button onClick={imprimir} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
               <Printer className="h-3.5 w-3.5" /> Imprimir
             </button>
+            <button onClick={gerarNF} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
+              <FileText className="h-3.5 w-3.5" /> Nota Fiscal
+            </button>
+            {pedido.status !== "encerrado" && (
+              <button onClick={encerrarPedido} disabled={encerrar.isPending} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-60">
+                <Archive className="h-3.5 w-3.5" /> Encerrar
+              </button>
+            )}
             {nextStatus && (
               <button onClick={avancar} disabled={updateStatus.isPending} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">
                 Avançar para {nextStatus}

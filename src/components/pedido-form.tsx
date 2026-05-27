@@ -1,24 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowRightLeft, Banknote, CalendarDays, CreditCard, FileText, Hash, Loader2, Minus, PackagePlus, Plus, QrCode, Receipt, ReceiptText, Save, Search, Trash2, User as UserIcon, WalletCards, X } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { ArrowRightLeft, Banknote, CalendarDays, CreditCard, FileText, Hash, Loader2, Minus, PackagePlus, Plus, QrCode, Receipt, ReceiptText, Save, Search, Trash2, User as UserIcon, UserPlus, WalletCards, X } from "lucide-react";
 import { SectionCard } from "@/components/section-card";
 import {
   useAppSettings,
   useProdutos,
   useClientes,
   useCreatePedido,
-  useUpsertCliente,
   type Produto,
   type Cliente,
 } from "@/lib/queries";
 import { formatBRL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 type PaymentMethod = "pix" | "dinheiro" | "nota_promissoria" | "cheque" | "debito" | "credito" | "fiado" | "outro";
 type Item = { produto: Produto; qtd: number; preco: number; desconto: number };
@@ -28,6 +22,8 @@ interface Props {
   origem?: "balcao" | "delivery" | "pdv";
   onCreated: (pedidoId: string) => void;
   onCancel: () => void;
+  /** Pré-seleciona um cliente pelo id (ex.: voltando da criação) */
+  initialClienteId?: string | null;
 }
 
 const PAYMENT_OPTIONS: { id: PaymentMethod; label: string; icon: any }[] = [
@@ -37,7 +33,6 @@ const PAYMENT_OPTIONS: { id: PaymentMethod; label: string; icon: any }[] = [
   { id: "cheque", label: "Cheque", icon: Receipt },
   { id: "debito", label: "Débito", icon: WalletCards },
   { id: "credito", label: "Crédito", icon: CreditCard },
-  { id: "fiado", label: "Fiado", icon: ReceiptText },
   { id: "outro", label: "Outro", icon: ArrowRightLeft },
 ];
 
@@ -62,12 +57,12 @@ function numericValue(value: string, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel }: Props) {
+export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel, initialClienteId = null }: Props) {
   const { data: produtos = [] } = useProdutos();
   const { data: clientes = [] } = useClientes();
   const { data: settings } = useAppSettings();
   const createPedido = useCreatePedido();
-  const upsertCliente = useUpsertCliente();
+  const navigate = useNavigate();
 
   const [data, setData] = useState(() => {
     const d = new Date();
@@ -85,9 +80,15 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
   const [itens, setItens] = useState<Item[]>([]);
   const [buscaProd, setBuscaProd] = useState("");
   const [showProdList, setShowProdList] = useState(false);
-  const [novoCliOpen, setNovoCliOpen] = useState(false);
-  const [novoCli, setNovoCli] = useState({ nome: "", telefone: "", documento: "" });
   const buscaRef = useRef<HTMLInputElement>(null);
+
+  // Pré-seleção via initialClienteId (vindo da query string ao voltar da criação)
+  useEffect(() => {
+    if (initialClienteId && !cliente) {
+      const c = clientes.find((x) => x.id === initialClienteId);
+      if (c) setCliente(c);
+    }
+  }, [initialClienteId, clientes, cliente]);
 
   const paymentMap = (settings?.metodos_pagamento ?? {}) as Record<string, boolean>;
   const activePayments = useMemo(() => {
@@ -160,23 +161,16 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
   const recebido = numericValue(valorRecebido);
   const troco = pagamento === "dinheiro" ? Math.max(0, money(recebido - total)) : 0;
 
-  const criarCliente = async () => {
-    if (!novoCli.nome.trim()) return toast.error("Informe o nome");
-    try {
-      const c = await upsertCliente.mutateAsync({ nome: novoCli.nome, telefone: novoCli.telefone || null, documento: novoCli.documento || null });
-      setCliente(c as any);
-      setBuscaCliente("");
-      setNovoCli({ nome: "", telefone: "", documento: "" });
-      setNovoCliOpen(false);
-      toast.success("Cliente cadastrado");
-    } catch (e: any) {
-      toast.error(e.message ?? "Erro ao cadastrar cliente");
-    }
+  const irParaNovoCliente = () => {
+    navigate({
+      to: "/clientes/novo",
+      search: { return: "/pedidos/novo", prefill: buscaCliente || undefined } as any,
+    });
   };
 
   const salvar = async () => {
     if (itens.length === 0) return toast.error("Adicione ao menos um item");
-    if (pagamento === "fiado" && !cliente) return toast.error("Selecione um cliente para pagamento fiado");
+    if (pagamento === "nota_promissoria" && !cliente) return toast.error("Selecione um cliente para nota promissória");
     if (pagamento === "dinheiro" && valorRecebido && toCents(recebido) < totalCents) return toast.error("Valor recebido menor que o total");
     try {
       const pedido = await createPedido.mutateAsync({
@@ -304,8 +298,8 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
                     </div>
                   )}
                 </div>
-                <button type="button" onClick={() => setNovoCliOpen(true)} className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted sm:w-auto">
-                  <Plus className="h-3.5 w-3.5" /> Novo cliente
+                <button type="button" onClick={irParaNovoCliente} className="inline-flex h-10 w-full items-center justify-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted sm:w-auto">
+                  <UserPlus className="h-3.5 w-3.5" /> Novo cliente
                 </button>
               </div>
             )}
@@ -478,21 +472,6 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel 
           </SectionCard>
         </aside>
       </div>
-
-      <Dialog open={novoCliOpen} onOpenChange={setNovoCliOpen}>
-        <DialogContent className="max-sm:!w-screen max-sm:!max-w-none max-sm:!h-[100dvh] max-sm:!rounded-none max-sm:!translate-x-0 max-sm:!translate-y-0 max-sm:!top-0 max-sm:!left-0">
-          <DialogHeader><DialogTitle>Cadastrar cliente</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <Field label="Nome"><input autoFocus value={novoCli.nome} onChange={(e) => setNovoCli((s) => ({ ...s, nome: e.target.value }))} className={inputBase} /></Field>
-            <Field label="Telefone"><input value={novoCli.telefone} onChange={(e) => setNovoCli((s) => ({ ...s, telefone: e.target.value }))} className={inputBase} /></Field>
-            <Field label="CPF/CNPJ"><input value={novoCli.documento} onChange={(e) => setNovoCli((s) => ({ ...s, documento: e.target.value }))} className={inputBase} /></Field>
-            <div className="flex justify-end gap-2 pt-2">
-              <button type="button" onClick={() => setNovoCliOpen(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
-              <button type="button" onClick={criarCliente} disabled={upsertCliente.isPending} className="h-9 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-50">{upsertCliente.isPending ? "Salvando..." : "Salvar cliente"}</button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Barra de ações MOBILE — fixa no rodapé com safe-area */}
       <div className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-2 gap-2 border-t bg-card/95 px-3 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">

@@ -38,6 +38,8 @@ export function pedidoStatusTone(status: string): Tone {
   if (s === "conferencia") return "primary";
   if (s === "concluido" || s === "concluído") return "success";
   if (s === "cancelado" || s === "reprovado") return "danger";
+  if (s === "encerrado") return "neutral";
+  if (s === "faturamento") return "primary";
   return statusTone(status);
 }
 
@@ -46,6 +48,8 @@ export const PEDIDO_STATUS_LABEL: Record<string, string> = {
   autorizado: "Autorizado",
   separacao: "Separação",
   conferencia: "Conferência",
+  faturamento: "Faturamento",
   concluido: "Finalizado",
   cancelado: "Cancelado",
+  encerrado: "Encerrado",
 };
