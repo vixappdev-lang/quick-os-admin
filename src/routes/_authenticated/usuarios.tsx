@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Loader2, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -12,6 +12,11 @@ import { useUsuarios } from "@/lib/queries";
 import { createUser, deleteUser } from "@/lib/admin-users.functions";
 import { setUserPermissions } from "@/lib/tenants.functions";
 import { useUserPermissions, MENU_KEYS, MENU_LABEL } from "@/lib/permissions";
+
+// Menus que NUNCA podem ser concedidos a vendedor/operador
+const ADMIN_ONLY_MENUS = new Set<string>(["/supabase", "/usuarios", "/configuracoes", "/financeiro", "/caixa"]);
+// Menus que vendedor recebe automaticamente (não editáveis)
+const VENDEDOR_FIXED = new Set<string>(["/", "/pdv", "/pedidos", "/clientes"]);
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
@@ -136,19 +141,29 @@ function PermissionsDialog({ user, onClose }: { user: any | null; onClose: () =>
   const { data } = useUserPermissions(user?.id);
   const [state, setState] = useState<Record<string, boolean>>({});
 
+  const userRole = (user?.roles?.[0] ?? "operador") as string;
+  const isVendedor = userRole === "vendedor";
+  const isAdminUser = userRole === "admin";
+
+  // Filtra os menus disponíveis conforme o papel do usuário
+  const visibleMenus = useMemo<string[]>(() => {
+    if (isVendedor) return (MENU_KEYS as readonly string[]).filter((k) => VENDEDOR_FIXED.has(k));
+    return (MENU_KEYS as readonly string[]).filter((k) => !ADMIN_ONLY_MENUS.has(k) || isAdminUser);
+  }, [isVendedor, isAdminUser]);
+
   useEffect(() => {
     if (!user) { setState({}); return; }
     const m: Record<string, boolean> = {};
-    MENU_KEYS.forEach((k) => (m[k] = true));
+    visibleMenus.forEach((k) => (m[k] = true));
     (data ?? []).forEach((r: any) => (m[r.menu] = r.allowed));
     setState(m);
-  }, [user?.id, data]);
+  }, [user?.id, data, visibleMenus]);
 
   const m = useMutation({
     mutationFn: () => setFn({
       data: {
         user_id: user!.id,
-        permissions: MENU_KEYS.map((k) => ({ menu: k, allowed: state[k] ?? true })),
+        permissions: visibleMenus.map((k) => ({ menu: k, allowed: state[k] ?? true })),
       },
     }),
     onSuccess: () => {
@@ -165,13 +180,20 @@ function PermissionsDialog({ user, onClose }: { user: any | null; onClose: () =>
         <DialogHeader>
           <DialogTitle>Permissões — {user?.nome}</DialogTitle>
         </DialogHeader>
+        {isVendedor && (
+          <div className="rounded-md border border-primary/30 bg-primary/5 p-3 text-xs">
+            <p className="font-semibold text-foreground">Acesso de vendedor</p>
+            <p className="mt-1 text-muted-foreground">Vendedores têm acesso fixo apenas a Dashboard, PDV, Pedidos (próprios) e Clientes. Menus administrativos (Supabase, Usuários, Configurações, Financeiro, Caixa) são bloqueados por segurança.</p>
+          </div>
+        )}
         <div className="grid max-h-[60vh] grid-cols-1 gap-1 overflow-y-auto pr-1">
-          {MENU_KEYS.map((k) => (
+          {visibleMenus.map((k) => (
             <label key={k} className="flex items-center justify-between rounded-md border bg-card px-3 py-2 text-sm">
               <span>{MENU_LABEL[k] ?? k}</span>
               <input
                 type="checkbox"
                 checked={state[k] ?? true}
+                disabled={isVendedor}
                 onChange={(e) => setState({ ...state, [k]: e.target.checked })}
                 className="h-4 w-4"
               />
