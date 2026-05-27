@@ -8,6 +8,7 @@ import { getMyTenant } from "@/lib/tenants.functions";
 import { useAuth } from "@/lib/auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
+import { WelcomeOnboarding } from "@/components/welcome-onboarding";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
@@ -113,10 +114,11 @@ function AuthLayout() {
         className={collapsed ? "lg:pl-[68px] transition-[padding] duration-200" : "lg:pl-[244px] transition-[padding] duration-200"}
       >
         <AppHeader onMenuClick={() => setMobileOpen(true)} />
-        <main className="px-4 py-4 md:px-6 md:py-6">
+        <main className="px-3 py-3 sm:px-4 sm:py-4 md:px-6 md:py-6">
           <Outlet />
         </main>
       </div>
+      {user.role === "admin" && <WelcomeOnboarding />}
     </div>
   );
 }

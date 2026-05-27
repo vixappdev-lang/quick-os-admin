@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useRef, useState, useMemo } from "react";
-import { UploadCloud, FileText, CheckCircle2, AlertTriangle, Search, Trash2, ChevronRight, X } from "lucide-react";
+import { UploadCloud, FileText, CheckCircle2, AlertTriangle, Search, Trash2, ChevronRight, X, FileSearch } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge, statusTone } from "@/components/status-badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { DanfePreviewDialog } from "@/components/danfe-preview";
 import { useNfes, useNfe } from "@/lib/queries";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -71,6 +72,7 @@ function NfePage() {
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [parsed, setParsed] = useState<ParsedNfe | null>(null);
   const [importing, setImporting] = useState(false);
+  const [danfeOpen, setDanfeOpen] = useState(false);
 
   const filtradas = useMemo(() => {
     if (!busca) return nfes;
@@ -174,7 +176,20 @@ function NfePage() {
 
   return (
     <div>
-      <PageHeader title="Entradas NF-e" description="Importação, conferência e busca de notas fiscais" />
+      <PageHeader
+        title="Entradas NF-e"
+        description="Importação, conferência e busca de notas fiscais"
+        actions={
+          <button
+            onClick={() => setDanfeOpen(true)}
+            className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted"
+          >
+            <FileSearch className="h-3.5 w-3.5" /> Ver modelo DANFE
+          </button>
+        }
+      />
+
+      <DanfePreviewDialog open={danfeOpen} onClose={() => setDanfeOpen(false)} />
 
       <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
         <SectionCard>
