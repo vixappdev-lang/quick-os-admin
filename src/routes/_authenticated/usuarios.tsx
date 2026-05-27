@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Loader2, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -146,9 +146,9 @@ function PermissionsDialog({ user, onClose }: { user: any | null; onClose: () =>
   const isAdminUser = userRole === "admin";
 
   // Filtra os menus disponíveis conforme o papel do usuário
-  const visibleMenus = useMemo(() => {
-    if (isVendedor) return MENU_KEYS.filter((k) => VENDEDOR_FIXED.has(k));
-    return MENU_KEYS.filter((k) => !ADMIN_ONLY_MENUS.has(k) || isAdminUser);
+  const visibleMenus = useMemo<string[]>(() => {
+    if (isVendedor) return (MENU_KEYS as readonly string[]).filter((k) => VENDEDOR_FIXED.has(k));
+    return (MENU_KEYS as readonly string[]).filter((k) => !ADMIN_ONLY_MENUS.has(k) || isAdminUser);
   }, [isVendedor, isAdminUser]);
 
   useEffect(() => {
