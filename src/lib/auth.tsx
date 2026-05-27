@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { setActiveTenant } from "@/integrations/supabase/active-client";
 
 export type AppRole = "admin" | "gerente" | "operador" | "vendedor";
 
@@ -123,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+    setActiveTenant(null);
     setUser(null);
     setSession(null);
   };
