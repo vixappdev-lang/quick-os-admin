@@ -89,7 +89,7 @@ function Fluxo() {
       <SectionCard
         title="Movimentação diária"
         padded={false}
-        action={
+        actions={
           <div className="flex gap-1 rounded-md border bg-card p-0.5">
             {([7, 15, 30, 60, 90] as const).map((d) => (
               <button key={d} onClick={() => setRange(d)}
