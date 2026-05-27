@@ -47,6 +47,33 @@ export type Database = {
         }
         Relationships: []
       }
+      app_logs: {
+        Row: {
+          categoria: string
+          created_at: string
+          id: string
+          mensagem: string
+          payload: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          id?: string
+          mensagem: string
+          payload?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          id?: string
+          mensagem?: string
+          payload?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           empresa_cnpj: string | null
@@ -57,6 +84,12 @@ export type Database = {
           empresa_telefone: string | null
           id: string
           metodos_pagamento: Json
+          nfeio_api_key: string | null
+          nfeio_company_id: string | null
+          nfeio_environment: string | null
+          nfeio_validated_at: string | null
+          nfeio_webhook_events: Json | null
+          nfeio_webhook_secret: string | null
           pdv_ativo: boolean
           pix_chave: string | null
           pix_qr_url: string | null
@@ -72,6 +105,12 @@ export type Database = {
           empresa_telefone?: string | null
           id?: string
           metodos_pagamento?: Json
+          nfeio_api_key?: string | null
+          nfeio_company_id?: string | null
+          nfeio_environment?: string | null
+          nfeio_validated_at?: string | null
+          nfeio_webhook_events?: Json | null
+          nfeio_webhook_secret?: string | null
           pdv_ativo?: boolean
           pix_chave?: string | null
           pix_qr_url?: string | null
@@ -87,6 +126,12 @@ export type Database = {
           empresa_telefone?: string | null
           id?: string
           metodos_pagamento?: Json
+          nfeio_api_key?: string | null
+          nfeio_company_id?: string | null
+          nfeio_environment?: string | null
+          nfeio_validated_at?: string | null
+          nfeio_webhook_events?: Json | null
+          nfeio_webhook_secret?: string | null
           pdv_ativo?: boolean
           pix_chave?: string | null
           pix_qr_url?: string | null
@@ -644,6 +689,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      nfe_webhook_events: {
+        Row: {
+          evento: string
+          id: string
+          payload: Json
+          pedido_id: string | null
+          recebido_em: string
+        }
+        Insert: {
+          evento: string
+          id?: string
+          payload: Json
+          pedido_id?: string | null
+          recebido_em?: string
+        }
+        Update: {
+          evento?: string
+          id?: string
+          payload?: Json
+          pedido_id?: string | null
+          recebido_em?: string
+        }
+        Relationships: []
       }
       patrimonio: {
         Row: {
