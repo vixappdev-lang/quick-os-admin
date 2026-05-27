@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, ShoppingCart, Receipt, Package, Boxes,
   Wallet, TrendingUp, FileBarChart, Users, UserCog, Settings,
-  ChevronLeft, Zap, X, FileText, Database,
+  ChevronLeft, Zap, X, FileText, Database, Truck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMyPermissions } from "@/lib/permissions";
@@ -35,7 +35,13 @@ const groups: Group[] = [
       { label: "Relatórios", to: "/relatorios", icon: FileBarChart },
     ],
   },
-  { label: "CRM", items: [{ label: "Clientes", to: "/clientes", icon: Users }] },
+  {
+    label: "CRM",
+    items: [
+      { label: "Clientes", to: "/clientes", icon: Users },
+      { label: "Fornecedores", to: "/fornecedores", icon: Truck },
+    ],
+  },
   {
     label: "Sistema",
     items: [
