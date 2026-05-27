@@ -13,7 +13,15 @@ export const Route = createFileRoute("/_authenticated/fornecedores")({
 });
 
 const inp = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
-const EMPTY = { razao_social: "", nome_fantasia: "", cpf_cnpj: "", ie: "", cidade: "", estado: "", telefone: "", email: "", observacoes: "" };
+const EMPTY = {
+  razao_social: "", nome_fantasia: "", cpf_cnpj: "", ie: "",
+  cep: "", endereco: "", numero: "", bairro: "", complemento: "",
+  cidade: "", estado: "",
+  telefone: "", whatsapp: "", email: "", site: "", contato_nome: "",
+  prazo_pagamento: "", condicoes: "",
+  banco: "", agencia: "", conta: "", pix: "",
+  observacoes: "",
+};
 
 function FornecedoresPage() {
   const { data: forn = [], isLoading } = useFornecedores();
@@ -111,14 +119,38 @@ function FornecedoresPage() {
                 <Field label="CPF/CNPJ"><input value={panel.data.cpf_cnpj ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, cpf_cnpj: e.target.value } })} className={inp} /></Field>
                 <Field label="Inscrição Estadual"><input value={panel.data.ie ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, ie: e.target.value } })} className={inp} /></Field>
               </div>
+              <div className="grid grid-cols-[100px_1fr_80px] gap-3">
+                <Field label="CEP"><input value={panel.data.cep ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, cep: e.target.value } })} className={inp} /></Field>
+                <Field label="Endereço"><input value={panel.data.endereco ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, endereco: e.target.value } })} className={inp} /></Field>
+                <Field label="Nº"><input value={panel.data.numero ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, numero: e.target.value } })} className={inp} /></Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Bairro"><input value={panel.data.bairro ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, bairro: e.target.value } })} className={inp} /></Field>
+                <Field label="Complemento"><input value={panel.data.complemento ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, complemento: e.target.value } })} className={inp} /></Field>
+              </div>
               <div className="grid grid-cols-[1fr_80px] gap-3">
                 <Field label="Cidade"><input value={panel.data.cidade ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, cidade: e.target.value } })} className={inp} /></Field>
                 <Field label="UF"><input maxLength={2} value={panel.data.estado ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, estado: e.target.value.toUpperCase() } })} className={inp} /></Field>
               </div>
+              <Field label="Contato (nome)"><input value={panel.data.contato_nome ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, contato_nome: e.target.value } })} className={inp} /></Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Telefone"><input value={panel.data.telefone ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, telefone: e.target.value } })} className={inp} /></Field>
-                <Field label="E-mail"><input type="email" value={panel.data.email ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, email: e.target.value } })} className={inp} /></Field>
+                <Field label="WhatsApp"><input value={panel.data.whatsapp ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, whatsapp: e.target.value } })} className={inp} /></Field>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="E-mail"><input type="email" value={panel.data.email ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, email: e.target.value } })} className={inp} /></Field>
+                <Field label="Site"><input value={panel.data.site ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, site: e.target.value } })} className={inp} /></Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Prazo de pagamento"><input placeholder="Ex.: 30/60/90" value={panel.data.prazo_pagamento ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, prazo_pagamento: e.target.value } })} className={inp} /></Field>
+                <Field label="Condições"><input placeholder="Ex.: à vista 5%" value={panel.data.condicoes ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, condicoes: e.target.value } })} className={inp} /></Field>
+              </div>
+              <div className="grid grid-cols-[1fr_90px_120px] gap-3">
+                <Field label="Banco"><input value={panel.data.banco ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, banco: e.target.value } })} className={inp} /></Field>
+                <Field label="Agência"><input value={panel.data.agencia ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, agencia: e.target.value } })} className={inp} /></Field>
+                <Field label="Conta"><input value={panel.data.conta ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, conta: e.target.value } })} className={inp} /></Field>
+              </div>
+              <Field label="Pix"><input value={panel.data.pix ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, pix: e.target.value } })} className={inp} /></Field>
               <Field label="Observações"><textarea value={panel.data.observacoes ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, observacoes: e.target.value } })} className={inp + " min-h-[80px] py-2"} /></Field>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setPanel({ open: false, data: null })} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
