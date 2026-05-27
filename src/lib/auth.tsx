@@ -4,6 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type AppRole = "admin" | "gerente" | "operador" | "vendedor";
 
+/** Único e-mail com poderes plenos (gerenciar permissões e tenants Supabase). */
+export const SUPER_ADMIN_EMAIL = "admin@loja.com";
+
 export interface SessionUser {
   id: string;
   name: string;
@@ -12,6 +15,7 @@ export interface SessionUser {
   roleLabel: string;
   initials: string;
   avatarUrl?: string | null;
+  isSuperAdmin: boolean;
 }
 
 interface AuthState {
@@ -58,6 +62,7 @@ async function hydrateUser(u: User): Promise<SessionUser> {
     roleLabel: ROLE_LABEL[top],
     initials: initialsOf(name),
     avatarUrl: profile?.avatar_url ?? null,
+    isSuperAdmin: (u.email ?? "").toLowerCase() === SUPER_ADMIN_EMAIL,
   };
 }
 
