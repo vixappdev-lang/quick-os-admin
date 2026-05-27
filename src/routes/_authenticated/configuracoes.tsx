@@ -16,7 +16,7 @@ import {
   type LogCategoria,
   NFEIO_EVENTOS,
 } from "@/lib/queries";
-import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Copy, ShieldCheck, Activity } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Copy, ShieldCheck, Activity, FileText, Plug } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { validateNfeio, validateBrasilnfe } from "@/lib/nfeio.functions";
 import { supabase } from "@/integrations/supabase/client";
@@ -120,7 +120,7 @@ function ToggleRow({ label, description, checked, onCheckedChange }: { label: st
   return <label className="flex items-center justify-between gap-4 rounded-md border bg-card px-4 py-3"><span><span className="block text-sm font-medium">{label}</span>{description && <span className="block text-xs text-muted-foreground">{description}</span>}</span><Switch checked={checked} onCheckedChange={onCheckedChange} /></label>;
 }
 
-// ============================ NF-e (nfe.io) ============================
+// ============================ Integrações (NF-e + futuros) ============================
 function NfeTab() {
   const { data: settings } = useAppSettings();
   const update = useUpdateAppSettings();
@@ -134,6 +134,7 @@ function NfeTab() {
   const [busy, setBusy] = useState(false);
   const [chooserOpen, setChooserOpen] = useState(false);
   const [bnOpen, setBnOpen] = useState(false);
+  const [nfeioOpen, setNfeioOpen] = useState(false);
   const [bnUser, setBnUser] = useState("");
   const [bnCompany, setBnCompany] = useState("");
   const [bnEnv, setBnEnv] = useState<"Development" | "Production">("Production");
@@ -196,6 +197,7 @@ function NfeTab() {
   const isOk = !!(settings as any)?.nfeio_validated_at;
   const bnOk = !!(settings as any)?.brasilnfe_validated_at;
   const provider = (settings as any)?.nfe_provider ?? "nfeio";
+  const conectado = (provider === "nfeio" && isOk) || (provider === "brasilnfe" && bnOk);
 
   const saveBrasilnfe = async () => {
     if (!bnUser || !bnCompany) return toast.error("Preencha UserToken e Token da empresa");
@@ -218,26 +220,17 @@ function NfeTab() {
 
   return (
     <div className="space-y-4">
-      {/* Card de integração / chooser */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <button
-          type="button"
+      {/* Grid uniforme de integrações */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <IntegrationCard
+          icon={<FileText className="h-5 w-5" />}
+          title="NF-e"
+          description="Nota Fiscal Eletrônica (Modelo 55) — emissão automática nos pedidos faturados."
+          status={conectado ? (provider === "brasilnfe" ? "Brasil NFe" : "nfe.io") : null}
           onClick={() => setChooserOpen(true)}
-          className="group flex items-start gap-3 rounded-xl border bg-card p-4 text-left shadow-subtle transition hover:border-primary/40 hover:bg-muted/40"
-        >
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
-            <ShieldCheck className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold">NF-e</p>
-              {provider === "nfeio" && isOk && <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">nfe.io conectado</span>}
-              {provider === "brasilnfe" && bnOk && <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">Brasil NFe conectado</span>}
-              {!isOk && !bnOk && <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">Não conectado</span>}
-            </div>
-            <p className="mt-0.5 text-xs text-muted-foreground">Escolha o provedor (nfe.io ou Brasil NFe) e conecte sua conta.</p>
-          </div>
-        </button>
+        />
+        <IntegrationPlaceholder icon={<Plug className="h-5 w-5" />} title="WhatsApp" />
+        <IntegrationPlaceholder icon={<Plug className="h-5 w-5" />} title="E-mail (SMTP)" />
       </div>
 
       {/* Chooser modal */}
@@ -246,7 +239,7 @@ function NfeTab() {
           <DialogHeader><DialogTitle>Conectar NF-e</DialogTitle></DialogHeader>
           <p className="text-xs text-muted-foreground">Selecione o provedor que sua empresa usa. Os dados ficam salvos para emissão automática.</p>
           <div className="mt-3 grid gap-2">
-            <button onClick={() => { setChooserOpen(false); /* nfeio fica abaixo */ }} className="flex items-center justify-between rounded-md border bg-card p-3 text-left hover:bg-muted">
+            <button onClick={() => { setChooserOpen(false); setNfeioOpen(true); }} className="flex items-center justify-between rounded-md border bg-card p-3 text-left hover:bg-muted">
               <div>
                 <p className="text-sm font-semibold">nfe.io</p>
                 <p className="text-[11px] text-muted-foreground">API Key + Company ID</p>
@@ -295,74 +288,104 @@ function NfeTab() {
         </DialogContent>
       </Dialog>
 
-      <SectionCard
-        title="Integração nfe.io — NF-e Modelo 55"
-        description="Emissão de NF-e produto (Modelo 55) usando a API padrão da nfe.io"
-        actions={
-          isOk ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600"><ShieldCheck className="h-3.5 w-3.5" /> Validado em {formatDateTime((settings as any).nfeio_validated_at)}</span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 text-xs text-amber-600"><AlertTriangle className="h-3.5 w-3.5" /> Não validado</span>
-          )
-        }
-      >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <label className="mb-1.5 block text-xs font-medium">API Key (Authorization) *</label>
-            <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="API key gerada no painel nfe.io" className={inp + " font-mono"} />
-            <p className="mt-1 text-[11px] text-muted-foreground">Painel nfe.io → Configurações → Chaves de API.</p>
+      {/* nfe.io configuration modal */}
+      <Dialog open={nfeioOpen} onOpenChange={setNfeioOpen}>
+        <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              Conectar nfe.io
+              {isOk && <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600"><ShieldCheck className="h-3 w-3" /> Validado</span>}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <label className="mb-1.5 block text-xs font-medium">API Key (Authorization) *</label>
+                <input value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder="API key gerada no painel nfe.io" className={inp + " font-mono"} />
+                <p className="mt-1 text-[11px] text-muted-foreground">Painel nfe.io → Configurações → Chaves de API.</p>
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium">Company ID *</label>
+                <input value={companyId} onChange={(e) => setCompanyId(e.target.value)} placeholder="Ex.: 5f8f8d8c8c8c8c8c8c8c8c8c" className={inp + " font-mono"} />
+              </div>
+              <div>
+                <label className="mb-1.5 block text-xs font-medium">Ambiente *</label>
+                <select value={env} onChange={(e) => setEnv(e.target.value as any)} className={inp}>
+                  <option value="Development">Development (homologação)</option>
+                  <option value="Production">Production</option>
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2 rounded-md border bg-muted/30 p-3">
+              <p className="text-xs font-semibold">Webhook</p>
+              <div className="flex gap-2">
+                <input readOnly value={webhookUrl} className={inp + " font-mono"} />
+                <button type="button" onClick={() => copy(webhookUrl)} className="inline-flex h-9 items-center gap-1 rounded-md border bg-card px-3 text-sm hover:bg-muted"><Copy className="h-3.5 w-3.5" /></button>
+              </div>
+              <div className="flex gap-2">
+                <input value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="X-Webhook-Secret" className={inp + " font-mono"} />
+                <button type="button" onClick={genSecret} className="inline-flex h-9 items-center gap-1 rounded-md border bg-card px-3 text-sm hover:bg-muted"><RefreshCw className="h-3.5 w-3.5" /></button>
+              </div>
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                {NFEIO_EVENTOS.map((ev) => (
+                  <label key={ev.key} className="flex items-center justify-between gap-2 rounded border bg-card px-2 py-1.5 text-[11px]">
+                    <span>{ev.label}</span>
+                    <Switch checked={events[ev.key] === true} onCheckedChange={(v) => setEvents({ ...events, [ev.key]: v })} />
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setNfeioOpen(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Fechar</button>
+              <button onClick={async () => { await salvar(); setNfeioOpen(false); }} disabled={busy || update.isPending} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">
+                {(busy || update.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
+                Salvar e validar
+              </button>
+            </div>
+            {isOk && (
+              <p className="text-[11px] text-muted-foreground">Validado em {formatDateTime((settings as any).nfeio_validated_at)}</p>
+            )}
           </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium">Company ID *</label>
-            <input value={companyId} onChange={(e) => setCompanyId(e.target.value)} placeholder="Ex.: 5f8f8d8c8c8c8c8c8c8c8c8c" className={inp + " font-mono"} />
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium">Ambiente *</label>
-            <select value={env} onChange={(e) => setEnv(e.target.value as any)} className={inp}>
-              <option value="Development">Development (homologação)</option>
-              <option value="Production">Production</option>
-            </select>
-          </div>
-        </div>
-      </SectionCard>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
-      <SectionCard title="Webhook" description="A nfe.io vai chamar esta URL a cada evento da nota. Cole no painel da nfe.io.">
-        <div className="space-y-3">
-          <div>
-            <label className="mb-1.5 block text-xs font-medium">URL pública do webhook</label>
-            <div className="flex gap-2">
-              <input readOnly value={webhookUrl} className={inp + " font-mono"} />
-              <button onClick={() => copy(webhookUrl)} className="inline-flex h-9 items-center gap-1 rounded-md border bg-card px-3 text-sm hover:bg-muted"><Copy className="h-3.5 w-3.5" /> Copiar</button>
-            </div>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-xs font-medium">Segredo do webhook (header <code className="text-[10px]">X-Webhook-Secret</code>)</label>
-            <div className="flex gap-2">
-              <input value={secret} onChange={(e) => setSecret(e.target.value)} placeholder="Gere ou cole o segredo" className={inp + " font-mono"} />
-              <button type="button" onClick={genSecret} className="inline-flex h-9 items-center gap-1 rounded-md border bg-card px-3 text-sm hover:bg-muted"><RefreshCw className="h-3.5 w-3.5" /> Gerar</button>
-              {secret && <button onClick={() => copy(secret)} className="inline-flex h-9 items-center gap-1 rounded-md border bg-card px-3 text-sm hover:bg-muted"><Copy className="h-3.5 w-3.5" /> Copiar</button>}
-            </div>
-            <p className="mt-1 text-[11px] text-muted-foreground">A nfe.io enviará este valor em <code>X-Webhook-Secret</code> a cada callback.</p>
-          </div>
-          <div>
-            <label className="mb-2 block text-xs font-medium">Eventos que quero receber</label>
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              {NFEIO_EVENTOS.map((ev) => (
-                <label key={ev.key} className="flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2">
-                  <span className="text-xs">{ev.label}</span>
-                  <Switch checked={events[ev.key] === true} onCheckedChange={(v) => setEvents({ ...events, [ev.key]: v })} />
-                </label>
-              ))}
-            </div>
-          </div>
-        </div>
-      </SectionCard>
+function IntegrationCard({ icon, title, description, status, onClick }: { icon: React.ReactNode; title: string; description: string; status: string | null; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group flex h-full flex-col gap-3 rounded-xl border bg-card p-4 text-left shadow-subtle transition hover:border-primary/40 hover:bg-muted/40"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10 text-primary">{icon}</div>
+        {status ? (
+          <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">{status}</span>
+        ) : (
+          <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">Não conectado</span>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">{title}</p>
+        <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{description}</p>
+      </div>
+      <span className="text-[11px] font-medium text-primary group-hover:underline">Configurar →</span>
+    </button>
+  );
+}
 
-      <div className="flex justify-end">
-        <button onClick={salvar} disabled={busy || update.isPending} className="inline-flex h-10 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">
-          {(busy || update.isPending) && <Loader2 className="h-4 w-4 animate-spin" />}
-          Salvar e validar
-        </button>
+function IntegrationPlaceholder({ icon, title }: { icon: React.ReactNode; title: string }) {
+  return (
+    <div className="flex h-full flex-col gap-3 rounded-xl border border-dashed bg-muted/20 p-4 text-left opacity-60">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-muted text-muted-foreground">{icon}</div>
+        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">Em breve</span>
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">{title}</p>
+        <p className="mt-1 text-xs text-muted-foreground">Integração planejada para a próxima versão.</p>
       </div>
     </div>
   );
