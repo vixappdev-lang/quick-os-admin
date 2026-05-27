@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth";
 export const MENU_KEYS = [
   "/", "/pdv", "/pedidos", "/produtos", "/estoque", "/nfe",
   "/caixa", "/financeiro", "/relatorios", "/clientes",
-  "/usuarios", "/configuracoes", "/supabase",
+  "/fornecedores", "/usuarios", "/configuracoes", "/supabase",
 ] as const;
 export type MenuKey = typeof MENU_KEYS[number];
 
@@ -21,15 +21,19 @@ export const MENU_LABEL: Record<string, string> = {
   "/financeiro": "Financeiro",
   "/relatorios": "Relatórios",
   "/clientes": "Clientes",
+  "/fornecedores": "Fornecedores",
   "/usuarios": "Usuários",
   "/configuracoes": "Configurações",
   "/supabase": "Supabase",
 };
 
+/** Menus restritos por padrão: só liberados quando o admin (super-admin) explicitamente conceder. */
+const RESTRICTED_BY_DEFAULT = new Set<string>(["/supabase", "/usuarios"]);
+
 /** Hook que retorna { allowed(menu): boolean, ready } para o usuário logado. */
 export function useMyPermissions() {
   const { user } = useAuth();
-  const isAdmin = user?.role === "admin";
+  const isSuper = !!user?.isSuperAdmin;
   const q = useQuery({
     queryKey: ["user_permissions", user?.id],
     queryFn: async () => {
@@ -49,11 +53,14 @@ export function useMyPermissions() {
   return {
     ready: q.isFetched || !user,
     allowed: (menu: string) => {
-      if (isAdmin) return true;
-      // default: permitido se nenhuma regra explícita existir
+      // Super-admin (admin@loja.com) sempre vê tudo
+      if (isSuper) return true;
       const v = map.get(menu);
-      return v === undefined ? true : v;
+      if (v !== undefined) return v;
+      // Default: menus sensíveis ficam ocultos até liberação explícita
+      return !RESTRICTED_BY_DEFAULT.has(menu);
     },
+    isSuperAdmin: isSuper,
   };
 }
 
