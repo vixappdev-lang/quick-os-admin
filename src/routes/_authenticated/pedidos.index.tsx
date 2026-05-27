@@ -288,36 +288,34 @@ function KanbanColumn({ col, pedidos, onView }: { col: typeof COLUMNS[number]; p
 
 function KanbanCard({ pedido, onView }: { pedido: any; onView: (id: string) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: pedido.id });
-  const itens = pedido.itens ?? [];
-  const primeiros = itens.slice(0, 2).map((i: any) => i.produto?.nome).filter(Boolean) as string[];
-  const sobra = Math.max(0, itens.length - primeiros.length);
+  const cli = pedido.cliente;
+  const nomeEmpresa = cli?.nome_fantasia || cli?.nome || "Balcão";
+  const cidade = cli?.endereco?.cidade || cli?.endereco?.city || cli?.cidade || null;
+  const vendedor = pedido.vendedor?.nome || null;
   return (
     <div
       ref={setNodeRef}
       {...attributes}
       {...listeners}
       className={cn("group cursor-grab rounded-lg border bg-card p-3 shadow-subtle transition-shadow hover:shadow-md active:cursor-grabbing", isDragging && "opacity-30")}
+      onDoubleClick={() => onView(pedido.id)}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <p className="text-sm font-semibold">{pedido.numero}</p>
+            <p className="text-sm font-semibold tabular">{pedido.numero}</p>
             <StatusBadge status={PEDIDO_STATUS_LABEL[pedido.status] ?? pedido.status} tone={pedidoStatusTone(pedido.status)} />
           </div>
-          <p className="mt-0.5 truncate text-xs text-muted-foreground">{pedido.cliente?.nome ?? "Balcão"}</p>
+          <p className="mt-0.5 truncate text-xs font-medium text-foreground">{nomeEmpresa}</p>
         </div>
         <PedidoActions pedido={pedido} onView={() => onView(pedido.id)} />
       </div>
-      {primeiros.length > 0 && (
-        <div className="mt-1.5 space-y-0.5">
-          {primeiros.map((n, i) => (
-            <p key={i} className="truncate text-[11px] text-foreground/80">• {n}</p>
-          ))}
-          {sobra > 0 && <p className="text-[10px] text-muted-foreground">+ {sobra} {sobra === 1 ? "item" : "itens"}</p>}
-        </div>
-      )}
+      <div className="mt-1 flex flex-wrap gap-x-2 text-[11px] text-muted-foreground">
+        {vendedor && <span className="truncate">{vendedor}</span>}
+        {cidade && <span className="truncate">· {cidade}</span>}
+      </div>
       <div className="mt-2 flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground">{formatTime(pedido.created_at)} · {itens.length} itens</span>
+        <span className="text-[11px] text-muted-foreground">{formatTime(pedido.created_at)}</span>
         <span className="tabular text-sm font-semibold">{formatBRL(Number(pedido.total))}</span>
       </div>
     </div>
