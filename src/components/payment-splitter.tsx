@@ -48,48 +48,49 @@ export function PaymentSplitter({ total, pagamentos, onAdd, onRemove, warnOnDiff
 
   return (
     <div className="space-y-3">
-      {/* Linha de adição — responsivo */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-12">
-        <div className="col-span-2 sm:col-span-4">
-          <label className="block text-[11px] font-medium text-muted-foreground">Forma</label>
-          <select value={forma} onChange={(e) => setForma(e.target.value)} className="mt-1 h-10 w-full rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-            {PAGAMENTO_LIST.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-          </select>
+      {/* Linha de adição — empilhada para evitar massacre em colunas estreitas */}
+      <div className="space-y-2 rounded-md border bg-card/40 p-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[11px] font-medium text-muted-foreground">Forma</label>
+            <select value={forma} onChange={(e) => setForma(e.target.value)} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+              {PAGAMENTO_LIST.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-muted-foreground">Condição</label>
+            <select value={condicao} onChange={(e) => setCondicao(e.target.value)} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+              {CONDICOES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
         </div>
-        <div className="col-span-1 sm:col-span-3">
-          <label className="block text-[11px] font-medium text-muted-foreground">Condição</label>
-          <select value={condicao} onChange={(e) => setCondicao(e.target.value)} className="mt-1 h-10 w-full rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
-            {CONDICOES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-[11px] font-medium text-muted-foreground">Vencimento</label>
+            <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
+          </div>
+          <div>
+            <label className="block text-[11px] font-medium text-muted-foreground">Valor</label>
+            <input
+              type="number"
+              inputMode="decimal"
+              step="0.01"
+              min={0}
+              placeholder={restante > 0 ? restante.toFixed(2) : "0,00"}
+              value={valor}
+              onChange={(e) => setValor(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); aceitar(); } }}
+              className="mt-1 h-9 w-full rounded-md border border-input bg-background px-2 text-right text-sm tabular focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
         </div>
-        <div className="col-span-1 sm:col-span-2">
-          <label className="block text-[11px] font-medium text-muted-foreground">Vencimento</label>
-          <input type="date" value={vencimento} onChange={(e) => setVencimento(e.target.value)} className="mt-1 h-10 w-full rounded-md border border-input bg-background px-2 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20" />
-        </div>
-        <div className="col-span-1 sm:col-span-2">
-          <label className="block text-[11px] font-medium text-muted-foreground">Valor</label>
-          <input
-            type="number"
-            inputMode="decimal"
-            step="0.01"
-            min={0}
-            placeholder={restante > 0 ? restante.toFixed(2) : "0,00"}
-            value={valor}
-            onChange={(e) => setValor(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); aceitar(); } }}
-            className="mt-1 h-10 w-full rounded-md border border-input bg-background px-2 text-right text-sm tabular focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </div>
-        <div className="col-span-1 flex items-end sm:col-span-1">
-          <button
-            type="button"
-            onClick={() => aceitar()}
-            className="h-10 w-full rounded-md bg-primary px-2 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"
-            title="Adicionar"
-          >
-            <Plus className="mx-auto h-4 w-4" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => aceitar()}
+          className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]"
+        >
+          <Plus className="h-3.5 w-3.5" /> Adicionar pagamento
+        </button>
       </div>
 
       {restante > 0 && (
@@ -154,25 +155,27 @@ export function PaymentSplitter({ total, pagamentos, onAdd, onRemove, warnOnDiff
         </>
       )}
 
-      {/* Rodapé totais */}
-      <div className="grid grid-cols-2 gap-2 rounded-md border bg-muted/30 p-3 sm:grid-cols-4">
-        <div>
-          <p className="text-[11px] text-muted-foreground">Total da venda</p>
-          <p className="tabular text-sm font-semibold">{formatBRL(total)}</p>
+      {/* Rodapé totais — empilhado e legível */}
+      <div className="rounded-md border bg-muted/30 p-3">
+        <div className="grid grid-cols-3 gap-2">
+          <div>
+            <p className="text-[11px] text-muted-foreground">Total da venda</p>
+            <p className="tabular text-sm font-semibold">{formatBRL(total)}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-muted-foreground">Total pago</p>
+            <p className="tabular text-sm font-semibold">{formatBRL(totalPago)}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-muted-foreground">Restante</p>
+            <p className={cn("tabular text-sm font-semibold", restanteOk ? "text-success" : "text-destructive")}>{formatBRL(restante)}</p>
+          </div>
         </div>
-        <div>
-          <p className="text-[11px] text-muted-foreground">Total pago</p>
-          <p className="tabular text-sm font-semibold">{formatBRL(totalPago)}</p>
-        </div>
-        <div>
-          <p className="text-[11px] text-muted-foreground">Restante</p>
-          <p className={cn("tabular text-sm font-semibold", restanteOk ? "text-success" : "text-destructive")}>{formatBRL(restante)}</p>
-        </div>
-        <div className="flex items-end justify-end">
+        <div className="mt-2 flex justify-end">
           {restanteOk ? (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-success"><CheckCircle2 className="h-3.5 w-3.5" /> Pago</span>
+            <span className="inline-flex items-center gap-1 rounded-md bg-success/10 px-2 py-0.5 text-xs font-medium text-success"><CheckCircle2 className="h-3.5 w-3.5" /> Pago</span>
           ) : warnOnDiff ? (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> Em aberto</span>
+            <span className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> Em aberto</span>
           ) : null}
         </div>
       </div>

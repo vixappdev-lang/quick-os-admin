@@ -8,8 +8,11 @@ import { pagamentoLabel } from "@/lib/pagamento";
  */
 export function printNotaFiscal(pedido: any, settings: any, pagamentos: any[] = []) {
   if (!pedido) return;
-  const win = window.open("", "_blank", "noopener,noreferrer,width=820,height=900");
-  if (!win) return;
+  const win = window.open("", "_blank", "width=820,height=900");
+  if (!win) {
+    alert("Habilite pop-ups para gerar a Nota Fiscal.");
+    return;
+  }
 
   const empresa = {
     razao: settings?.empresa_razao ?? "Empresa",
