@@ -17,7 +17,7 @@ import {
 } from "@/lib/queries";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Copy, ShieldCheck, Activity } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { validateNfeio } from "@/lib/nfeio.functions";
+import { validateNfeio, validateBrasilnfe } from "@/lib/nfeio.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime } from "@/lib/format";
 
@@ -73,7 +73,7 @@ function ConfiguracoesPage() {
         <TabsList className="flex h-auto flex-wrap justify-start">
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
           <TabsTrigger value="pdv">PDV</TabsTrigger>
-          <TabsTrigger value="nfe">NF-e</TabsTrigger>
+          <TabsTrigger value="nfe">Integrações</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
           <TabsTrigger value="impressao">Impressão</TabsTrigger>
           <TabsTrigger value="api">API</TabsTrigger>
