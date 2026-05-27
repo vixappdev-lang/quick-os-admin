@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { ApiKeysPanel } from "@/components/api-keys-panel";
 import { useAppSettings, useUpdateAppSettings } from "@/lib/queries";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   head: () => ({ meta: [{ title: "Configurações | Quick OS" }] }),
@@ -19,15 +20,18 @@ function ConfiguracoesPage() {
   const { data: settings } = useAppSettings();
   const updateSettings = useUpdateAppSettings();
   const inp = "h-9 w-full rounded-md border border-input bg-background px-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
-  const [empresa, setEmpresa] = useState({ razao: "", cnpj: "", telefone: "", email: "", endereco: "" });
+  const [empresa, setEmpresa] = useState({ razao: "", cnpj: "", ie: "", telefone: "", email: "", endereco: "" });
 
-  const paymentMap = useMemo<Record<string, boolean>>(() => ({ pix: true, credito: true, debito: true, dinheiro: true, fiado: true, outro: false, ...((settings?.metodos_pagamento ?? {}) as Record<string, boolean>) }), [settings]);
+  const paymentMap = useMemo<Record<string, boolean>>(() => ({ pix: true, credito: true, debito: true, dinheiro: true, nota_promissoria: true, cheque: false, outro: false, ...((settings?.metodos_pagamento ?? {}) as Record<string, boolean>) }), [settings]);
+
+  const requiredOk = !!(settings?.empresa_razao && settings?.empresa_cnpj && settings?.empresa_ie && settings?.empresa_telefone && settings?.empresa_email && settings?.empresa_endereco);
 
   const saveEmpresa = async () => {
     try {
       await updateSettings.mutateAsync({
         empresa_razao: empresa.razao || settings?.empresa_razao || null,
         empresa_cnpj: empresa.cnpj || settings?.empresa_cnpj || null,
+        empresa_ie: empresa.ie || settings?.empresa_ie || null,
         empresa_telefone: empresa.telefone || settings?.empresa_telefone || null,
         empresa_email: empresa.email || settings?.empresa_email || null,
         empresa_endereco: empresa.endereco || settings?.empresa_endereco || null,
@@ -44,6 +48,15 @@ function ConfiguracoesPage() {
   return (
     <div>
       <PageHeader title="Configurações" description="Preferências da empresa e do sistema" />
+      {!requiredOk && (
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+          <div>
+            <p className="font-semibold text-foreground">Dados da empresa obrigatórios</p>
+            <p className="text-xs text-muted-foreground">Preencha <b>razão social, CNPJ, IE, telefone, e-mail e endereço</b> para emitir notas e faturar pedidos.</p>
+          </div>
+        </div>
+      )}
       <Tabs defaultValue="empresa">
         <TabsList className="flex h-auto flex-wrap justify-start">
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
@@ -53,13 +66,14 @@ function ConfiguracoesPage() {
           <TabsTrigger value="tema">Tema</TabsTrigger>
         </TabsList>
         <TabsContent value="empresa" className="mt-4">
-          <SectionCard title="Dados da empresa" actions={<button onClick={saveEmpresa} disabled={updateSettings.isPending} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">Salvar</button>}>
+          <SectionCard title="Dados da empresa" actions={<div className="flex items-center gap-3">{requiredOk && <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600"><CheckCircle2 className="h-3.5 w-3.5" /> Completo</span>}<button onClick={saveEmpresa} disabled={updateSettings.isPending} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">Salvar</button></div>}>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div><label className="mb-1.5 block text-xs font-medium">Razão social</label><input defaultValue={settings?.empresa_razao ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, razao: e.target.value }))} className={inp} /></div>
-              <div><label className="mb-1.5 block text-xs font-medium">CNPJ</label><input defaultValue={settings?.empresa_cnpj ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, cnpj: e.target.value }))} className={inp} /></div>
-              <div><label className="mb-1.5 block text-xs font-medium">Telefone</label><input defaultValue={settings?.empresa_telefone ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, telefone: e.target.value }))} className={inp} /></div>
-              <div><label className="mb-1.5 block text-xs font-medium">Email</label><input defaultValue={settings?.empresa_email ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, email: e.target.value }))} className={inp} /></div>
-              <div className="md:col-span-2"><label className="mb-1.5 block text-xs font-medium">Endereço</label><input defaultValue={settings?.empresa_endereco ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, endereco: e.target.value }))} className={inp} /></div>
+              <div><label className="mb-1.5 block text-xs font-medium">Razão social *</label><input defaultValue={settings?.empresa_razao ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, razao: e.target.value }))} className={inp} /></div>
+              <div><label className="mb-1.5 block text-xs font-medium">CNPJ *</label><input defaultValue={settings?.empresa_cnpj ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, cnpj: e.target.value }))} className={inp} /></div>
+              <div><label className="mb-1.5 block text-xs font-medium">Inscrição Estadual (IE) *</label><input defaultValue={settings?.empresa_ie ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, ie: e.target.value }))} className={inp} placeholder="000.000.000.000" /></div>
+              <div><label className="mb-1.5 block text-xs font-medium">Telefone *</label><input defaultValue={settings?.empresa_telefone ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, telefone: e.target.value }))} className={inp} /></div>
+              <div><label className="mb-1.5 block text-xs font-medium">Email *</label><input defaultValue={settings?.empresa_email ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, email: e.target.value }))} className={inp} /></div>
+              <div className="md:col-span-2"><label className="mb-1.5 block text-xs font-medium">Endereço *</label><input defaultValue={settings?.empresa_endereco ?? ""} onChange={(e) => setEmpresa((s) => ({ ...s, endereco: e.target.value }))} className={inp} /></div>
             </div>
           </SectionCard>
         </TabsContent>
