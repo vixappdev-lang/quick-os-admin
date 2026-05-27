@@ -375,6 +375,16 @@ function Th({ children }: { children: React.ReactNode }) {
   return <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{children}</th>;
 }
 
+function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold truncate">{value}</p>
+      {hint && <p className="text-[10px] text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
 function NewTenantDialog({ open, onOpenChange, usuarios, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; usuarios: any[]; onCreated?: (tenant: any) => void }) {
   const qc = useQueryClient();
   const createFn = useServerFn(createTenant);
