@@ -2,9 +2,10 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard, ShoppingCart, Receipt, Package, Boxes,
   Wallet, TrendingUp, FileBarChart, Users, UserCog, Settings,
-  ChevronLeft, Zap, X, FileText,
+  ChevronLeft, Zap, X, FileText, Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useMyPermissions } from "@/lib/permissions";
 
 type Item = { label: string; to: string; icon: any };
 type Group = { label?: string; items: Item[] };
@@ -39,6 +40,7 @@ const groups: Group[] = [
     label: "Sistema",
     items: [
       { label: "Usuários", to: "/usuarios", icon: UserCog },
+      { label: "Supabase", to: "/supabase", icon: Database },
       { label: "Configurações", to: "/configuracoes", icon: Settings },
     ],
   },
@@ -53,6 +55,10 @@ interface Props {
 
 export function AppSidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: Props) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { allowed } = useMyPermissions();
+  const visibleGroups = groups
+    .map((g) => ({ ...g, items: g.items.filter((it) => allowed(it.to)) }))
+    .filter((g) => g.items.length > 0);
   return (
     <>
       {mobileOpen && (
@@ -101,7 +107,7 @@ export function AppSidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: P
         </div>
 
         <nav className="flex-1 overflow-y-auto scrollbar-thin px-2.5 py-3">
-          {groups.map((g, gi) => (
+          {visibleGroups.map((g, gi) => (
             <div key={gi} className="mb-1.5">
               {g.label && !collapsed && (
                 <p className="px-2.5 pb-1.5 pt-2 text-[10px] font-semibold uppercase tracking-wider text-[var(--sidebar-muted)]">
