@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as centralSupabase } from "@/integrations/supabase/client";
+import { activeSupabase as supabase } from "@/integrations/supabase/active-client";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type Produto = Tables<"produtos">;
@@ -343,8 +344,8 @@ export function useVendedores() {
     queryKey: ["vendedores"],
     queryFn: async () => {
       const [{ data: profiles }, { data: roles }] = await Promise.all([
-        supabase.from("profiles").select("id, nome, email").order("nome"),
-        supabase.from("user_roles").select("user_id, role"),
+        centralSupabase.from("profiles").select("id, nome, email").order("nome"),
+        centralSupabase.from("user_roles").select("user_id, role"),
       ]);
       const rmap = new Map<string, string[]>();
       (roles ?? []).forEach((r: any) => {
@@ -854,8 +855,8 @@ export function useUsuarios() {
     queryKey: ["usuarios"],
     queryFn: async () => {
       const [{ data: profiles, error: pe }, { data: roles, error: re }] = await Promise.all([
-        supabase.from("profiles").select("*").order("nome"),
-        supabase.from("user_roles").select("*"),
+        centralSupabase.from("profiles").select("*").order("nome"),
+        centralSupabase.from("user_roles").select("*"),
       ]);
       if (pe) throw pe;
       if (re) throw re;

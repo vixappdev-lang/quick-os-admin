@@ -2,6 +2,9 @@ import { createFileRoute, Outlet, useNavigate, useRouter } from "@tanstack/react
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { activeSupabase, setActiveTenant, getActiveTenant } from "@/integrations/supabase/active-client";
+import { useServerFn } from "@tanstack/react-start";
+import { getMyTenant } from "@/lib/tenants.functions";
 import { useAuth } from "@/lib/auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
@@ -17,6 +20,37 @@ function AuthLayout() {
   const qc = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const fetchMyTenant = useServerFn(getMyTenant);
+
+  // Sincroniza tenant ativo do usuário (banco próprio). Se ele tem um tenant
+  // conectado, todas as queries de dados passam a apontar para esse banco.
+  useEffect(() => {
+    if (!ready || !user) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const t = await fetchMyTenant();
+        if (cancelled) return;
+        const current = getActiveTenant();
+        if (!t) {
+          if (current) { setActiveTenant(null); qc.clear(); }
+          return;
+        }
+        if (!current || current.slug !== t.slug || current.url !== t.url) {
+          setActiveTenant({ slug: t.slug, url: t.url, anon_key: t.anon_key });
+          qc.clear(); // painel "limpa" — recarrega dados do tenant
+        }
+      } catch {/* ignore — segue no banco central */}
+    })();
+    return () => { cancelled = true; };
+  }, [ready, user, fetchMyTenant, qc]);
+
+  // Reage a trocas manuais do tenant (super-admin conectando/removendo).
+  useEffect(() => {
+    const onChange = () => qc.clear();
+    window.addEventListener("active-tenant-changed", onChange);
+    return () => window.removeEventListener("active-tenant-changed", onChange);
+  }, [qc]);
 
   useEffect(() => {
     if (!ready) return;
@@ -38,11 +72,11 @@ function AuthLayout() {
     routes.forEach((to) => { try { router.preloadRoute({ to }); } catch {} });
 
     const prefetch = [
-      { key: ["produtos"], fn: () => supabase.from("produtos").select("*, categoria:categorias(id,nome,cor)").order("nome") },
-      { key: ["clientes"], fn: () => supabase.from("clientes").select("*").order("nome") },
-      { key: ["categorias"], fn: () => supabase.from("categorias").select("*").order("nome") },
-      { key: ["pedidos", undefined], fn: () => supabase.from("pedidos").select("*, cliente:clientes(id,nome,telefone), itens:pedido_itens(id,qtd,preco_unit,total,produto:produtos(id,nome,sku))").order("created_at", { ascending: false }) },
-      { key: ["app_settings"], fn: () => supabase.from("app_settings").select("*").eq("id", "main").maybeSingle() },
+      { key: ["produtos"], fn: () => activeSupabase.from("produtos").select("*, categoria:categorias(id,nome,cor)").order("nome") },
+      { key: ["clientes"], fn: () => activeSupabase.from("clientes").select("*").order("nome") },
+      { key: ["categorias"], fn: () => activeSupabase.from("categorias").select("*").order("nome") },
+      { key: ["pedidos", undefined], fn: () => activeSupabase.from("pedidos").select("*, cliente:clientes(id,nome,telefone), itens:pedido_itens(id,qtd,preco_unit,total,produto:produtos(id,nome,sku))").order("created_at", { ascending: false }) },
+      { key: ["app_settings"], fn: () => activeSupabase.from("app_settings").select("*").eq("id", "main").maybeSingle() },
     ];
     prefetch.forEach(({ key, fn }) => {
       qc.prefetchQuery({

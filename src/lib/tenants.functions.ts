@@ -3,9 +3,14 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-async function assertAdmin(ctx: any) {
-  const { data } = await ctx.supabase.from("user_roles").select("role").eq("user_id", ctx.userId);
-  if (!(data ?? []).some((r: any) => r.role === "admin")) throw new Error("Apenas administradores");
+const SUPER_ADMIN_EMAIL = "admin@loja.com";
+
+/** Apenas o super-admin (admin@loja.com) pode mexer em tenants e permissões. */
+async function assertSuperAdmin(ctx: any) {
+  const email = (ctx?.claims?.email || "").toString().toLowerCase();
+  if (email !== SUPER_ADMIN_EMAIL) {
+    throw new Error("Acesso restrito ao super-administrador.");
+  }
 }
 
 const CreateTenantSchema = z.object({
@@ -20,7 +25,7 @@ export const createTenant = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => CreateTenantSchema.parse(i))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    await assertSuperAdmin(context);
     // 1) cria tenant
     const { data: t, error } = await supabaseAdmin
       .from("tenants")
@@ -44,7 +49,7 @@ export const deleteTenant = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => z.object({ id: z.string().uuid() }).parse(i))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    await assertSuperAdmin(context);
     const { error } = await supabaseAdmin.from("tenants").delete().eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
@@ -53,13 +58,27 @@ export const deleteTenant = createServerFn({ method: "POST" })
 export const listTenants = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context);
+    await assertSuperAdmin(context);
     const { data, error } = await supabaseAdmin
       .from("tenants")
       .select("id, slug, nome, supabase_url, user_id, created_at")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
+  });
+
+/** Retorna o tenant ativo do usuário logado (ou null). */
+export const getMyTenant = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await supabaseAdmin
+      .from("tenants")
+      .select("slug, nome, supabase_url, supabase_anon_key")
+      .eq("user_id", context.userId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+    return { slug: data.slug, nome: data.nome, url: data.supabase_url, anon_key: data.supabase_anon_key };
   });
 
 const PermSchema = z.object({
@@ -71,7 +90,7 @@ export const setUserPermissions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((i) => PermSchema.parse(i))
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    await assertSuperAdmin(context);
     // apaga e re-insere as fornecidas
     await supabaseAdmin.from("user_permissions").delete().eq("user_id", data.user_id);
     if (data.permissions.length) {
