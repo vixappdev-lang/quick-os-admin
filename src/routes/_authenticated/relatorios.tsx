@@ -252,6 +252,21 @@ function RelatoriosPage() {
 
 function ReportTable({ report }: { report: RelReport }) {
   return (
+    <ReportTableInner report={report} />
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col">
+      <label className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function ReportTableInner({ report }: { report: RelReport }) {
+  return (
     <>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[480px] text-sm">
