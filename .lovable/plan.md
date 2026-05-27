@@ -1,160 +1,160 @@
-## Plano Final — Pedidos, Pagamentos múltiplos, Produtos UN/FD/CX, Fix Supabase env & Movimentações
 
-Agrupa Parte 1 + Parte 2. Sem implementação até aprovação.
-
----
-
-### 1. Pagamentos múltiplos (modelo "lista de pagamentos")
-
-Hoje cada pedido tem **1 forma** (`pagamento` text). Vamos suportar **N formas** somando até o total.
-
-**Banco** — nova tabela `pedido_pagamentos`:
-- `id`, `pedido_id` (FK), `tenant_id`
-- `forma` (pix, dinheiro, debito, credito, nota_promissoria, cheque, fiado, outro)
-- `condicao` (à vista / 7/14/30 dias / parcelado) — texto livre
-- `vencimento` (date, opcional)
-- `valor` (numeric)
-- `created_at`
-- GRANTs + RLS por tenant (mesmo padrão das outras tabelas)
-- Trigger que recalcula `pedido.total_pago` e `pedido.restante`
-- Manter coluna legada `pagamento` para compatibilidade (preenchida com a 1ª forma)
-- Renomear label "Fiado" → **"Nota promissória"** já feito no `pagamento.ts`; manter ambos os ids para retrocompat
-
-**Componente novo** `PaymentSplitter` (`src/components/payment-splitter.tsx`):
-- Layout igual ao print: linha "Forma · Condição · Vencimento · Valor · Adicionar"
-- Tabela das formas já adicionadas (com botão remover)
-- Rodapé: **Total da Venda · Total Pago · Restante · Créditos**
-- Bloqueia salvar se `restante !== 0` (ou permite com aviso se "fiado/nota promissória")
-- 100% responsivo (cards no mobile, tabela no desktop)
-
-**Onde plugar:**
-- **Novo Pedido** (`pedido-builder.tsx`): substituir o grid atual de 5 botões por `PaymentSplitter` embutido
-- **Detalhes do pedido** (`pedidos.$id.tsx`): menu de 3 pontinhos → item **"Pagamentos"** → abre `Sheet` lateral com `PaymentSplitter` (adicionar / editar / remover formas a qualquer momento)
+Plano dividido em 7 blocos independentes. Sem mudança de design — só novos campos/telas seguindo o visual existente. Tudo testado antes de finalizar.
 
 ---
 
-### 2. Kanban de Pedidos — Encerrar + Faturar
+## 1) Kanban de Pedidos — pagamentos e encerramento
 
-**Encerrar pedido:**
-- Novo status `encerrado` (enum/check) — adicionar na migration
-- Botão "Encerrar" no card do Kanban e no detalhe
-- Filtro do Kanban: ocultar `encerrado`
-- Lista de pedidos: nova aba/filtro **"Encerrados"**
+**Pagamentos editáveis** (em `pedidos.$id.tsx`, na aba/seção "Pagamentos"):
+- Lista atual de pagamentos passa a ter botão **Editar** e **Remover** por linha.
+- Botão **Adicionar pagamento** abre o `PaymentSplitter` já existente, mas em modo "adicionar parcial" (permite uma forma só OU várias).
+- Ao editar: muda valor e forma, recalcula `total_pago` e `restante` via trigger já existente (`recalc_pedido_pagamentos`).
+- "Fiado" vira **"Nota promissória"** em toda a UI (`src/lib/pagamento.ts` já tem `nota_promissoria`; vou trocar todos os usos remanescentes de `fiado` por `nota_promissoria` na exibição, mantendo o valor `fiado` no banco como alias compatível — não quebra dados antigos).
 
-**Faturamento (NFC-e consumidor final):**
-- Aba "Faturamento" no detalhe do pedido
-- Por ora: **gerar DANFE-simulado em PDF/HTML imprimível** (cabeçalho da empresa, dados do cliente "Consumidor Final" quando sem cliente, itens, totais, formas de pagamento, QR code placeholder)
-- Tabela `pedido_faturas`: `id`, `pedido_id`, `numero`, `serie`, `chave_acesso` (placeholder), `emitida_em`, `pdf_url?`, `status` (rascunho/emitida/cancelada)
-- **Integração SEFAZ real fica para fase 2** — aguardar exemplo de NF que o usuário vai enviar para mapear campos. Estrutura já fica preparada.
+**Encerrar pedido** (botão no detalhe do pedido):
+- Adicionar status `encerrado` ao enum `pedido_status` (migration).
+- Botão "Encerrar pedido" no topo do `pedidos.$id.tsx`, com confirmação.
+- No Kanban (`pedidos.index.tsx` view Kanban): filtrar `status != 'encerrado'`.
+- Na Lista: aparece com badge **"Encerrado"** (cinza), e novo filtro "Encerrados" no topo.
 
----
-
-### 3. Novo Pedido — Novo Cliente sem dialog antigo
-
-- Em `pedido-builder.tsx`, botão "+ Novo cliente" hoje abre dialog
-- Trocar por navegação com `useNavigate` para `/clientes/novo?returnTo=/pedidos/novo&select=1`
-- `clientes/novo` lê `returnTo` e, ao salvar, volta. `pedidos/novo` recupera o cliente recém-criado via search param ou via cache (`useClientes` + último criado) e já seleciona
+**Faturamento → Nota Fiscal profissional (PDF)**:
+- Novo componente `nf-print.tsx` (modelo NFC-e visual, igual comércio: cabeçalho com razão social/CNPJ/endereço da empresa de `app_settings`, dados do consumidor, tabela de itens com qtd/un/preço/total, totais, forma de pagamento, número sequencial de `faturamentos.numero`, data, rodapé com "Documento auxiliar — não é documento fiscal oficial").
+- Botão **"Gerar Nota Fiscal"** na aba Faturamento abre janela de impressão (segue padrão dos prints existentes: `romaneio-print`, `separacao-print`).
+- Deixa hook preparado para futura integração NFC-e oficial (campo `nfe_chave` no faturamento, vazio por enquanto).
 
 ---
 
-### 4. Produtos — UN / FD / CX (multi-embalagem)
+## 2) Novo Pedido → Novo Cliente: usar página atual
 
-**Banco** (migration):
-- Adicionar em `produtos`:
-  - `unidade_base` (default "UN")
-  - `embalagens` jsonb (default `[]`) — formato:
-    ```
-    [
-      { "tipo": "FD", "qtd_un": 12, "preco_venda": 60.00, "codigo_barras": "789..." },
-      { "tipo": "CX", "qtd_un": 24, "preco_venda": 115.00 }
-    ]
-    ```
-- Em `pedido_itens`:
-  - `embalagem_tipo` ("UN"|"FD"|"CX", default "UN")
-  - `qtd_un_por_embalagem` (int, default 1)
-  - `qtd_embalagens` (numeric) — `qtd` continua sendo qtd em UN (qtd_embalagens × qtd_un_por_embalagem) para manter cálculo de estoque
+Em `pedido-form.tsx` o botão "Novo cliente" hoje abre um dialog antigo. Trocar para:
+- Navegar para `/clientes/novo?return=/pedidos/novo&prefill=<nome>` (rota já existe).
+- Em `clientes.novo.tsx`: ler `return` na query; após criar, navegar de volta com `?cliente=<id>`.
+- Em `pedidos.novo.tsx`: ler `?cliente=<id>` no mount e pré-selecionar o cliente.
 
-**Form de Produto** (`product-form-panel.tsx`):
-- Nova seção "Embalagens de venda" com lista editável (tipo, UN por embalagem, preço, código de barras opcional)
-
-**Adicionar item no Pedido** (`pedido-builder.tsx`):
-- Ao clicar em um produto, abrir **modal "Dados do Produto"** (estilo do print enviado anteriormente):
-  - Referência, Produto (readonly)
-  - **Seletor UN/FD/CX** (apenas as cadastradas)
-  - Quantidade, Valor Unitário (preenchido pela embalagem), Total Bruto
-  - % Desconto, Valor de Desconto
-  - % Acréscimo, Valor de Acréscimo
-  - Total Líquido
-- HID scanner: ao ler código que bate com `embalagens[].codigo_barras`, já abre modal com aquela embalagem pré-selecionada
+Sem dialog. Usa a tela de cadastro de cliente atual sem mudar design.
 
 ---
 
-### 5. Fix CRÍTICO — "Missing Supabase environment variable(s)" fora do preview
+## 3) Produto Manual → UN/FD/CX + peso
 
-**Causa raiz:** `src/integrations/supabase/client.ts` lê `import.meta.env.VITE_SUPABASE_URL` que é substituído **em build-time pelo Vite**. No deploy Cloudflare Worker (`wrangler.jsonc`/`vercel.json`) as envs `VITE_*` precisam estar presentes **no momento do build**, mas estão sendo lidas só em runtime → o bundle do worker fica com `undefined`.
-
-**Solução estratégica (em camadas):**
-
-1. **Tornar o client lazy + tolerante**: já é Proxy lazy ✅. Adicionar fallback: ler também de `globalThis.__SUPABASE_ENV__` injetado pelo SSR a partir de `process.env.SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` (que **existem** no `.env` do worker).
-2. **Injetar envs no HTML via root SSR**: em `src/routes/__root.tsx` (`head()` ou shell), emitir um `<script>` com:
-   ```
-   window.__SUPABASE_ENV__ = { url: "...", key: "..." }
-   ```
-   lido de `process.env.SUPABASE_URL` no servidor (createServerFn `getPublicEnv` chamado no loader do root, com cache).
-3. **Atualizar `client.ts`** (o arquivo é auto-gerado, então criar um **wrapper** `src/integrations/supabase/runtime-env.ts` e ajustar apenas a leitura via Proxy se possível; se não der, documentar que o arquivo precisa de regeneração). Ordem de leitura:
-   `import.meta.env.VITE_*` → `globalThis.__SUPABASE_ENV__` → `process.env.SUPABASE_*` → erro amigável.
-4. **Garantir build Vercel/Worker**: no `scripts/prepare-vercel-output.mjs` e/ou `vite.vercel.config.ts`, **forçar** `define: { 'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL), ... }` na config de build, assim mesmo sem `VITE_*` exportadas no ambiente de deploy o bundle leva o valor correto.
-5. **Mensagem de erro** continua existindo só como último recurso, mas com link de "Reconectar Lovable Cloud".
-
-Resultado: aplicação publicada nunca mais quebra com esse erro, independente de onde o usuário hospede.
+Em `product-form-panel.tsx` (modo manual):
+- Campo **Unidade base** (`unidade`): UN/KG/L (já existe).
+- Nova seção **Embalagens** (preenche o campo `embalagens` jsonb que já existe):
+  - Tabela com linhas: tipo (UN / FD / CX), qtd de UN por embalagem, preço de venda da embalagem (opcional, default = preço_unit × qtd).
+  - Pelo menos UN com qtd=1 sempre presente.
+- Novo campo **Peso (kg) por unidade** (`peso_kg`, numeric, default 0) — coluna nova via migration.
+- Listagem de produtos continua exibindo estoque em **UN** (já é assim). Sem mudança visual.
+- No PDV e no `pedido-form`, o seletor de embalagem usa as embalagens cadastradas; venda por FD/CX multiplica a baixa de estoque pela qtd_un_por_embalagem (lógica já parcialmente presente em `pedido_itens.qtd_un_por_embalagem`).
 
 ---
 
-### 6. Fix — botão "Movimentações" sem ação
+## 4) SQL completo para SQL Editor (idempotente, sem erros)
 
-Investigar `src/routes/_authenticated/estoque.tsx` e o menu/sidebar. Causa típica: `<Link to="/estoque/movimentacoes">` com path que **não** bate com `createFileRoute("/_authenticated/estoque/movimentacoes")` (filename usa ponto: `estoque.movimentacoes.tsx` → rota `/estoque/movimentacoes`). Plano:
-- Verificar `routeTree.gen.ts` para confirmar id real da rota
-- Substituir `<button onClick>` por `<Link to="/estoque/movimentacoes">` tipado
-- Garantir que `estoque.tsx` (layout pai) renderiza `<Outlet />` se for layout, ou que `movimentacoes` é rota irmã independente
-- Testar navegação no preview antes de finalizar
+Vou gerar **um único arquivo `docs/setup.sql`** (também incluído no modal do bloco 6) com:
+
+1. Extensions (`pgcrypto`).
+2. Enums: `app_role`, `pedido_status` (+ `encerrado`), `pedido_origem`, `caixa_status`, `conta_status`, `nfe_status`, etc. (todos com `IF NOT EXISTS` via DO blocks).
+3. Tabelas atuais idênticas ao banco (todas as 22): `profiles`, `user_roles`, `clientes`, `produtos` (com `peso_kg`), `categorias`, `pedidos`, `pedido_itens`, `pedido_pagamentos`, `app_settings`, `caixa_sessoes`, `caixa_movimentos`, `contas`, `despesas`, `estoque_movimentos`, `faturamentos`, `faturamento_pedidos`, `fidelidade_pontos`, `nfe_entradas`, `nfe_itens`, `gtin_global`, `product_images`, `api_keys`, **+ `tenants`** (bloco 6).
+4. Sequences (`pedidos_numero_seq`, `faturamentos_numero_seq`).
+5. Functions: `has_role`, `is_staff`, `handle_new_user`, `touch_updated_at`, `recalc_pedido_pagamentos`, `recalc_pedido_restante` (todas com `CREATE OR REPLACE`).
+6. Triggers (drop+create).
+7. GRANTs para `anon`, `authenticated`, `service_role` (conforme política atual).
+8. RLS policies idênticas (drop+create).
+9. Storage bucket `pdv-assets` (public) + `product-images`.
+10. **Seed do admin**: insere em `auth.users` via função `auth.admin_create_user` substituta (uso de `crypt` do pgcrypto para hash bcrypt) — `admin@loja.com` / `admin12`, depois insere `profiles` e `user_roles` (role=admin). Idempotente (ON CONFLICT).
+11. Seed dos demais usuários atuais (vou listar via `read_query` antes de gerar o SQL final, mantendo emails e role; senha padrão para os que não conhecemos: `mudar123`, instrução pro usuário trocar).
+12. Seed das imagens em `product_images` e `produtos.imagem_url` (copio as URLs públicas atuais do bucket `pdv-assets` — listo via `read_query` antes).
+
+O arquivo abre com cabeçalho explicando: "rode tudo de uma vez no SQL Editor; é idempotente, pode rodar várias vezes".
 
 ---
 
-### Arquivos impactados
+## 5) Nota Fiscal — modelo
 
-**Migrations** (uma única):
-- `pedido_pagamentos` (tabela + RLS + GRANTs + trigger soma)
-- `pedido_faturas` (tabela + RLS + GRANTs)
-- `produtos.embalagens jsonb`, `produtos.unidade_base`
-- `pedido_itens.embalagem_tipo`, `qtd_un_por_embalagem`, `qtd_embalagens`
-- `pedidos.status` aceitar `encerrado`; colunas `total_pago`, `restante` (numeric)
+Sem exemplo seu ainda, vou usar layout NFC-e padrão (consumidor final): cabeçalho da empresa, "DANFE NFC-e (modelo visual)", dados consumidor, itens, totais, forma pgto, QR Code placeholder, rodapé. Se você mandar o exemplo depois, refino — mas já fica profissional.
 
-**Código novo:**
-- `src/components/payment-splitter.tsx`
-- `src/components/produto-add-dialog.tsx` (modal estilo print UN/FD/CX)
-- `src/components/fatura-print.tsx` (DANFE simulada)
-- `src/integrations/supabase/runtime-env.ts` (fallback envs)
-- `src/lib/queries.ts` — `useAddPedidoPagamento`, `useRemovePedidoPagamento`, `useEncerrarPedido`, `useFaturarPedido`
+---
 
-**Código editado:**
-- `src/components/pedido-builder.tsx` (PaymentSplitter + novo cliente via rota + dialog UN/FD/CX)
-- `src/components/pedido-form.tsx`
-- `src/components/product-form-panel.tsx` (embalagens)
-- `src/routes/_authenticated/pedidos.$id.tsx` (menu 3 pontos → Pagamentos / Encerrar / Faturar; aba Faturamento)
-- `src/routes/_authenticated/pedidos.index.tsx` (filtro Encerrados, ação Encerrar no Kanban)
-- `src/routes/_authenticated/estoque.tsx` (corrigir link Movimentações)
-- `src/routes/__root.tsx` (injetar envs Supabase no SSR)
-- `src/integrations/supabase/client.ts` (se possível; ou wrapper)
-- `vite.vercel.config.ts` / `scripts/prepare-vercel-output.mjs` (define envs no build)
-- `src/lib/pagamento.ts` (já tem nota_promissoria; reordenar)
+## 6) Nova aba "Supabase" — multi-tenant por slug
 
-**Aceite:**
-- Pagamentos múltiplos funcionam em Novo Pedido **e** no menu 3 pontos do detalhe; soma trava em "Restante 0,00"
-- Encerrar pedido tira do Kanban e aparece em "Encerrados" na lista
-- Faturar gera PDF imprimível (estrutura pronta para NFC-e real depois)
-- Novo Cliente abre a tela cheia e volta selecionado
-- Produto pode ser cadastrado com UN+FD+CX; dialog de adicionar item permite escolher embalagem
-- App publicado **não** mostra mais erro "Missing Supabase environment variable(s)"
-- Clicar em "Movimentações" navega para `/estoque/movimentacoes` e renderiza a tela
+**Modelo escolhido:** subdomínio/rota por slug curto (`/t/{slug}` ou subdomínio). Cada tenant = um banco Supabase próprio.
 
-Aguardando aprovação para implementar.
+**Schema novo (no banco principal):**
+```
+tenants(
+  id uuid pk,
+  slug text unique not null check (length(slug) between 4 and 8),
+  nome text,
+  supabase_url text not null,
+  supabase_anon_key text not null,
+  user_id uuid not null,        -- a qual usuário do painel pertence
+  created_by uuid,
+  created_at timestamptz
+)
+```
+RLS: só admin escreve; usuário dono lê o próprio.
+
+**Coluna nova em `profiles`:** `tenant_slug text` (opcional). Quando um user tem `tenant_slug` setado, o app sabe que ele tem banco próprio.
+
+**Tela `/supabase` (sidebar, só pra quem tem permissão):**
+- Lista tenants cadastrados (slug, nome, dono, criado em).
+- Botão "Conectar novo banco":
+  1. Seleciona um usuário existente (dropdown puxando `useUsuarios`).
+  2. Define slug curto (auto-sugere 5 chars aleatórios `[a-z0-9]`).
+  3. Cola **Supabase URL** + **anon key** do novo projeto.
+  4. (Opcional) **service_role key** — só pra rodar seed automaticamente; se vazio, mostra SQL no modal pra rodar manual.
+  5. Define **email + senha** que o usuário usará nesse banco novo (preenche com os do user atual).
+- Ao salvar: insere em `tenants`, seta `profiles.tenant_slug` daquele user, abre **modal de sucesso** com:
+  - "Banco conectado ✅"
+  - Caixa de código com o SQL completo (bloco 4) + `INSERT` do usuário daquele banco com email/senha definidos.
+  - Botão **Copiar**.
+  - Instrução: "Cole no SQL Editor do novo Supabase e execute".
+
+**Roteamento por slug:**
+- Rota nova `_authenticated.tsx` (ou no `__root.tsx`): detecta `window.location.pathname` começando com `/t/{slug}` OU subdomínio `{slug}.<host>`.
+- Se houver slug: cria um **cliente Supabase secundário** em runtime com URL/anon do tenant (busca via server fn `getTenantBySlug` no banco principal — só URL e anon, nunca service_role).
+- Substitui o `supabase` exportado por um Proxy que delega ao client do tenant ativo (padrão singleton com `setActiveTenant(slug)`).
+- Login: o user faz login normalmente em `/t/{slug}/login`. As credenciais batem no Supabase do tenant, não no principal.
+- Sem slug na URL = banco principal (admin@loja.com etc.).
+
+**Detalhes técnicos chave:**
+- Server fn `getTenantBySlug` retorna só `{ url, anon_key, nome }` — service_role NUNCA vai pro client.
+- O cliente principal continua existindo só pra resolver tenant; depois disso o app inteiro usa o cliente do tenant.
+- Estudei o docs Supabase: multi-instância de `createClient` é suportado oficialmente; cada um tem seu próprio storage key (`storageKey: 'sb-{slug}'`) pra não colidir.
+
+---
+
+## 7) Usuários — ações e permissões
+
+Em `usuarios.tsx`:
+- Coluna nova **Ações** já tem "remover"; adicionar:
+  - **Permissões** (botão): abre dialog com switches por menu (Pedidos, Produtos, Clientes, Estoque, Caixa, Financeiro, Relatórios, NF-e, Configurações, **Supabase**, Usuários).
+- Tabela nova `user_permissions(user_id uuid, menu text, allowed bool, pk(user_id, menu))` — default: tudo true para admin, configurável para outros.
+- Dialog "Novo usuário" (`NewUserDialog`): adicionar checkbox **"Acesso à aba Supabase"** (e no SQL gerado pra esse user, se desmarcado, NÃO inclui linha em `user_permissions` pra `supabase`, ou inclui com `allowed=false`).
+- Sidebar (`app-sidebar.tsx`): carrega permissões do user atual via `useUserPermissions` e filtra itens. Sem permissão Supabase = item não aparece.
+
+---
+
+## Ordem de execução (build mode)
+
+1. Migration: enum `encerrado`, coluna `peso_kg`, tabela `tenants`, tabela `user_permissions`, coluna `profiles.tenant_slug`. (Inclui GRANTs + RLS.)
+2. Atualizar `pagamento.ts` (label) + `payment-splitter` (edit/add/remove parciais).
+3. `pedidos.$id.tsx`: botão Encerrar + aba Faturamento + NF print.
+4. `pedidos.index.tsx`: filtro Kanban (sem encerrados) + filtro Lista (com encerrados).
+5. `pedido-form.tsx`: trocar dialog de novo cliente por navegação.
+6. `clientes.novo.tsx`: suportar `return` + prefill.
+7. `product-form-panel.tsx`: embalagens UN/FD/CX + peso_kg.
+8. Aba Supabase: tela `/supabase`, server fn `getTenantBySlug`, cliente multi-tenant em runtime, modal com SQL.
+9. Permissões: dialog, hook `useUserPermissions`, filtro do sidebar, checkbox no novo user.
+10. Gerar `docs/setup.sql` final (com seeds dos usuários e imagens atuais).
+11. QA: criar pedido, encerrar, gerar NF, criar produto FD, criar tenant, logar no slug, validar permissões.
+
+---
+
+## Pontos para você confirmar
+
+- **Senha padrão** para os usuários existentes (fora `admin@loja.com`) no SQL seed: uso `mudar123` ou prefere outra?
+- **Subdomínio vs `/t/{slug}`**: `/t/{slug}` funciona out-of-the-box no Lovable; subdomínio real (`abc12.seudominio.com`) exige DNS wildcard e domínio custom configurado. Posso implementar `/t/{slug}` agora e deixar suporte a subdomínio pronto (mesma lógica de detecção). OK?
+- **NF**: posso seguir com layout NFC-e profissional padrão agora e ajustar quando você mandar o exemplo?
+
+Se aprovar, parto direto pra execução na ordem acima.
