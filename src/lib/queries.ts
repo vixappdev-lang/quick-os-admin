@@ -905,3 +905,149 @@ export function useProductImages(query?: string) {
     staleTime: 60_000,
   });
 }
+
+// APP LOGS — auditoria filtrável
+export const LOG_CATEGORIAS = ["login", "produto", "pedido", "erro", "webhook"] as const;
+export type LogCategoria = (typeof LOG_CATEGORIAS)[number];
+
+export async function logEvent(categoria: LogCategoria, mensagem: string, payload?: any) {
+  try {
+    const { data: { user } } = await centralSupabase.auth.getUser();
+    await centralSupabase.from("app_logs" as any).insert({
+      categoria,
+      mensagem,
+      payload: payload ?? null,
+      user_id: user?.id ?? null,
+    } as any);
+  } catch {
+    /* não-bloqueante */
+  }
+}
+
+export function useAppLogs(filtro: { categoria?: LogCategoria | "all"; busca?: string } = {}) {
+  return useQuery({
+    queryKey: ["app_logs", filtro.categoria ?? "all", filtro.busca ?? ""],
+    queryFn: async () => {
+      let q = centralSupabase
+        .from("app_logs" as any)
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (filtro.categoria && filtro.categoria !== "all") q = q.eq("categoria", filtro.categoria);
+      if (filtro.busca && filtro.busca.trim().length >= 2) q = q.ilike("mensagem", `%${filtro.busca.trim()}%`);
+      const { data, error } = await q;
+      if (error) return [] as any[];
+      return (data ?? []) as any[];
+    },
+    refetchInterval: 5_000,
+    staleTime: 2_000,
+  });
+}
+
+// NFE WEBHOOK EVENTS — feed em tempo real
+export function useNfeWebhookEvents() {
+  return useQuery({
+    queryKey: ["nfe_webhook_events"],
+    queryFn: async () => {
+      const { data, error } = await centralSupabase
+        .from("nfe_webhook_events" as any)
+        .select("*")
+        .order("recebido_em", { ascending: false })
+        .limit(100);
+      if (error) return [] as any[];
+      return (data ?? []) as any[];
+    },
+    staleTime: 1_000,
+  });
+}
+
+// FATURAMENTO — pedidos faturados no período
+export function useFaturamento(periodo: "dia" | "mes" | "ano" = "mes") {
+  return useQuery({
+    queryKey: ["faturamento", periodo],
+    queryFn: async () => {
+      const now = new Date();
+      let from = new Date();
+      if (periodo === "dia") from.setHours(0, 0, 0, 0);
+      else if (periodo === "mes") from = new Date(now.getFullYear(), now.getMonth(), 1);
+      else from = new Date(now.getFullYear(), 0, 1);
+      const { data, error } = await supabase
+        .from("pedidos")
+        .select("id,total,faturado_em" as any)
+        .gte("faturado_em", from.toISOString())
+        .not("faturado_em", "is", null);
+      if (error) throw error;
+      const total = (data ?? []).reduce((s: number, p: any) => s + Number(p.total ?? 0), 0);
+      return { total, qtd: (data ?? []).length, from: from.toISOString() };
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useFaturarPedido() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (pedidoId: string) => {
+      const { data, error } = await supabase
+        .from("pedidos")
+        .update({ faturado_em: new Date().toISOString() } as any)
+        .eq("id", pedidoId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_d, id) => {
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["pedido", id] });
+      qc.invalidateQueries({ queryKey: ["faturamento"] });
+    },
+  });
+}
+
+export function useSalvarNfeEmitida() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { pedidoId: string; invoice: any }) => {
+      const inv = input.invoice ?? {};
+      const patch: any = {
+        nfe_id: inv.id ?? inv.invoiceId ?? null,
+        nfe_status: inv.status ?? null,
+        nfe_numero: inv.number ? String(inv.number) : null,
+        nfe_chave: inv.accessKey ?? inv.acessKey ?? null,
+        nfe_pdf_url: inv?.pdf?.url ?? null,
+        nfe_xml_url: inv?.xml?.url ?? null,
+        nfe_emitida_em: new Date().toISOString(),
+        faturado_em: new Date().toISOString(),
+      };
+      const { data, error } = await supabase
+        .from("pedidos")
+        .update(patch)
+        .eq("id", input.pedidoId)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["pedido", v.pedidoId] });
+      qc.invalidateQueries({ queryKey: ["pedidos"] });
+      qc.invalidateQueries({ queryKey: ["faturamento"] });
+    },
+  });
+}
+
+// Eventos nfe.io disponíveis para o usuário marcar
+export const NFEIO_EVENTOS: { key: string; label: string }[] = [
+  { key: "issued", label: "Emitida (issued)" },
+  { key: "issueFailed", label: "Falha na emissão (issueFailed)" },
+  { key: "cancelled", label: "Cancelada (cancelled)" },
+  { key: "cancelFailed", label: "Falha no cancelamento (cancelFailed)" },
+  { key: "inutilized", label: "Inutilizada (inutilized)" },
+  { key: "inutilizeFailed", label: "Falha na inutilização (inutilizeFailed)" },
+  { key: "disabled", label: "Desabilitada (disabled)" },
+  { key: "pdfGenerated", label: "PDF gerado (pdfGenerated)" },
+  { key: "pdfGenerateFailed", label: "Falha no PDF (pdfGenerateFailed)" },
+  { key: "xmlGenerated", label: "XML gerado (xmlGenerated)" },
+  { key: "xmlGenerateFailed", label: "Falha no XML (xmlGenerateFailed)" },
+];
