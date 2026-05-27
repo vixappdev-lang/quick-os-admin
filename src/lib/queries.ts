@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { keepPreviousData } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as centralSupabase } from "@/integrations/supabase/client";
+import { activeSupabase as supabase } from "@/integrations/supabase/active-client";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 export type Produto = Tables<"produtos">;
