@@ -76,6 +76,14 @@ function SupabasePage() {
         }
       />
 
+      {/* Resumo */}
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard label="Conexões ativas" value={String(tenants.length + 1)} hint="incluindo principal" />
+        <StatCard label="Banco principal" value="Lovable Cloud" hint="gerenciado" />
+        <StatCard label="Clientes conectados" value={String(tenants.length)} hint="tenants externos" />
+        <StatCard label="Sua função" value="Super-admin" hint="acesso total" />
+      </div>
+
       {/* Desktop table */}
       <SectionCard padded={false}>
         <div className="hidden md:block overflow-x-auto">
@@ -91,12 +99,13 @@ function SupabasePage() {
             </thead>
             <tbody>
               {/* Linha fixa do banco principal */}
-              <tr className="border-b bg-primary/5">
+              <tr className="border-b bg-primary/5 hover:bg-primary/10 transition-colors">
                 <td className="px-4 py-3">
                   <code className="rounded bg-primary/15 px-1.5 py-0.5 text-xs font-semibold text-primary">/t/principal</code>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
+                    <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                     <span className="font-semibold">Lovable Cloud</span>
                     <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">ATUAL</span>
                   </div>
@@ -113,13 +122,27 @@ function SupabasePage() {
                 </td>
               </tr>
               {isLoading && <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">Carregando…</td></tr>}
-              {!isLoading && tenants.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-xs text-muted-foreground">Nenhum tenant adicional. Clique em "Nova conexão" para conectar o banco de um cliente.</td></tr>}
+              {!isLoading && tenants.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-4 py-10 text-center">
+                    <Database className="mx-auto mb-2 h-8 w-8 text-muted-foreground/40" />
+                    <p className="text-sm font-medium text-muted-foreground">Nenhum tenant adicional</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Clique em "Nova conexão" para conectar o banco de um cliente.</p>
+                  </td>
+                </tr>
+              )}
               {tenants.map((t: any) => {
                 const u = usuarios.find((x: any) => x.id === t.user_id);
                 return (
-                  <tr key={t.id} className="border-b">
+                  <tr key={t.id} className="border-b hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3"><code className="rounded bg-muted px-1.5 py-0.5 text-xs">/t/{t.slug}</code></td>
-                    <td className="px-4 py-3">{u?.nome || t.nome || <span className="text-muted-foreground">—</span>}<div className="text-xs text-muted-foreground">{u?.email}</div></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="font-medium">{u?.nome || t.nome || "—"}</span>
+                      </div>
+                      <div className="ml-4 text-xs text-muted-foreground">{u?.email}</div>
+                    </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[280px]">{t.supabase_url}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString("pt-BR")}</td>
                     <td className="px-4 py-3 text-right">
