@@ -30,6 +30,7 @@ import { Route as AuthenticatedCaixaRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPedidosIndexRouteImport } from './routes/_authenticated/pedidos.index'
 import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
 import { Route as ApiPublicV1RouteImport } from './routes/api/public/v1'
+import { Route as ApiPublicNfeioWebhookRouteImport } from './routes/api/public/nfeio-webhook'
 import { Route as AuthenticatedRelatoriosCatalogoRouteImport } from './routes/_authenticated/relatorios.catalogo'
 import { Route as AuthenticatedProdutosNovoRouteImport } from './routes/_authenticated/produtos.novo'
 import { Route as AuthenticatedProdutosIdRouteImport } from './routes/_authenticated/produtos.$id'
@@ -149,6 +150,11 @@ const ApiPublicV1Route = ApiPublicV1RouteImport.update({
   path: '/api/public/v1',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicNfeioWebhookRoute = ApiPublicNfeioWebhookRouteImport.update({
+  id: '/api/public/nfeio-webhook',
+  path: '/api/public/nfeio-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRelatoriosCatalogoRoute =
   AuthenticatedRelatoriosCatalogoRouteImport.update({
     id: '/catalogo',
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/produtos/$id': typeof AuthenticatedProdutosIdRoute
   '/produtos/novo': typeof AuthenticatedProdutosNovoRoute
   '/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
+  '/api/public/nfeio-webhook': typeof ApiPublicNfeioWebhookRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
   '/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/pedidos/': typeof AuthenticatedPedidosIndexRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/produtos/$id': typeof AuthenticatedProdutosIdRoute
   '/produtos/novo': typeof AuthenticatedProdutosNovoRoute
   '/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
+  '/api/public/nfeio-webhook': typeof ApiPublicNfeioWebhookRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
   '/estoque': typeof AuthenticatedEstoqueIndexRoute
   '/pedidos': typeof AuthenticatedPedidosIndexRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/_authenticated/produtos/$id': typeof AuthenticatedProdutosIdRoute
   '/_authenticated/produtos/novo': typeof AuthenticatedProdutosNovoRoute
   '/_authenticated/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
+  '/api/public/nfeio-webhook': typeof ApiPublicNfeioWebhookRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
   '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/_authenticated/pedidos/': typeof AuthenticatedPedidosIndexRoute
@@ -329,6 +338,7 @@ export interface FileRouteTypes {
     | '/produtos/$id'
     | '/produtos/novo'
     | '/relatorios/catalogo'
+    | '/api/public/nfeio-webhook'
     | '/api/public/v1'
     | '/estoque/'
     | '/pedidos/'
@@ -359,6 +369,7 @@ export interface FileRouteTypes {
     | '/produtos/$id'
     | '/produtos/novo'
     | '/relatorios/catalogo'
+    | '/api/public/nfeio-webhook'
     | '/api/public/v1'
     | '/estoque'
     | '/pedidos'
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | '/_authenticated/produtos/$id'
     | '/_authenticated/produtos/novo'
     | '/_authenticated/relatorios/catalogo'
+    | '/api/public/nfeio-webhook'
     | '/api/public/v1'
     | '/_authenticated/estoque/'
     | '/_authenticated/pedidos/'
@@ -403,6 +415,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   VendedorRoute: typeof VendedorRouteWithChildren
+  ApiPublicNfeioWebhookRoute: typeof ApiPublicNfeioWebhookRoute
   ApiPublicV1Route: typeof ApiPublicV1RouteWithChildren
 }
 
@@ -553,6 +566,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/v1'
       fullPath: '/api/public/v1'
       preLoaderRoute: typeof ApiPublicV1RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/nfeio-webhook': {
+      id: '/api/public/nfeio-webhook'
+      path: '/api/public/nfeio-webhook'
+      fullPath: '/api/public/nfeio-webhook'
+      preLoaderRoute: typeof ApiPublicNfeioWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/relatorios/catalogo': {
@@ -760,6 +780,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   VendedorRoute: VendedorRouteWithChildren,
+  ApiPublicNfeioWebhookRoute: ApiPublicNfeioWebhookRoute,
   ApiPublicV1Route: ApiPublicV1RouteWithChildren,
 }
 export const routeTree = rootRouteImport
