@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus, Trash2, Loader2, Database, Copy, Check, Download, AlertTriangle, ExternalLink } from "lucide-react";
+import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -36,6 +36,7 @@ function SupabasePage() {
   const { data: usuarios = [] } = useUsuarios();
 
   const [open, setOpen] = useState(false);
+  const [schemaTenant, setSchemaTenant] = useState<any | null>(null);
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
     onSuccess: () => {
@@ -55,12 +56,16 @@ function SupabasePage() {
         title="Supabase"
         description="Conecte clientes a bancos Supabase próprios usando um slug único."
         actions={
-          <button onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
-            <Plus className="h-3.5 w-3.5" /> Nova conexão
-          </button>
+          <div className="flex gap-2">
+            <button onClick={() => setSchemaTenant({})} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
+              <FileCode2 className="h-3.5 w-3.5" /> Schema SQL
+            </button>
+            <button onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
+              <Plus className="h-3.5 w-3.5" /> Nova conexão
+            </button>
+          </div>
         }
       />
-      <SchemaPrereqCard />
       <SectionCard padded={false}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
@@ -97,51 +102,79 @@ function SupabasePage() {
         </div>
       </SectionCard>
 
-      <NewTenantDialog open={open} onOpenChange={setOpen} usuarios={usuarios} />
+      <NewTenantDialog open={open} onOpenChange={setOpen} usuarios={usuarios} onCreated={(t) => setSchemaTenant(t)} />
+      <SchemaDialog tenant={schemaTenant} onClose={() => setSchemaTenant(null)} />
     </div>
   );
 }
 
-function SchemaPrereqCard() {
+function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => void }) {
+  const [sql, setSql] = useState<string>("");
   const [copied, setCopied] = useState(false);
-  const copyCmd = async () => {
+  const open = !!tenant;
+
+  useState(() => undefined);
+  if (open && !sql) {
+    fetch("/setup.sql").then((r) => r.text()).then(setSql).catch(() => setSql("-- erro ao carregar setup.sql"));
+  }
+
+  const supabaseUrl: string | undefined = tenant?.supabase_url;
+  const projectRef = supabaseUrl?.match(/https?:\/\/([a-z0-9-]+)\.supabase\.co/i)?.[1];
+  const sqlEditorUrl = projectRef
+    ? `https://supabase.com/dashboard/project/${projectRef}/sql/new`
+    : "https://supabase.com/dashboard/project/_/sql/new";
+
+  const copyAll = async () => {
     try {
-      const r = await fetch("/setup.sql");
-      const txt = await r.text();
-      await navigator.clipboard.writeText(txt);
+      await navigator.clipboard.writeText(sql);
       setCopied(true);
-      toast.success("Schema copiado. Cole no SQL Editor do Supabase do cliente.");
+      toast.success("SQL copiado. Cole no SQL Editor e execute.");
       setTimeout(() => setCopied(false), 1500);
     } catch {
       toast.error("Falha ao copiar. Use o botão Baixar.");
     }
   };
+
   return (
-    <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
-      <div className="flex items-start gap-3">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-        <div className="flex-1 space-y-2 text-sm">
-          <div className="font-semibold text-foreground">Pré-requisito: schema do banco</div>
-          <p className="text-muted-foreground leading-relaxed">
-            Antes de conectar, o Supabase do cliente precisa ter o mesmo schema (tabelas, RLS, funções).
-            Não é possível executar DDL via anon key — abra o <b>SQL Editor</b> do projeto Supabase do cliente,
-            cole o conteúdo de <code className="rounded bg-muted px-1 py-0.5 text-xs">setup.sql</code> e execute uma vez.
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><FileCode2 className="h-4 w-4" /> Schema do banco (pré-requisito)</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3">
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {tenant?.slug
+              ? <>Conexão criada para <code className="rounded bg-muted px-1 py-0.5 text-xs">/t/{tenant.slug}</code>. <b>Antes do primeiro login</b> do usuário, execute este SQL no Supabase do cliente.</>
+              : <>Para que as queries funcionem no Supabase do cliente, o schema (tabelas, RLS, funções) precisa estar instalado. Execute o SQL abaixo no <b>SQL Editor</b> do projeto.</>}
+            {" "}Não é possível rodar DDL via anon key — por isso é manual e único.
           </p>
-          <div className="flex flex-wrap gap-2 pt-1">
-            <a href="/setup.sql" download="setup.sql" className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-card px-3 text-xs font-medium hover:bg-muted">
-              <Download className="h-3.5 w-3.5" /> Baixar setup.sql
-            </a>
-            <button type="button" onClick={copyCmd} className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-card px-3 text-xs font-medium hover:bg-muted">
-              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado" : "Copiar SQL"}
-            </button>
-            <a href="https://supabase.com/dashboard/project/_/sql/new" target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-card px-3 text-xs font-medium hover:bg-muted">
+          <div className="flex flex-wrap gap-2">
+            <a href={sqlEditorUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
               <ExternalLink className="h-3.5 w-3.5" /> Abrir SQL Editor
             </a>
+            <button type="button" onClick={copyAll} disabled={!sql} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted disabled:opacity-50">
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copiado" : "Copiar SQL completo"}
+            </button>
+            <a href="/setup.sql" download="setup.sql" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
+              <Download className="h-3.5 w-3.5" /> Baixar setup.sql
+            </a>
           </div>
+          <div className="rounded-md border bg-muted/30">
+            <div className="border-b px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground">Prévia ({sql ? `${sql.split("\n").length} linhas` : "carregando…"})</div>
+            <pre className="max-h-[320px] overflow-auto p-3 font-mono text-[11px] leading-relaxed">{sql || "carregando..."}</pre>
+          </div>
+          <ol className="rounded-md border bg-card p-3 text-xs text-muted-foreground space-y-1 list-decimal pl-6">
+            <li>Abra o <b>SQL Editor</b> do projeto Supabase do cliente.</li>
+            <li>Cole o SQL acima e clique em <b>Run</b>.</li>
+            <li>No próximo login do usuário, o painel limpa e carrega do banco dele.</li>
+          </ol>
         </div>
-      </div>
-    </div>
+        <DialogFooter>
+          <button onClick={onClose} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">Entendi</button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -149,7 +182,7 @@ function Th({ children }: { children: React.ReactNode }) {
   return <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{children}</th>;
 }
 
-function NewTenantDialog({ open, onOpenChange, usuarios }: { open: boolean; onOpenChange: (o: boolean) => void; usuarios: any[] }) {
+function NewTenantDialog({ open, onOpenChange, usuarios, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; usuarios: any[]; onCreated?: (tenant: any) => void }) {
   const qc = useQueryClient();
   const createFn = useServerFn(createTenant);
   const [form, setForm] = useState({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "" });
@@ -157,14 +190,13 @@ function NewTenantDialog({ open, onOpenChange, usuarios }: { open: boolean; onOp
 
   const m = useMutation({
     mutationFn: (input: typeof form) => createFn({ data: input }),
-    onSuccess: () => {
+    onSuccess: (created: any) => {
       qc.invalidateQueries({ queryKey: ["tenants"] });
-      toast.success("Tenant conectado.", {
-        description: "Importante: certifique-se de ter executado o setup.sql no SQL Editor do Supabase do cliente. Sem o schema as queries falharão.",
-        duration: 8000,
-      });
+      toast.success("Tenant conectado.");
+      const payload = created && typeof created === "object" ? { ...form, ...created } : { ...form };
       onOpenChange(false);
       setForm({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "" });
+      onCreated?.(payload);
     },
     onError: (e: any) => toast.error(e.message ?? "Erro"),
   });
