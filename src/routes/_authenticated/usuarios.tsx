@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Trash2, Loader2, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -133,22 +133,13 @@ function PermissionsDialog({ user, onClose }: { user: any | null; onClose: () =>
   const { data: rows = [] } = useUserPermissions(user?.id);
   const [state, setState] = useState<Record<string, boolean>>({});
 
-  // sync ao abrir
-  useState(() => {
-    if (user) {
-      const m: Record<string, boolean> = {};
-      MENU_KEYS.forEach((k) => (m[k] = true));
-      (rows ?? []).forEach((r: any) => (m[r.menu] = r.allowed));
-      setState(m);
-    }
-  });
-  // re-sync via effect-like: sempre que user/rows mudarem
-  if (user && Object.keys(state).length === 0) {
+  useEffect(() => {
+    if (!user) { setState({}); return; }
     const m: Record<string, boolean> = {};
     MENU_KEYS.forEach((k) => (m[k] = true));
     (rows ?? []).forEach((r: any) => (m[r.menu] = r.allowed));
     setState(m);
-  }
+  }, [user, rows]);
 
   const m = useMutation({
     mutationFn: () => setFn({
