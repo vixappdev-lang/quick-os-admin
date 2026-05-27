@@ -850,10 +850,15 @@ export type Database = {
           cliente_id: string | null
           created_at: string
           desconto: number
+          faturado_em: string | null
           id: string
           nfe_chave: string | null
           nfe_emitida_em: string | null
+          nfe_id: string | null
           nfe_numero: string | null
+          nfe_pdf_url: string | null
+          nfe_status: string | null
+          nfe_xml_url: string | null
           numero: string
           observacoes: string | null
           operador_id: string | null
@@ -871,10 +876,15 @@ export type Database = {
           cliente_id?: string | null
           created_at?: string
           desconto?: number
+          faturado_em?: string | null
           id?: string
           nfe_chave?: string | null
           nfe_emitida_em?: string | null
+          nfe_id?: string | null
           nfe_numero?: string | null
+          nfe_pdf_url?: string | null
+          nfe_status?: string | null
+          nfe_xml_url?: string | null
           numero?: string
           observacoes?: string | null
           operador_id?: string | null
@@ -892,10 +902,15 @@ export type Database = {
           cliente_id?: string | null
           created_at?: string
           desconto?: number
+          faturado_em?: string | null
           id?: string
           nfe_chave?: string | null
           nfe_emitida_em?: string | null
+          nfe_id?: string | null
           nfe_numero?: string | null
+          nfe_pdf_url?: string | null
+          nfe_status?: string | null
+          nfe_xml_url?: string | null
           numero?: string
           observacoes?: string | null
           operador_id?: string | null
