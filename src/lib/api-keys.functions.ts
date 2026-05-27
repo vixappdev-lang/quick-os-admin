@@ -23,7 +23,7 @@ export const listApiKeys = createServerFn({ method: "GET" })
     }
     const { data, error } = await supabaseAdmin
       .from("api_keys")
-      .select("id, nome, prefix, ativo, last_used_at, created_at")
+      .select("id, nome, prefix, ativo, last_used_at, created_at, scopes, expires_at, usage_count, descricao")
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
     return data ?? [];
@@ -31,7 +31,14 @@ export const listApiKeys = createServerFn({ method: "GET" })
 
 export const createApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((i) => z.object({ nome: z.string().min(2).max(80) }).parse(i))
+  .inputValidator((i) =>
+    z.object({
+      nome: z.string().min(2).max(80),
+      descricao: z.string().max(240).optional().nullable(),
+      scopes: z.array(z.enum(["read", "write"])).min(1).default(["read", "write"]),
+      expires_at: z.string().datetime().optional().nullable(),
+    }).parse(i),
+  )
   .handler(async ({ context, data }) => {
     const { data: roles } = await supabaseAdmin
       .from("user_roles").select("role").eq("user_id", context.userId);
@@ -43,8 +50,16 @@ export const createApiKey = createServerFn({ method: "POST" })
     const key_hash = hashKey(key);
     const { data: row, error } = await supabaseAdmin
       .from("api_keys")
-      .insert({ nome: data.nome, prefix, key_hash, created_by: context.userId })
-      .select("id, nome, prefix, ativo, created_at")
+      .insert({
+        nome: data.nome,
+        descricao: data.descricao ?? null,
+        prefix,
+        key_hash,
+        created_by: context.userId,
+        scopes: data.scopes,
+        expires_at: data.expires_at ?? null,
+      } as any)
+      .select("id, nome, prefix, ativo, created_at, scopes, expires_at, descricao")
       .single();
     if (error) throw new Error(error.message);
     return { ...row, key };

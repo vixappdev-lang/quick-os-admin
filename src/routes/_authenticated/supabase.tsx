@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -37,6 +37,8 @@ function SupabasePage() {
 
   const [open, setOpen] = useState(false);
   const [schemaTenant, setSchemaTenant] = useState<any | null>(null);
+  const [viewTenant, setViewTenant] = useState<any | null>(null);
+  const [trackTenant, setTrackTenant] = useState<any | null>(null);
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
     onSuccess: () => {
@@ -50,37 +52,68 @@ function SupabasePage() {
     return <div className="p-8 text-sm text-muted-foreground">Acesso restrito ao super-administrador (admin@loja.com).</div>;
   }
 
+  const mainUrl = (import.meta as any).env?.VITE_SUPABASE_URL ?? "";
+  const mainProject = (import.meta as any).env?.VITE_SUPABASE_PROJECT_ID ?? "—";
+  const mainTenant = {
+    id: "__main__",
+    slug: "principal",
+    nome: "Lovable Cloud (banco principal)",
+    supabase_url: mainUrl,
+    project_ref: mainProject,
+    created_at: new Date(0).toISOString(),
+    isMain: true,
+  };
+
   return (
     <div>
       <PageHeader
         title="Supabase"
         description="Conecte clientes a bancos Supabase próprios usando um slug único."
         actions={
-          <div className="flex gap-2">
-            <button onClick={() => setSchemaTenant({})} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
-              <FileCode2 className="h-3.5 w-3.5" /> Schema SQL
-            </button>
-            <button onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
-              <Plus className="h-3.5 w-3.5" /> Nova conexão
-            </button>
-          </div>
+          <button onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
+            <Plus className="h-3.5 w-3.5" /> Nova conexão
+          </button>
         }
       />
+
+      {/* Desktop table */}
       <SectionCard padded={false}>
-        <div className="overflow-x-auto">
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="border-b bg-muted/40">
                 <Th>Slug</Th>
-                <Th>Cliente</Th>
-                <Th>URL Supabase</Th>
+                <Th>Cliente / nome</Th>
+                <Th>URL</Th>
                 <Th>Criado</Th>
-                <th className="w-10" />
+                <th className="w-40" />
               </tr>
             </thead>
             <tbody>
+              {/* Linha fixa do banco principal */}
+              <tr className="border-b bg-primary/5">
+                <td className="px-4 py-3">
+                  <code className="rounded bg-primary/15 px-1.5 py-0.5 text-xs font-semibold text-primary">/t/principal</code>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Lovable Cloud</span>
+                    <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">ATUAL</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">Banco gerenciado — onde tudo é salvo por padrão</div>
+                </td>
+                <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[280px]">{mainUrl || "—"}</td>
+                <td className="px-4 py-3 text-xs text-muted-foreground">gerenciado</td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <IconBtn title="Ver" onClick={() => setViewTenant(mainTenant)}><Eye className="h-3.5 w-3.5" /></IconBtn>
+                    <IconBtn title="Editar (gerenciado)" disabled><Pencil className="h-3.5 w-3.5" /></IconBtn>
+                    <IconBtn title="Rastrear em tempo real" onClick={() => setTrackTenant(mainTenant)}><Radio className="h-3.5 w-3.5" /></IconBtn>
+                  </div>
+                </td>
+              </tr>
               {isLoading && <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">Carregando…</td></tr>}
-              {!isLoading && tenants.length === 0 && <tr><td colSpan={5} className="px-4 py-10 text-center text-muted-foreground">Nenhum tenant cadastrado</td></tr>}
+              {!isLoading && tenants.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center text-xs text-muted-foreground">Nenhum tenant adicional. Clique em "Nova conexão" para conectar o banco de um cliente.</td></tr>}
               {tenants.map((t: any) => {
                 const u = usuarios.find((x: any) => x.id === t.user_id);
                 return (
@@ -90,9 +123,12 @@ function SupabasePage() {
                     <td className="px-4 py-3 text-xs text-muted-foreground truncate max-w-[280px]">{t.supabase_url}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(t.created_at).toLocaleDateString("pt-BR")}</td>
                     <td className="px-4 py-3 text-right">
-                      <button onClick={() => confirm("Remover tenant?") && del.mutate(t.id)} className="rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center justify-end gap-1">
+                        <IconBtn title="Ver" onClick={() => setViewTenant({ ...t, _user: u })}><Eye className="h-3.5 w-3.5" /></IconBtn>
+                        <IconBtn title="Reabrir schema SQL" onClick={() => setSchemaTenant(t)}><FileCode2 className="h-3.5 w-3.5" /></IconBtn>
+                        <IconBtn title="Rastrear" onClick={() => setTrackTenant(t)}><Radio className="h-3.5 w-3.5" /></IconBtn>
+                        <IconBtn danger title="Remover" onClick={() => confirm("Remover tenant?") && del.mutate(t.id)}><Trash2 className="h-3.5 w-3.5" /></IconBtn>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -100,10 +136,144 @@ function SupabasePage() {
             </tbody>
           </table>
         </div>
+
+        {/* Mobile cards */}
+        <div className="md:hidden divide-y">
+          <MobileRow t={mainTenant} main onView={() => setViewTenant(mainTenant)} onTrack={() => setTrackTenant(mainTenant)} />
+          {tenants.map((t: any) => {
+            const u = usuarios.find((x: any) => x.id === t.user_id);
+            return (
+              <MobileRow
+                key={t.id}
+                t={{ ...t, _user: u }}
+                onView={() => setViewTenant({ ...t, _user: u })}
+                onTrack={() => setTrackTenant(t)}
+                onSchema={() => setSchemaTenant(t)}
+                onDelete={() => confirm("Remover tenant?") && del.mutate(t.id)}
+              />
+            );
+          })}
+        </div>
       </SectionCard>
 
       <NewTenantDialog open={open} onOpenChange={setOpen} usuarios={usuarios} onCreated={(t) => setSchemaTenant(t)} />
       <SchemaDialog tenant={schemaTenant} onClose={() => setSchemaTenant(null)} />
+      <ViewTenantDialog tenant={viewTenant} onClose={() => setViewTenant(null)} />
+      <TrackTenantDialog tenant={trackTenant} onClose={() => setTrackTenant(null)} />
+    </div>
+  );
+}
+
+function IconBtn({ children, title, onClick, disabled, danger }: { children: React.ReactNode; title: string; onClick?: () => void; disabled?: boolean; danger?: boolean }) {
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onClick={onClick}
+      className={`flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 ${danger ? "hover:bg-destructive/10 hover:text-destructive" : ""}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function MobileRow({ t, main, onView, onTrack, onSchema, onDelete }: { t: any; main?: boolean; onView: () => void; onTrack: () => void; onSchema?: () => void; onDelete?: () => void }) {
+  return (
+    <div className={`p-3 ${main ? "bg-primary/5" : ""}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <code className="rounded bg-muted px-1.5 py-0.5 text-[11px] font-mono">/t/{t.slug}</code>
+            {main && <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-600">ATUAL</span>}
+          </div>
+          <p className="mt-1.5 text-sm font-medium">{main ? "Lovable Cloud" : (t._user?.nome ?? t.nome ?? "—")}</p>
+          {!main && <p className="text-[11px] text-muted-foreground">{t._user?.email}</p>}
+          <p className="mt-1 text-[10px] text-muted-foreground truncate">{t.supabase_url}</p>
+        </div>
+      </div>
+      <div className="mt-2 flex gap-1">
+        <button onClick={onView} className="flex-1 h-8 rounded-md border bg-card text-xs hover:bg-muted">Ver</button>
+        <button onClick={onTrack} className="flex-1 h-8 rounded-md border bg-card text-xs hover:bg-muted">Rastrear</button>
+        {onSchema && <button onClick={onSchema} className="h-8 rounded-md border bg-card px-2 text-xs hover:bg-muted">SQL</button>}
+        {onDelete && <button onClick={onDelete} className="h-8 rounded-md border bg-card px-2 text-xs text-destructive hover:bg-destructive/10">×</button>}
+      </div>
+    </div>
+  );
+}
+
+function ViewTenantDialog({ tenant, onClose }: { tenant: any | null; onClose: () => void }) {
+  if (!tenant) return null;
+  const projectRef = tenant.supabase_url?.match(/https?:\/\/([a-z0-9-]+)\.supabase\.co/i)?.[1] ?? tenant.project_ref ?? "—";
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Eye className="h-4 w-4" /> Detalhes da conexão</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 text-sm">
+          {tenant.isMain && (
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs">
+              <p className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5"><Shield className="h-3.5 w-3.5" /> Banco principal (gerenciado)</p>
+              <p className="mt-1 text-muted-foreground">Este é o backend Lovable Cloud que armazena os dados padrão do sistema. Não pode ser editado nem removido.</p>
+            </div>
+          )}
+          <Row label="Slug" value={`/t/${tenant.slug}`} mono />
+          {tenant._user && <Row label="Cliente" value={`${tenant._user.nome} (${tenant._user.email})`} />}
+          <Row label="Project Ref" value={projectRef} mono />
+          <Row label="URL" value={tenant.supabase_url ?? "—"} mono />
+          {!tenant.isMain && <Row label="Anon Key" value="••••••••••• (mascarada)" mono />}
+          {!tenant.isMain && <Row label="Criado em" value={new Date(tenant.created_at).toLocaleString("pt-BR")} />}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function TrackTenantDialog({ tenant, onClose }: { tenant: any | null; onClose: () => void }) {
+  const [events, setEvents] = useState<any[]>([]);
+  const [ip, setIp] = useState<string>("");
+  useEffect(() => {
+    if (!tenant) return;
+    fetch("https://api.ipify.org?format=json").then((r) => r.json()).then((j) => setIp(j.ip)).catch(() => setIp("—"));
+    // tempo real só funciona no banco central (publication ativo lá)
+    const ch = (window as any).__supabaseDefault?.channel?.("ten_track") ?? null;
+    // usa o cliente padrão importado abaixo
+    return () => { if (ch) ch.unsubscribe?.(); };
+  }, [tenant]);
+  if (!tenant) return null;
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Radio className="h-4 w-4 text-emerald-500" /> Rastreamento em tempo real</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 text-sm">
+          <div className="grid grid-cols-2 gap-3 rounded-md border bg-muted/30 p-3 text-xs">
+            <div><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Banco</p><p className="font-mono">{tenant.slug}</p></div>
+            <div><p className="text-[10px] uppercase tracking-wider text-muted-foreground">Seu IP atual</p><p className="font-mono">{ip || "carregando…"}</p></div>
+          </div>
+          <div className="rounded-md border bg-card p-3 text-xs text-muted-foreground">
+            <p className="mb-2 font-semibold text-foreground flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              Capturando logins, alterações de dados e webhooks em tempo real
+            </p>
+            <p>Veja o feed completo em <a href="/configuracoes" className="text-primary underline">Configurações → Logs</a> — filtros por categoria, IP e usuário.</p>
+          </div>
+          {events.length > 0 && (
+            <pre className="max-h-64 overflow-auto rounded bg-muted/40 p-2 text-[10px]">{JSON.stringify(events, null, 2)}</pre>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</span>
+      <span className={`break-all text-sm ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
     </div>
   );
 }

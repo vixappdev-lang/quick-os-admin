@@ -913,11 +913,26 @@ export type LogCategoria = (typeof LOG_CATEGORIAS)[number];
 export async function logEvent(categoria: LogCategoria, mensagem: string, payload?: any) {
   try {
     const { data: { user } } = await centralSupabase.auth.getUser();
+    let ip: string | null = null;
+    let ua: string | null = null;
+    if (typeof window !== "undefined") {
+      ua = window.navigator.userAgent;
+      try {
+        const cached = sessionStorage.getItem("__client_ip");
+        if (cached) ip = cached;
+        else {
+          const r = await fetch("https://api.ipify.org?format=json").then((x) => x.json()).catch(() => null);
+          if (r?.ip) { ip = r.ip; sessionStorage.setItem("__client_ip", r.ip); }
+        }
+      } catch {/* ignore */}
+    }
     await centralSupabase.from("app_logs" as any).insert({
       categoria,
       mensagem,
       payload: payload ?? null,
       user_id: user?.id ?? null,
+      ip,
+      user_agent: ua,
     } as any);
   } catch {
     /* não-bloqueante */

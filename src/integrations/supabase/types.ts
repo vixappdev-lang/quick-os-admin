@@ -19,31 +19,43 @@ export type Database = {
           ativo: boolean
           created_at: string
           created_by: string | null
+          descricao: string | null
+          expires_at: string | null
           id: string
           key_hash: string
           last_used_at: string | null
           nome: string
           prefix: string
+          scopes: string[] | null
+          usage_count: number
         }
         Insert: {
           ativo?: boolean
           created_at?: string
           created_by?: string | null
+          descricao?: string | null
+          expires_at?: string | null
           id?: string
           key_hash: string
           last_used_at?: string | null
           nome: string
           prefix: string
+          scopes?: string[] | null
+          usage_count?: number
         }
         Update: {
           ativo?: boolean
           created_at?: string
           created_by?: string | null
+          descricao?: string | null
+          expires_at?: string | null
           id?: string
           key_hash?: string
           last_used_at?: string | null
           nome?: string
           prefix?: string
+          scopes?: string[] | null
+          usage_count?: number
         }
         Relationships: []
       }
@@ -52,24 +64,30 @@ export type Database = {
           categoria: string
           created_at: string
           id: string
+          ip: string | null
           mensagem: string
           payload: Json | null
+          user_agent: string | null
           user_id: string | null
         }
         Insert: {
           categoria: string
           created_at?: string
           id?: string
+          ip?: string | null
           mensagem: string
           payload?: Json | null
+          user_agent?: string | null
           user_id?: string | null
         }
         Update: {
           categoria?: string
           created_at?: string
           id?: string
+          ip?: string | null
           mensagem?: string
           payload?: Json | null
+          user_agent?: string | null
           user_id?: string | null
         }
         Relationships: []
@@ -1046,6 +1064,7 @@ export type Database = {
           email: string | null
           id: string
           nome: string
+          onboarding_completed_at: string | null
           telefone: string | null
           tenant_slug: string | null
           updated_at: string
@@ -1056,6 +1075,7 @@ export type Database = {
           email?: string | null
           id: string
           nome: string
+          onboarding_completed_at?: string | null
           telefone?: string | null
           tenant_slug?: string | null
           updated_at?: string
@@ -1066,6 +1086,7 @@ export type Database = {
           email?: string | null
           id?: string
           nome?: string
+          onboarding_completed_at?: string | null
           telefone?: string | null
           tenant_slug?: string | null
           updated_at?: string
