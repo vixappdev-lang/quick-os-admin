@@ -203,6 +203,36 @@ export type Database = {
         }
         Relationships: []
       }
+      backups_log: {
+        Row: {
+          created_at: string
+          id: string
+          observacao: string | null
+          status: string
+          storage_path: string | null
+          tamanho_bytes: number | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          status?: string
+          storage_path?: string | null
+          tamanho_bytes?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          status?: string
+          storage_path?: string | null
+          tamanho_bytes?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       caixa_movimentos: {
         Row: {
           created_at: string
@@ -744,6 +774,45 @@ export type Database = {
           payload?: Json
           pedido_id?: string | null
           recebido_em?: string
+        }
+        Relationships: []
+      }
+      notificacoes: {
+        Row: {
+          created_at: string
+          dedupe_key: string | null
+          id: string
+          lida_em: string | null
+          mensagem: string
+          payload: Json | null
+          severidade: string
+          tipo: string
+          titulo: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          dedupe_key?: string | null
+          id?: string
+          lida_em?: string | null
+          mensagem: string
+          payload?: Json | null
+          severidade?: string
+          tipo: string
+          titulo: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          dedupe_key?: string | null
+          id?: string
+          lida_em?: string | null
+          mensagem?: string
+          payload?: Json | null
+          severidade?: string
+          tipo?: string
+          titulo?: string
+          user_id?: string | null
         }
         Relationships: []
       }

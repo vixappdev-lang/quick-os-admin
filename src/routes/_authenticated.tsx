@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { WelcomeOnboarding } from "@/components/welcome-onboarding";
+import { SecurityShield } from "@/components/security-shield";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
@@ -119,6 +120,7 @@ function AuthLayout() {
         </main>
       </div>
       {user.role === "admin" && <WelcomeOnboarding />}
+      <SecurityShield />
     </div>
   );
 }
