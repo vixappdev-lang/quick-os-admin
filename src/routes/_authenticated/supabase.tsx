@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Plus, Trash2, Loader2, Database, Copy, Check } from "lucide-react";
+import { Plus, Trash2, Loader2, Database, Copy, Check, Download, AlertTriangle, ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -60,6 +60,7 @@ function SupabasePage() {
           </button>
         }
       />
+      <SchemaPrereqCard />
       <SectionCard padded={false}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-sm">
@@ -101,6 +102,49 @@ function SupabasePage() {
   );
 }
 
+function SchemaPrereqCard() {
+  const [copied, setCopied] = useState(false);
+  const copyCmd = async () => {
+    try {
+      const r = await fetch("/setup.sql");
+      const txt = await r.text();
+      await navigator.clipboard.writeText(txt);
+      setCopied(true);
+      toast.success("Schema copiado. Cole no SQL Editor do Supabase do cliente.");
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      toast.error("Falha ao copiar. Use o botão Baixar.");
+    }
+  };
+  return (
+    <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+        <div className="flex-1 space-y-2 text-sm">
+          <div className="font-semibold text-foreground">Pré-requisito: schema do banco</div>
+          <p className="text-muted-foreground leading-relaxed">
+            Antes de conectar, o Supabase do cliente precisa ter o mesmo schema (tabelas, RLS, funções).
+            Não é possível executar DDL via anon key — abra o <b>SQL Editor</b> do projeto Supabase do cliente,
+            cole o conteúdo de <code className="rounded bg-muted px-1 py-0.5 text-xs">setup.sql</code> e execute uma vez.
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <a href="/setup.sql" download="setup.sql" className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-card px-3 text-xs font-medium hover:bg-muted">
+              <Download className="h-3.5 w-3.5" /> Baixar setup.sql
+            </a>
+            <button type="button" onClick={copyCmd} className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-card px-3 text-xs font-medium hover:bg-muted">
+              {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+              {copied ? "Copiado" : "Copiar SQL"}
+            </button>
+            <a href="https://supabase.com/dashboard/project/_/sql/new" target="_blank" rel="noreferrer" className="inline-flex h-8 items-center gap-1.5 rounded-md border bg-card px-3 text-xs font-medium hover:bg-muted">
+              <ExternalLink className="h-3.5 w-3.5" /> Abrir SQL Editor
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Th({ children }: { children: React.ReactNode }) {
   return <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{children}</th>;
 }
@@ -115,7 +159,10 @@ function NewTenantDialog({ open, onOpenChange, usuarios }: { open: boolean; onOp
     mutationFn: (input: typeof form) => createFn({ data: input }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tenants"] });
-      toast.success("Tenant conectado. O painel do usuário será limpo e recarregará com o banco dele no próximo login.");
+      toast.success("Tenant conectado.", {
+        description: "Importante: certifique-se de ter executado o setup.sql no SQL Editor do Supabase do cliente. Sem o schema as queries falharão.",
+        duration: 8000,
+      });
       onOpenChange(false);
       setForm({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "" });
     },
