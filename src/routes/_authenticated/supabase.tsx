@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield } from "lucide-react";
+import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, Search } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -304,6 +304,7 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
 function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => void }) {
   const [sql, setSql] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [query, setQuery] = useState("");
   const open = !!tenant;
 
   useEffect(() => {
@@ -354,8 +355,27 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
             </a>
           </div>
           <div className="rounded-md border bg-muted/30">
-            <div className="border-b px-3 py-2 text-[11px] uppercase tracking-wider text-muted-foreground">Prévia ({sql ? `${sql.split("\n").length} linhas` : "carregando…"})</div>
-            <pre className="max-h-[320px] overflow-auto p-3 font-mono text-[11px] leading-relaxed">{sql || "carregando..."}</pre>
+            <div className="flex flex-col gap-2 border-b px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                Prévia ({sql ? `${sql.split("\n").length} linhas` : "carregando…"})
+                {query && sql ? (() => {
+                  const matches = (sql.toLowerCase().match(new RegExp(query.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length;
+                  return <span className="ml-2 normal-case tracking-normal text-primary">{matches} ocorrência(s)</span>;
+                })() : null}
+              </span>
+              <div className="relative w-full sm:w-64">
+                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Buscar no SQL…"
+                  className="h-8 w-full rounded-md border border-input bg-background pl-7 pr-2 text-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+            <pre className="max-h-[320px] overflow-auto p-3 font-mono text-[11px] leading-relaxed">
+              {sql ? renderHighlighted(sql, query) : "carregando..."}
+            </pre>
           </div>
           <ol className="rounded-md border bg-card p-3 text-xs text-muted-foreground space-y-1 list-decimal pl-6">
             <li>Abra o <b>SQL Editor</b> do projeto Supabase do cliente.</li>
@@ -368,6 +388,17 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function renderHighlighted(text: string, query: string) {
+  if (!query) return text;
+  const safe = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${safe})`, "gi"));
+  return parts.map((p, i) =>
+    p.toLowerCase() === query.toLowerCase()
+      ? <mark key={i} className="rounded bg-primary/30 px-0.5 text-foreground">{p}</mark>
+      : <span key={i}>{p}</span>
   );
 }
 
