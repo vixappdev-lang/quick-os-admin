@@ -4,6 +4,7 @@ import { Download, Upload, Database, ShieldAlert, Loader2, FileDown, CheckCircle
 import { toast } from "sonner";
 import { SectionCard } from "@/components/section-card";
 import { activeSupabase } from "@/integrations/supabase/active-client";
+import { supabase as centralSupabase } from "@/integrations/supabase/client";
 import { ReauthDialog } from "@/components/reauth-dialog";
 import { formatDateTime } from "@/lib/format";
 
@@ -43,7 +44,7 @@ export function BackupTab() {
   const { data: logs = [], refetch } = useQuery({
     queryKey: ["backups_log"],
     queryFn: async () => {
-      const { data, error } = await activeSupabase.from("backups_log").select("*").order("created_at", { ascending: false }).limit(20);
+      const { data, error } = await centralSupabase.from("backups_log").select("*").order("created_at", { ascending: false }).limit(20);
       if (error) throw error;
       return data ?? [];
     },
@@ -77,8 +78,8 @@ export function BackupTab() {
       // Sobe também ao bucket privado e registra no log
       try {
         const path = `${new Date().getFullYear()}/${filename}`;
-        await activeSupabase.storage.from("backups").upload(path, blob, { contentType: "application/json", upsert: false });
-        await activeSupabase.from("backups_log").insert({ storage_path: path, tamanho_bytes: blob.size, status: "success", observacao: "Backup manual (export)" } as any);
+        await centralSupabase.storage.from("backups").upload(path, blob, { contentType: "application/json", upsert: false });
+        await centralSupabase.from("backups_log").insert({ storage_path: path, tamanho_bytes: blob.size, status: "success", observacao: `Backup manual — ${TABLES.length} tabelas, ${(blob.size / 1024).toFixed(1)} KB` } as any);
       } catch {/* upload best-effort */}
 
       toast.success("Backup gerado e baixado.");
@@ -105,12 +106,12 @@ export function BackupTab() {
         if (error) throw new Error(`${t}: ${error.message}`);
         inserted += rows.length;
       }
-      await activeSupabase.from("backups_log").insert({ storage_path: null, tamanho_bytes: file.size, status: "success", observacao: `Restore manual (${inserted} linhas)` } as any);
+      await centralSupabase.from("backups_log").insert({ storage_path: null, tamanho_bytes: file.size, status: "success", observacao: `Restore manual (${inserted} linhas)` } as any);
       toast.success(`Backup restaurado (${inserted} linhas).`);
       refetch();
     } catch (e: any) {
       toast.error(e.message ?? "Falha ao importar.");
-      try { await activeSupabase.from("backups_log").insert({ status: "error", observacao: String(e?.message ?? e) } as any); } catch {}
+      try { await centralSupabase.from("backups_log").insert({ status: "error", observacao: String(e?.message ?? e) } as any); } catch {}
     } finally {
       setImporting(false);
       setPendingFile(null);
