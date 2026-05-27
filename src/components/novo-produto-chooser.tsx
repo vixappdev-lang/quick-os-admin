@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScanBarcode, Pencil, Loader2, AlertTriangle, Package, Plus, PackageX } from "lucide-react";
 import { BarcodeScanner } from "@/components/barcode-scanner";
-import { lookupProductByEan } from "@/lib/produto-scan.functions";
+import { lookupProductByEan, autoCreateProductFromEan } from "@/lib/produto-scan.functions";
 import { toast } from "sonner";
 import { beepError } from "@/lib/sounds";
 
@@ -42,6 +42,7 @@ export function NovoProdutoChooser({ open, onClose, onPickManual, onPickEdit }: 
   const [lastEan, setLastEan] = useState<string>("");
   const playedRef = useRef<Stage | null>(null);
   const lookup = useServerFn(lookupProductByEan);
+  const autoCreate = useServerFn(autoCreateProductFromEan);
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -70,6 +71,22 @@ export function NovoProdutoChooser({ open, onClose, onPickManual, onPickEdit }: 
         setSugestao(null);
         setStage("duplicate");
       } else {
+        // Auto-cadastro: produto não existe → cria automaticamente com a
+        // sugestão do gtin_global (ou placeholder mínimo) e mostra para edição.
+        try {
+          const created = await autoCreate({ data: { ean } });
+          qc.invalidateQueries({ queryKey: ["produtos"] });
+          if (created.produto) {
+            toast.success(`Produto cadastrado automaticamente${r.sugestao?.nome ? `: ${r.sugestao.nome}` : ""}`);
+            if (onPickEdit) { onPickEdit(created.produto.id); close(); return; }
+            setResult(created.produto as ResultProduto);
+            setSugestao(r.sugestao ?? null);
+            setStage("duplicate");
+            return;
+          }
+        } catch (err: any) {
+          console.error("[autoCreateProductFromEan]", err);
+        }
         setResult(null);
         setSugestao(r.sugestao ?? null);
         setStage("not_found");
