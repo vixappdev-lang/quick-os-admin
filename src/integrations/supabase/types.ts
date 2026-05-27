@@ -94,6 +94,10 @@ export type Database = {
       }
       app_settings: {
         Row: {
+          brasilnfe_company_token: string | null
+          brasilnfe_environment: string | null
+          brasilnfe_user_token: string | null
+          brasilnfe_validated_at: string | null
           empresa_cnpj: string | null
           empresa_email: string | null
           empresa_endereco: string | null
@@ -102,6 +106,7 @@ export type Database = {
           empresa_telefone: string | null
           id: string
           metodos_pagamento: Json
+          nfe_provider: string | null
           nfeio_api_key: string | null
           nfeio_company_id: string | null
           nfeio_environment: string | null
@@ -115,6 +120,10 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          brasilnfe_company_token?: string | null
+          brasilnfe_environment?: string | null
+          brasilnfe_user_token?: string | null
+          brasilnfe_validated_at?: string | null
           empresa_cnpj?: string | null
           empresa_email?: string | null
           empresa_endereco?: string | null
@@ -123,6 +132,7 @@ export type Database = {
           empresa_telefone?: string | null
           id?: string
           metodos_pagamento?: Json
+          nfe_provider?: string | null
           nfeio_api_key?: string | null
           nfeio_company_id?: string | null
           nfeio_environment?: string | null
@@ -136,6 +146,10 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          brasilnfe_company_token?: string | null
+          brasilnfe_environment?: string | null
+          brasilnfe_user_token?: string | null
+          brasilnfe_validated_at?: string | null
           empresa_cnpj?: string | null
           empresa_email?: string | null
           empresa_endereco?: string | null
@@ -144,6 +158,7 @@ export type Database = {
           empresa_telefone?: string | null
           id?: string
           metodos_pagamento?: Json
+          nfe_provider?: string | null
           nfeio_api_key?: string | null
           nfeio_company_id?: string | null
           nfeio_environment?: string | null

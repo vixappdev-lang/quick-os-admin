@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const BASE = "https://api.nfe.io";
+const BRASILNFE_BASE = "https://api.brasilnfe.com.br";
 
 /**
  * Valida credenciais nfe.io fazendo um GET na empresa cadastrada.
@@ -55,6 +56,61 @@ export const validateNfeio = createServerFn({ method: "POST" })
       };
     } catch (err: any) {
       return { ok: false as const, error: err?.message ?? "Erro de rede ao validar nfe.io" };
+    }
+  });
+
+/**
+ * Valida credenciais Brasil NFe consultando a empresa pelo Token de empresa.
+ * Headers obrigatórios: UserToken (usuário) + Token (empresa).
+ * Doc: https://www.brasilnfe.com.br/api/empresas
+ */
+export const validateBrasilnfe = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z
+      .object({
+        userToken: z.string().min(10),
+        companyToken: z.string().min(10),
+        environment: z.enum(["Development", "Production"]).default("Production"),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    try {
+      // BuscarEmpresa exige UserToken + Token; retorno = dados da empresa
+      const res = await fetch(`${BRASILNFE_BASE}/services/empresa/BuscarEmpresa`, {
+        method: "POST",
+        headers: {
+          UserToken: data.userToken,
+          Token: data.companyToken,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({}),
+      });
+      const text = await res.text();
+      let body: any = null;
+      try { body = text ? JSON.parse(text) : null; } catch { body = { raw: text }; }
+      if (!res.ok) {
+        return {
+          ok: false as const,
+          status: res.status,
+          error: body?.message ?? body?.Mensagem ?? body?.error ?? `Falha (${res.status}) ao consultar empresa em Brasil NFe.`,
+        };
+      }
+      // erros lógicos costumam vir 200 com Sucesso=false
+      if (body && (body.Sucesso === false || body.success === false)) {
+        return { ok: false as const, error: body?.Mensagem ?? body?.message ?? "Token inválido em Brasil NFe." };
+      }
+      return {
+        ok: true as const,
+        company: {
+          name: body?.RzSocial ?? body?.NmFantasia ?? body?.razaoSocial ?? null,
+          cnpj: body?.CNPJ ?? body?.cnpj ?? null,
+          environment: data.environment,
+        },
+      };
+    } catch (err: any) {
+      return { ok: false as const, error: err?.message ?? "Erro de rede ao validar Brasil NFe" };
     }
   });
 

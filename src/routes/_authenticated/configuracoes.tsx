@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ApiKeysPanel } from "@/components/api-keys-panel";
 import {
   useAppSettings,
@@ -17,7 +18,7 @@ import {
 } from "@/lib/queries";
 import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Copy, ShieldCheck, Activity } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { validateNfeio } from "@/lib/nfeio.functions";
+import { validateNfeio, validateBrasilnfe } from "@/lib/nfeio.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime } from "@/lib/format";
 
@@ -73,7 +74,7 @@ function ConfiguracoesPage() {
         <TabsList className="flex h-auto flex-wrap justify-start">
           <TabsTrigger value="empresa">Empresa</TabsTrigger>
           <TabsTrigger value="pdv">PDV</TabsTrigger>
-          <TabsTrigger value="nfe">NF-e</TabsTrigger>
+          <TabsTrigger value="nfe">Integrações</TabsTrigger>
           <TabsTrigger value="logs">Logs</TabsTrigger>
           <TabsTrigger value="impressao">Impressão</TabsTrigger>
           <TabsTrigger value="api">API</TabsTrigger>
@@ -124,12 +125,18 @@ function NfeTab() {
   const { data: settings } = useAppSettings();
   const update = useUpdateAppSettings();
   const validate = useServerFn(validateNfeio);
+  const validateBn = useServerFn(validateBrasilnfe);
   const [apiKey, setApiKey] = useState("");
   const [companyId, setCompanyId] = useState("");
   const [env, setEnv] = useState<"Development" | "Production">("Production");
   const [secret, setSecret] = useState("");
   const [events, setEvents] = useState<Record<string, boolean>>({});
   const [busy, setBusy] = useState(false);
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const [bnOpen, setBnOpen] = useState(false);
+  const [bnUser, setBnUser] = useState("");
+  const [bnCompany, setBnCompany] = useState("");
+  const [bnEnv, setBnEnv] = useState<"Development" | "Production">("Production");
 
   useEffect(() => {
     if (!settings) return;
@@ -138,6 +145,9 @@ function NfeTab() {
     setEnv(((settings as any).nfeio_environment as any) ?? "Production");
     setSecret((settings as any).nfeio_webhook_secret ?? "");
     setEvents(((settings as any).nfeio_webhook_events as any) ?? {});
+    setBnUser((settings as any).brasilnfe_user_token ?? "");
+    setBnCompany((settings as any).brasilnfe_company_token ?? "");
+    setBnEnv(((settings as any).brasilnfe_environment as any) ?? "Production");
   }, [settings]);
 
   const projectId = (import.meta as any).env?.VITE_SUPABASE_PROJECT_ID ?? "";
@@ -184,9 +194,107 @@ function NfeTab() {
   };
 
   const isOk = !!(settings as any)?.nfeio_validated_at;
+  const bnOk = !!(settings as any)?.brasilnfe_validated_at;
+  const provider = (settings as any)?.nfe_provider ?? "nfeio";
+
+  const saveBrasilnfe = async () => {
+    if (!bnUser || !bnCompany) return toast.error("Preencha UserToken e Token da empresa");
+    setBusy(true);
+    try {
+      const r = await validateBn({ data: { userToken: bnUser, companyToken: bnCompany, environment: bnEnv } });
+      if (!(r as any).ok) { toast.error(`Validação falhou: ${(r as any).error}`); return; }
+      await update.mutateAsync({
+        nfe_provider: "brasilnfe",
+        brasilnfe_user_token: bnUser,
+        brasilnfe_company_token: bnCompany,
+        brasilnfe_environment: bnEnv,
+        brasilnfe_validated_at: new Date().toISOString(),
+      } as any);
+      toast.success(`Brasil NFe validado ✓ ${(r as any).company?.name ?? ""}`);
+      setBnOpen(false);
+    } catch (e: any) { toast.error(e?.message ?? "Erro ao salvar"); }
+    finally { setBusy(false); }
+  };
 
   return (
     <div className="space-y-4">
+      {/* Card de integração / chooser */}
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setChooserOpen(true)}
+          className="group flex items-start gap-3 rounded-xl border bg-card p-4 text-left shadow-subtle transition hover:border-primary/40 hover:bg-muted/40"
+        >
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold">NF-e</p>
+              {provider === "nfeio" && isOk && <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">nfe.io conectado</span>}
+              {provider === "brasilnfe" && bnOk && <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">Brasil NFe conectado</span>}
+              {!isOk && !bnOk && <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600">Não conectado</span>}
+            </div>
+            <p className="mt-0.5 text-xs text-muted-foreground">Escolha o provedor (nfe.io ou Brasil NFe) e conecte sua conta.</p>
+          </div>
+        </button>
+      </div>
+
+      {/* Chooser modal */}
+      <Dialog open={chooserOpen} onOpenChange={setChooserOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Conectar NF-e</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">Selecione o provedor que sua empresa usa. Os dados ficam salvos para emissão automática.</p>
+          <div className="mt-3 grid gap-2">
+            <button onClick={() => { setChooserOpen(false); /* nfeio fica abaixo */ }} className="flex items-center justify-between rounded-md border bg-card p-3 text-left hover:bg-muted">
+              <div>
+                <p className="text-sm font-semibold">nfe.io</p>
+                <p className="text-[11px] text-muted-foreground">API Key + Company ID</p>
+              </div>
+              {isOk && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+            </button>
+            <button onClick={() => { setChooserOpen(false); setBnOpen(true); }} className="flex items-center justify-between rounded-md border bg-card p-3 text-left hover:bg-muted">
+              <div>
+                <p className="text-sm font-semibold">Brasil NFe</p>
+                <p className="text-[11px] text-muted-foreground">UserToken + Token da empresa · brasilnfe.com.br</p>
+              </div>
+              {bnOk && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Brasil NFe modal */}
+      <Dialog open={bnOpen} onOpenChange={setBnOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Conectar Brasil NFe</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium">UserToken *</label>
+              <input value={bnUser} onChange={(e) => setBnUser(e.target.value)} placeholder="Token do usuário" className={inp + " font-mono"} />
+              <p className="mt-1 text-[11px] text-muted-foreground">Painel Brasil NFe → Conta → Tokens.</p>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium">Token da empresa *</label>
+              <input value={bnCompany} onChange={(e) => setBnCompany(e.target.value)} placeholder="Token da empresa cadastrada" className={inp + " font-mono"} />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium">Ambiente</label>
+              <select value={bnEnv} onChange={(e) => setBnEnv(e.target.value as any)} className={inp}>
+                <option value="Development">Homologação</option>
+                <option value="Production">Produção</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setBnOpen(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
+              <button onClick={saveBrasilnfe} disabled={busy} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">
+                {busy && <Loader2 className="h-4 w-4 animate-spin" />} Salvar e validar
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <SectionCard
         title="Integração nfe.io — NF-e Modelo 55"
         description="Emissão de NF-e produto (Modelo 55) usando a API padrão da nfe.io"

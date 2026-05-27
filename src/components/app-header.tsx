@@ -58,14 +58,24 @@ export function AppHeader({ onMenuClick }: Props) {
               <span className="font-medium text-foreground">Dashboard</span>
             </>
           )}
-          {segments.map((seg, i) => (
-            <span key={i} className="flex items-center gap-1.5">
-              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
-              <span className={cn(i === segments.length - 1 ? "font-medium text-foreground" : "text-muted-foreground")}>
-                {labels[seg] ?? seg}
+          {segments.map((seg, i) => {
+            const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(seg);
+            const display = isUuid ? `#${seg.slice(0, 8)}` : (labels[seg] ?? seg);
+            return (
+              <span key={i} className="flex items-center gap-1.5">
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
+                <span
+                  title={isUuid ? seg : undefined}
+                  className={cn(
+                    i === segments.length - 1 ? "font-medium text-foreground" : "text-muted-foreground",
+                    isUuid && "font-mono text-xs",
+                  )}
+                >
+                  {display}
+                </span>
               </span>
-            </span>
-          ))}
+            );
+          })}
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5">
