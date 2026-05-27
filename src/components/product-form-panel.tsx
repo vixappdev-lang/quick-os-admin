@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { ImagePlus, Sparkles, Loader2, Trash2, Pencil, X, Save, Eye } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useCategorias, useUpsertProduto, useDeleteProduto } from "@/lib/queries";
+import { useCategorias, useUpsertProduto, useDeleteProduto, useFornecedores } from "@/lib/queries";
 import { generateProductImage } from "@/lib/product-image.functions";
 import { ProductImageGallery } from "@/components/product-image-gallery";
 import { formatBRL } from "@/lib/format";
@@ -25,10 +25,12 @@ const EMPTY: any = {
   preco_custo: "0", preco_venda: "0", estoque: "0", estoque_minimo: "0", unidade: "UN",
   ativo: true, imagem_url: "", peso_kg: "0",
   embalagens: [] as { tipo: string; qtd: number }[],
+  fornecedor_id: "",
 };
 
 export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }: Props) {
   const { data: categorias = [] } = useCategorias();
+  const { data: fornecedores = [] } = useFornecedores();
   const upsert = useUpsertProduto();
   const del = useDeleteProduto();
   const genImage = useServerFn(generateProductImage);
@@ -54,6 +56,7 @@ export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }:
         imagem_url: produto.imagem_url ?? "",
         peso_kg: String(produto.peso_kg ?? 0),
         embalagens: Array.isArray(produto.embalagens) ? produto.embalagens : [],
+        fornecedor_id: produto.fornecedor_id ?? "",
       });
     }
   }, [open, mode, produto]);
@@ -93,6 +96,7 @@ export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }:
         imagem_url: form.imagem_url || null,
         peso_kg: Number(form.peso_kg) || 0,
         embalagens: form.embalagens ?? [],
+        fornecedor_id: form.fornecedor_id || null,
       };
       if (mode === "edit" && produto?.id) payload.id = produto.id;
       await upsert.mutateAsync(payload);
@@ -179,6 +183,12 @@ export function ProductFormPanel({ open, mode, produto, onClose, onModeChange }:
               <select disabled={ro} value={form.categoria_id} onChange={(e) => set("categoria_id", e.target.value)} className={inp}>
                 <option value="">— sem categoria —</option>
                 {categorias.map((c: any) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </Field>
+            <Field label="Fornecedor" full>
+              <select disabled={ro} value={form.fornecedor_id} onChange={(e) => set("fornecedor_id", e.target.value)} className={inp}>
+                <option value="">— sem fornecedor —</option>
+                {fornecedores.map((f: any) => <option key={f.id} value={f.id}>{f.razao_social}{f.nome_fantasia ? ` (${f.nome_fantasia})` : ""}</option>)}
               </select>
             </Field>
             <Field label="Preço de custo"><input disabled={ro} type="number" step="0.01" value={form.preco_custo} onChange={(e) => set("preco_custo", e.target.value)} className={inp} /></Field>
