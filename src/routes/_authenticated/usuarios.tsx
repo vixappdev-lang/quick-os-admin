@@ -130,16 +130,16 @@ function UsuariosPage() {
 function PermissionsDialog({ user, onClose }: { user: any | null; onClose: () => void }) {
   const qc = useQueryClient();
   const setFn = useServerFn(setUserPermissions);
-  const { data: rows = [] } = useUserPermissions(user?.id);
+  const { data } = useUserPermissions(user?.id);
   const [state, setState] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!user) { setState({}); return; }
     const m: Record<string, boolean> = {};
     MENU_KEYS.forEach((k) => (m[k] = true));
-    (rows ?? []).forEach((r: any) => (m[r.menu] = r.allowed));
+    (data ?? []).forEach((r: any) => (m[r.menu] = r.allowed));
     setState(m);
-  }, [user, rows]);
+  }, [user?.id, data]);
 
   const m = useMutation({
     mutationFn: () => setFn({
