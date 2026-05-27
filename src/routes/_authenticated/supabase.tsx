@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2 } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
@@ -113,10 +113,10 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
   const [copied, setCopied] = useState(false);
   const open = !!tenant;
 
-  useState(() => undefined);
-  if (open && !sql) {
+  useEffect(() => {
+    if (!open || sql) return;
     fetch("/setup.sql").then((r) => r.text()).then(setSql).catch(() => setSql("-- erro ao carregar setup.sql"));
-  }
+  }, [open, sql]);
 
   const supabaseUrl: string | undefined = tenant?.supabase_url;
   const projectRef = supabaseUrl?.match(/https?:\/\/([a-z0-9-]+)\.supabase\.co/i)?.[1];
