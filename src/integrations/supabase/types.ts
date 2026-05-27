@@ -47,6 +47,33 @@ export type Database = {
         }
         Relationships: []
       }
+      app_logs: {
+        Row: {
+          categoria: string
+          created_at: string
+          id: string
+          mensagem: string
+          payload: Json | null
+          user_id: string | null
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          id?: string
+          mensagem: string
+          payload?: Json | null
+          user_id?: string | null
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          id?: string
+          mensagem?: string
+          payload?: Json | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           empresa_cnpj: string | null
@@ -57,6 +84,12 @@ export type Database = {
           empresa_telefone: string | null
           id: string
           metodos_pagamento: Json
+          nfeio_api_key: string | null
+          nfeio_company_id: string | null
+          nfeio_environment: string | null
+          nfeio_validated_at: string | null
+          nfeio_webhook_events: Json | null
+          nfeio_webhook_secret: string | null
           pdv_ativo: boolean
           pix_chave: string | null
           pix_qr_url: string | null
@@ -72,6 +105,12 @@ export type Database = {
           empresa_telefone?: string | null
           id?: string
           metodos_pagamento?: Json
+          nfeio_api_key?: string | null
+          nfeio_company_id?: string | null
+          nfeio_environment?: string | null
+          nfeio_validated_at?: string | null
+          nfeio_webhook_events?: Json | null
+          nfeio_webhook_secret?: string | null
           pdv_ativo?: boolean
           pix_chave?: string | null
           pix_qr_url?: string | null
@@ -87,6 +126,12 @@ export type Database = {
           empresa_telefone?: string | null
           id?: string
           metodos_pagamento?: Json
+          nfeio_api_key?: string | null
+          nfeio_company_id?: string | null
+          nfeio_environment?: string | null
+          nfeio_validated_at?: string | null
+          nfeio_webhook_events?: Json | null
+          nfeio_webhook_secret?: string | null
           pdv_ativo?: boolean
           pix_chave?: string | null
           pix_qr_url?: string | null
@@ -645,6 +690,30 @@ export type Database = {
           },
         ]
       }
+      nfe_webhook_events: {
+        Row: {
+          evento: string
+          id: string
+          payload: Json
+          pedido_id: string | null
+          recebido_em: string
+        }
+        Insert: {
+          evento: string
+          id?: string
+          payload: Json
+          pedido_id?: string | null
+          recebido_em?: string
+        }
+        Update: {
+          evento?: string
+          id?: string
+          payload?: Json
+          pedido_id?: string | null
+          recebido_em?: string
+        }
+        Relationships: []
+      }
       patrimonio: {
         Row: {
           categoria: string | null
@@ -781,10 +850,15 @@ export type Database = {
           cliente_id: string | null
           created_at: string
           desconto: number
+          faturado_em: string | null
           id: string
           nfe_chave: string | null
           nfe_emitida_em: string | null
+          nfe_id: string | null
           nfe_numero: string | null
+          nfe_pdf_url: string | null
+          nfe_status: string | null
+          nfe_xml_url: string | null
           numero: string
           observacoes: string | null
           operador_id: string | null
@@ -802,10 +876,15 @@ export type Database = {
           cliente_id?: string | null
           created_at?: string
           desconto?: number
+          faturado_em?: string | null
           id?: string
           nfe_chave?: string | null
           nfe_emitida_em?: string | null
+          nfe_id?: string | null
           nfe_numero?: string | null
+          nfe_pdf_url?: string | null
+          nfe_status?: string | null
+          nfe_xml_url?: string | null
           numero?: string
           observacoes?: string | null
           operador_id?: string | null
@@ -823,10 +902,15 @@ export type Database = {
           cliente_id?: string | null
           created_at?: string
           desconto?: number
+          faturado_em?: string | null
           id?: string
           nfe_chave?: string | null
           nfe_emitida_em?: string | null
+          nfe_id?: string | null
           nfe_numero?: string | null
+          nfe_pdf_url?: string | null
+          nfe_status?: string | null
+          nfe_xml_url?: string | null
           numero?: string
           observacoes?: string | null
           operador_id?: string | null

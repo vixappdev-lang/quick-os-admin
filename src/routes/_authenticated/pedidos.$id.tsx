@@ -4,7 +4,9 @@ import { ArrowLeft, Printer, CheckCircle2, Clock, Receipt, Truck, User, Pencil, 
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { StatusBadge, statusTone } from "@/components/status-badge";
-import { usePedido, useUpdatePedidoStatus, useUpdatePedido, useProdutos, usePedidoPagamentos, useAddPedidoPagamento, useRemovePedidoPagamento, useEncerrarPedido, type Pedido } from "@/lib/queries";
+import { usePedido, useUpdatePedidoStatus, useUpdatePedido, useProdutos, usePedidoPagamentos, useAddPedidoPagamento, useRemovePedidoPagamento, useEncerrarPedido, useFaturarPedido, useSalvarNfeEmitida, logEvent, type Pedido } from "@/lib/queries";
+import { useServerFn } from "@tanstack/react-start";
+import { emitNfeio } from "@/lib/nfeio.functions";
 import { formatBRL, formatDateTime, formatTime } from "@/lib/format";
 import { printRomaneio } from "@/components/romaneio-print";
 import { toast } from "sonner";
@@ -36,6 +38,9 @@ function PedidoDetail() {
   const updateStatus = useUpdatePedidoStatus();
   const updatePedido = useUpdatePedido();
   const encerrar = useEncerrarPedido();
+  const faturar = useFaturarPedido();
+  const salvarNfe = useSalvarNfeEmitida();
+  const emitNF = useServerFn(emitNfeio);
   const [editMode, setEditMode] = useState<boolean>(edit === 1);
   const [pagamento, setPagamento] = useState<string>("");
   const [observacoes, setObservacoes] = useState<string>("");
@@ -155,6 +160,59 @@ function PedidoDetail() {
     } catch (e: any) { toast.error(e.message); }
   };
 
+  const faturarSimples = async () => {
+    if (!confirm(`Faturar pedido ${numeroCurto}? Ele entrará no faturamento da empresa.`)) return;
+    try {
+      await faturar.mutateAsync(pedido.id);
+      await logEvent("pedido", `Pedido ${numeroCurto} faturado`, { pedidoId: pedido.id, total: pedido.total });
+      toast.success("Pedido faturado");
+    } catch (e: any) { toast.error(e.message); }
+  };
+
+  const faturarNFe = async () => {
+    if (!settings?.empresa_razao || !(settings as any)?.empresa_ie || !(settings as any)?.nfeio_api_key || !(settings as any)?.nfeio_company_id) {
+      return toast.error("Configure NF-e em Configurações → NF-e e complete dados da empresa.");
+    }
+    if (!confirm(`Emitir NF-e Modelo 55 para o pedido ${numeroCurto}?`)) return;
+    try {
+      const cli = pedido.cliente as any;
+      const payload: any = {
+        borrower: cli ? {
+          federalTaxNumber: String(cli.documento ?? "").replace(/\D/g, ""),
+          name: cli.nome,
+          email: cli.email ?? undefined,
+          address: cli.endereco ?? undefined,
+        } : undefined,
+        natureOperation: "Venda de mercadoria",
+        items: (pedido.itens ?? []).map((i: any, idx: number) => ({
+          number: idx + 1,
+          code: i.produto?.sku ?? String(idx + 1),
+          description: i.produto?.nome ?? "Item",
+          unitOfMeasure: i.embalagem_tipo ?? "UN",
+          quantity: Number(i.qtd ?? 0),
+          unitAmount: Number(i.preco_unit ?? 0),
+          totalAmount: Number(i.total ?? 0),
+        })),
+      };
+      const r: any = await emitNF({ data: {
+        apiKey: (settings as any).nfeio_api_key,
+        companyId: (settings as any).nfeio_company_id,
+        environment: ((settings as any).nfeio_environment as any) ?? "Production",
+        payload,
+      }});
+      if (!r.ok) {
+        await logEvent("erro", `Falha NF-e pedido ${numeroCurto}: ${r.error}`, r.details ?? null);
+        return toast.error(`NF-e falhou: ${r.error}`);
+      }
+      await salvarNfe.mutateAsync({ pedidoId: pedido.id, invoice: r.invoice });
+      await logEvent("pedido", `NF-e emitida para pedido ${numeroCurto}`, { invoice: r.invoice });
+      toast.success("NF-e enviada — acompanhe o status em Configurações → Logs (webhook).");
+    } catch (e: any) {
+      await logEvent("erro", `Exceção ao emitir NF-e ${numeroCurto}: ${e.message}`);
+      toast.error(e.message);
+    }
+  };
+
   const timeline = [
     { icon: Receipt, label: "Pedido criado", time: formatTime(pedido.created_at), done: true },
     { icon: CheckCircle2, label: "Autorizado", time: ix >= 1 ? formatTime(pedido.updated_at) : "—", done: ix >= 1 },
@@ -189,6 +247,16 @@ function PedidoDetail() {
             <button onClick={gerarNF} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
               <FileText className="h-3.5 w-3.5" /> Nota Fiscal
             </button>
+            {!pedido.faturado_em && (
+              <>
+                <button onClick={faturarSimples} disabled={faturar.isPending} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted disabled:opacity-60">
+                  <Receipt className="h-3.5 w-3.5" /> Faturar pedido
+                </button>
+                <button onClick={faturarNFe} disabled={salvarNfe.isPending} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-emerald-600 px-3 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-60">
+                  <FileText className="h-3.5 w-3.5" /> Faturar como NF-e
+                </button>
+              </>
+            )}
             {pedido.status !== "encerrado" && (
               <button onClick={encerrarPedido} disabled={encerrar.isPending} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium text-destructive hover:bg-destructive/10 disabled:opacity-60">
                 <Archive className="h-3.5 w-3.5" /> Encerrar

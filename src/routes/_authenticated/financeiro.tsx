@@ -250,7 +250,7 @@ function Despesas() {
       toast.success("Despesa registrada");
     } catch (e: any) { toast.error(e.message); }
   };
-  const pagar = async (d: any) => { try { await up.mutateAsync({ id: d.id, pago: true, pago_em: new Date().toISOString() }); toast.success("Despesa paga"); } catch (e: any) { toast.error(e.message); } };
+  const pagar = async (d: any) => { try { await up.mutateAsync({ id: d.id, descricao: d.descricao, valor: d.valor, pago: true, pago_em: new Date().toISOString() } as any); toast.success("Despesa paga"); } catch (e: any) { toast.error(e.message); } };
   return (
     <div>
       <SectionCard title="Nova despesa">
