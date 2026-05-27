@@ -15,6 +15,7 @@ export function DanfePreviewDialog({ open, onClose }: { open: boolean; onClose: 
   // Usa o pedido mais recente com itens — dado REAL do painel.
   const pedido = pedidosAll.find((p: any) => Array.isArray(p.itens) && p.itens.length > 0) ?? null;
   const cliente = pedido?.cliente ?? null;
+  const end: any = (cliente?.endereco && typeof cliente.endereco === "object") ? cliente.endereco : {};
 
   const itens = pedido
     ? pedido.itens.map((it: any, idx: number) => ({
@@ -132,19 +133,19 @@ export function DanfePreviewDialog({ open, onClose }: { open: boolean; onClose: 
               <tbody>
                 <tr>
                   <td className="border border-black p-1" colSpan={2}><Field label="NOME / RAZÃO SOCIAL" value={cliente?.nome ?? "—"} /></td>
-                  <td className="border border-black p-1"><Field label="CNPJ/CPF" value={cliente?.cnpj ?? cliente?.cpf ?? "—"} /></td>
+                  <td className="border border-black p-1"><Field label="CNPJ/CPF" value={cliente?.documento ?? "—"} /></td>
                   <td className="border border-black p-1"><Field label="DATA EMISSÃO" value={new Date().toLocaleDateString("pt-BR")} /></td>
                 </tr>
                 <tr>
-                  <td className="border border-black p-1" colSpan={2}><Field label="ENDEREÇO" value={cliente?.endereco ?? "—"} /></td>
-                  <td className="border border-black p-1"><Field label="BAIRRO" value={cliente?.bairro ?? "—"} /></td>
-                  <td className="border border-black p-1"><Field label="CEP" value={cliente?.cep ?? "—"} /></td>
+                  <td className="border border-black p-1" colSpan={2}><Field label="ENDEREÇO" value={end.logradouro ?? end.endereco ?? "—"} /></td>
+                  <td className="border border-black p-1"><Field label="BAIRRO" value={end.bairro ?? "—"} /></td>
+                  <td className="border border-black p-1"><Field label="CEP" value={end.cep ?? "—"} /></td>
                 </tr>
                 <tr>
-                  <td className="border border-black p-1"><Field label="MUNICÍPIO" value={cliente?.cidade ?? "—"} /></td>
+                  <td className="border border-black p-1"><Field label="MUNICÍPIO" value={end.cidade ?? "—"} /></td>
                   <td className="border border-black p-1"><Field label="FONE" value={cliente?.telefone ?? "—"} /></td>
-                  <td className="border border-black p-1"><Field label="UF" value={cliente?.uf ?? "—"} /></td>
-                  <td className="border border-black p-1"><Field label="INSC. ESTADUAL" value="—" /></td>
+                  <td className="border border-black p-1"><Field label="UF" value={end.uf ?? "—"} /></td>
+                  <td className="border border-black p-1"><Field label="INSC. ESTADUAL" value={cliente?.ie ?? "—"} /></td>
                 </tr>
               </tbody>
             </table>
