@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, Search, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -417,17 +417,6 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function renderHighlighted(text: string, query: string) {
-  if (!query) return text;
-  const safe = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const parts = text.split(new RegExp(`(${safe})`, "gi"));
-  return parts.map((p, i) =>
-    p.toLowerCase() === query.toLowerCase()
-      ? <mark key={i} className="rounded bg-primary/30 px-0.5 text-foreground">{p}</mark>
-      : <span key={i}>{p}</span>
   );
 }
 
