@@ -28,130 +28,100 @@
 -- Name: app_role; Type: TYPE; Schema: public; Owner: -
 --
 
-DO $idem$ BEGIN
-  DO $idem$ BEGIN
-  DO $idem$ BEGIN
+DO $idem_app_role$ BEGIN
   CREATE TYPE public.app_role AS ENUM (
     'admin',
     'gerente',
     'operador',
     'vendedor'
 );
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $idem_app_role$;
 
 --
 -- Name: caixa_mov_tipo; Type: TYPE; Schema: public; Owner: -
 --
 
-DO $idem$ BEGIN
-  DO $idem$ BEGIN
-  DO $idem$ BEGIN
+DO $idem_caixa_mov_tipo$ BEGIN
   CREATE TYPE public.caixa_mov_tipo AS ENUM (
     'sangria',
     'suprimento',
     'venda',
     'despesa'
 );
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $idem_caixa_mov_tipo$;
 
 --
 -- Name: caixa_status; Type: TYPE; Schema: public; Owner: -
 --
 
-DO $idem$ BEGIN
-  DO $idem$ BEGIN
-  DO $idem$ BEGIN
+DO $idem_caixa_status$ BEGIN
   CREATE TYPE public.caixa_status AS ENUM (
     'aberto',
     'fechado'
 );
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $idem_caixa_status$;
 
 --
 -- Name: conta_status; Type: TYPE; Schema: public; Owner: -
 --
 
-DO $idem$ BEGIN
-  DO $idem$ BEGIN
-  DO $idem$ BEGIN
+DO $idem_conta_status$ BEGIN
   CREATE TYPE public.conta_status AS ENUM (
     'pendente',
     'pago',
     'atrasado',
     'cancelado'
 );
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $idem_conta_status$;
 
 --
 -- Name: conta_tipo; Type: TYPE; Schema: public; Owner: -
 --
 
-DO $idem$ BEGIN
-  DO $idem$ BEGIN
-  DO $idem$ BEGIN
+DO $idem_conta_tipo$ BEGIN
   CREATE TYPE public.conta_tipo AS ENUM (
     'pagar',
     'receber'
 );
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $idem_conta_tipo$;
 
 --
 -- Name: estoque_mov_tipo; Type: TYPE; Schema: public; Owner: -
 --
 
-DO $idem$ BEGIN
-  DO $idem$ BEGIN
-  DO $idem$ BEGIN
+DO $idem_estoque_mov_tipo$ BEGIN
   CREATE TYPE public.estoque_mov_tipo AS ENUM (
     'entrada',
     'saida',
     'ajuste',
     'perda'
 );
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $idem_estoque_mov_tipo$;
 
 --
 -- Name: nfe_status; Type: TYPE; Schema: public; Owner: -
 --
 
-DO $idem$ BEGIN
-  DO $idem$ BEGIN
-  DO $idem$ BEGIN
+DO $idem_nfe_status$ BEGIN
   CREATE TYPE public.nfe_status AS ENUM (
     'importado',
     'conferindo',
     'confirmado'
 );
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $idem_nfe_status$;
 
 --
 -- Name: pagamento_tipo; Type: TYPE; Schema: public; Owner: -
 --
 
-DO $idem$ BEGIN
-  DO $idem$ BEGIN
-  DO $idem$ BEGIN
+DO $idem_pagamento_tipo$ BEGIN
   CREATE TYPE public.pagamento_tipo AS ENUM (
     'pix',
     'credito',
@@ -162,36 +132,28 @@ DO $idem$ BEGIN
     'nota_promissoria',
     'cheque'
 );
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $idem_pagamento_tipo$;
 
 --
 -- Name: pedido_origem; Type: TYPE; Schema: public; Owner: -
 --
 
-DO $idem$ BEGIN
-  DO $idem$ BEGIN
-  DO $idem$ BEGIN
+DO $idem_pedido_origem$ BEGIN
   CREATE TYPE public.pedido_origem AS ENUM (
     'balcao',
     'pdv',
     'vendedor',
     'delivery'
 );
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $idem_pedido_origem$;
 
 --
 -- Name: pedido_status; Type: TYPE; Schema: public; Owner: -
 --
 
-DO $idem$ BEGIN
-  DO $idem$ BEGIN
-  DO $idem$ BEGIN
+DO $idem_pedido_status$ BEGIN
   CREATE TYPE public.pedido_status AS ENUM (
     'pendente',
     'autorizado',
@@ -202,21 +164,8 @@ DO $idem$ BEGIN
     'cancelado',
     'encerrado'
 );
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
-
-
-
-
-
-
-
-
-
-
-
-
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $idem_pedido_status$;
 
 --
 -- Name: api_keys; Type: TABLE; Schema: public; Owner: -
@@ -792,6 +741,10 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
     role public.app_role NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+
+
 
 
 
@@ -1558,6 +1511,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_produtos_codigo_barras ON public.produtos U
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 --
 -- Name: apply_estoque_from_item(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1631,6 +1596,7 @@ $$;
 
 
 
+
 --
 -- Name: guard_pedido_faturado(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1655,6 +1621,7 @@ $$;
 
 
 
+
 --
 -- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1670,6 +1637,7 @@ BEGIN
   INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'operador') ON CONFLICT DO NOTHING;
   RETURN NEW;
 END; $$;
+
 
 
 
@@ -1701,6 +1669,7 @@ $$;
 
 
 
+
 --
 -- Name: has_role(uuid, public.app_role); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1713,6 +1682,7 @@ CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role public.app_role)
 
 
 
+
 --
 -- Name: is_staff(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1721,6 +1691,7 @@ CREATE OR REPLACE FUNCTION public.is_staff(_user_id uuid) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role IN ('admin','gerente','operador')) $$;
+
 
 
 
@@ -1765,6 +1736,7 @@ $$;
 
 
 
+
 --
 -- Name: notify_pedido_event(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1798,6 +1770,7 @@ $_$;
 
 
 
+
 --
 -- Name: recalc_pedido_pagamentos(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1827,6 +1800,7 @@ $$;
 
 
 
+
 --
 -- Name: recalc_pedido_restante(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1846,6 +1820,7 @@ $$;
 
 
 
+
 --
 -- Name: touch_updated_at(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1855,6 +1830,7 @@ CREATE OR REPLACE FUNCTION public.touch_updated_at() RETURNS trigger
     SET search_path TO 'public'
     AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
+
 
 
 
