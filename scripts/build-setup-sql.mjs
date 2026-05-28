@@ -57,6 +57,12 @@ function removeOldColumnPatch(sql) {
   return sql.slice(0, start) + sql.slice(end + ADD_COLUMNS_END.length);
 }
 
+function removeEnvironmentSpecificGrants(sql) {
+  return sql
+    .replace(/^.*\bsandbox_exec\b.*\n/gm, "")
+    .replace(/\n--\n-- Name: DEFAULT PRIVILEGES FOR (SEQUENCES|FUNCTIONS|TABLES);[\s\S]*?(?=\n--\n-- Name: |\n--\n-- PostgreSQL database dump complete|$)/g, "\n");
+}
+
 function buildColumnPatch(sql) {
   const statements = [];
   const tables = sql.matchAll(/CREATE TABLE IF NOT EXISTS (public\.[a-z0-9_]+) \(([\s\S]*?)\n\);/g);
@@ -78,7 +84,7 @@ function buildColumnPatch(sql) {
   return `\n\n${ADD_COLUMNS_START}\n-- Completa bancos já existentes/parciais antes de criar constraints, funções, triggers e policies.\n${statements.join("\n")}\n${ADD_COLUMNS_END}\n\n`;
 }
 
-s = normalizeIdempotency(removeOldColumnPatch(s));
+s = normalizeIdempotency(removeEnvironmentSpecificGrants(removeOldColumnPatch(s)));
 const { without, blocks } = extractFunctionBlocks(s);
 s = without;
 
