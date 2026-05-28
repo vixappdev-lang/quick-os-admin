@@ -591,7 +591,9 @@ export function useCreatePedido() {
       pagamento?: Pedido["pagamento"] | null;
       desconto?: number;
       observacoes?: string | null;
-      itens: { produto_id: string; qtd: number; preco_unit: number; desconto?: number }[];
+      tipo_operacao?: "saida" | "entrada";
+      fornecedor_id?: string | null;
+      itens: { produto_id: string; qtd: number; preco_unit: number; desconto?: number; qtd_un_por_embalagem?: number; embalagem_tipo?: string }[];
       pagamentos?: { forma: string; condicao?: string | null; vencimento?: string | null; valor: number }[];
     }) => {
       const toCents = (v: number) => Math.round((Number.isFinite(v) ? v : 0) * 100);
@@ -612,7 +614,9 @@ export function useCreatePedido() {
           status: "pendente",
           subtotal, desconto, total,
           observacoes: input.observacoes ?? null,
-        })
+          tipo_operacao: input.tipo_operacao ?? "saida",
+          fornecedor_id: input.fornecedor_id ?? null,
+        } as any)
         .select()
         .single();
       if (pe) throw pe;
@@ -622,6 +626,8 @@ export function useCreatePedido() {
         qtd: i.qtd,
         preco_unit: i.preco_unit,
         desconto: i.desconto ?? 0,
+        qtd_un_por_embalagem: i.qtd_un_por_embalagem ?? 1,
+        embalagem_tipo: i.embalagem_tipo ?? "UN",
         total: fromCents(Math.max(0, toCents(i.preco_unit) * i.qtd - toCents(i.desconto ?? 0))),
       }));
       const { error: ie } = await supabase.from("pedido_itens").insert(itensInsert);
