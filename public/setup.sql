@@ -752,6 +752,10 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
 
 
 
+
+
+
+
 -- === LYNECLOUD: COLUNAS FALTANTES (INÍCIO) ===
 -- Completa bancos já existentes/parciais antes de criar constraints, funções, triggers e policies.
 ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
@@ -1523,6 +1527,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_produtos_codigo_barras ON public.produtos U
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 --
 -- Name: apply_estoque_from_item(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1597,6 +1613,7 @@ $$;
 
 
 
+
 --
 -- Name: guard_pedido_faturado(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1622,6 +1639,7 @@ $$;
 
 
 
+
 --
 -- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1637,6 +1655,7 @@ BEGIN
   INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'operador') ON CONFLICT DO NOTHING;
   RETURN NEW;
 END; $$;
+
 
 
 
@@ -1670,6 +1689,7 @@ $$;
 
 
 
+
 --
 -- Name: has_role(uuid, public.app_role); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1683,6 +1703,7 @@ CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role public.app_role)
 
 
 
+
 --
 -- Name: is_staff(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1691,6 +1712,7 @@ CREATE OR REPLACE FUNCTION public.is_staff(_user_id uuid) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role IN ('admin','gerente','operador')) $$;
+
 
 
 
@@ -1737,6 +1759,7 @@ $$;
 
 
 
+
 --
 -- Name: notify_pedido_event(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1766,6 +1789,7 @@ BEGIN
   RETURN NEW;
 END;
 $_$;
+
 
 
 
@@ -1801,6 +1825,7 @@ $$;
 
 
 
+
 --
 -- Name: recalc_pedido_restante(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1821,6 +1846,7 @@ $$;
 
 
 
+
 --
 -- Name: touch_updated_at(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1830,6 +1856,7 @@ CREATE OR REPLACE FUNCTION public.touch_updated_at() RETURNS trigger
     SET search_path TO 'public'
     AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
+
 
 
 
