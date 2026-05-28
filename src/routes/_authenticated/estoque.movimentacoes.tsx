@@ -9,7 +9,7 @@ import { useEstoqueMovimentos } from "@/lib/queries";
 import { formatDateTime } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/estoque/movimentacoes")({
-  head: () => ({ meta: [{ title: "Movimentações de estoque — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Movimentações de estoque — LyneCloud" }] }),
   component: MovimentacoesPage,
 });
 

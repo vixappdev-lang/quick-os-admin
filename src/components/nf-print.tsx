@@ -238,7 +238,7 @@ export function printNotaFiscal(pedido: any, settings: any, pagamentos: any[] = 
       </div>
     </div>
 
-    <p class="foot-note">DANFE gerado pelo sistema Quick OS · Espelho da operação — não substitui a NF-e autorizada pela SEFAZ.</p>
+    <p class="foot-note">DANFE gerado pelo sistema LyneCloud · Espelho da operação — não substitui a NF-e autorizada pela SEFAZ.</p>
   </div>
   <script>setTimeout(function(){window.focus();window.print()},200)</script>
 </body></html>`;

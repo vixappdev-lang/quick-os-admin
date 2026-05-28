@@ -88,7 +88,7 @@ export function AppSidebar({ collapsed, onToggle, mobileOpen, onMobileClose }: P
             </div>
             {!collapsed && (
               <div className="leading-tight">
-                <p className="text-[13px] font-semibold tracking-tight text-white">Quick OS</p>
+                <p className="text-[13px] font-semibold tracking-tight text-white">LyneCloud</p>
                 <p className="text-[10px] uppercase tracking-wider text-[var(--sidebar-muted)]">Enterprise</p>
               </div>
             )}

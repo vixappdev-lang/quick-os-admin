@@ -16,7 +16,7 @@ import { formatBRL, formatTime } from "@/lib/format";
 import { usePedidos, useProdutos, useCaixaAtual } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/")({
-  head: () => ({ meta: [{ title: "Dashboard — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Dashboard — LyneCloud" }] }),
   component: Dashboard,
 });
 

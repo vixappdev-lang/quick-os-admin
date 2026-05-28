@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/nfe")({
-  head: () => ({ meta: [{ title: "Entradas NF-e — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Entradas NF-e — LyneCloud" }] }),
   component: NfePage,
 });
 

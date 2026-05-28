@@ -9,7 +9,7 @@ import { useAppSettings, useCliente, usePedidos } from "@/lib/queries";
 import { formatBRL, formatDateTime } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/clientes/$id")({
-  head: () => ({ meta: [{ title: "Cliente — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Cliente — LyneCloud" }] }),
   component: ClienteDetalhe,
 });
 

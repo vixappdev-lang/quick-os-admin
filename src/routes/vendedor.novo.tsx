@@ -4,7 +4,7 @@ import { PedidoForm } from "@/components/pedido-form";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/vendedor/novo")({
-  head: () => ({ meta: [{ title: "Novo pedido | Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Novo pedido | LyneCloud" }] }),
   component: VendedorNovo,
 });
 

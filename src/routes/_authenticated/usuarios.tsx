@@ -21,7 +21,7 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/usuarios")({
-  head: () => ({ meta: [{ title: "Usuários — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Usuários — LyneCloud" }] }),
   component: UsuariosPage,
 });
 

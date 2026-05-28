@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 import { ClienteForm } from "@/components/cliente-form";
 
 export const Route = createFileRoute("/_authenticated/clientes/novo")({
-  head: () => ({ meta: [{ title: "Novo cliente — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Novo cliente — LyneCloud" }] }),
   validateSearch: (s: Record<string, unknown>) => ({
     return: typeof s.return === "string" ? s.return : undefined,
     prefill: typeof s.prefill === "string" ? s.prefill : undefined,

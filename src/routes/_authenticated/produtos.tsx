@@ -13,7 +13,7 @@ import { NovoProdutoChooser, type ManualPrefill } from "@/components/novo-produt
 import { NovaEntradaDialog } from "@/components/nova-entrada-dialog";
 
 export const Route = createFileRoute("/_authenticated/produtos")({
-  head: () => ({ meta: [{ title: "Produtos — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Produtos — LyneCloud" }] }),
   component: ProdutosPage,
 });
 

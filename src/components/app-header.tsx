@@ -51,7 +51,7 @@ export function AppHeader({ onMenuClick }: Props) {
         </button>
 
         <nav className="hidden items-center gap-1.5 text-[13px] md:flex">
-          <Link to="/" className="text-muted-foreground hover:text-foreground">Quick OS</Link>
+          <Link to="/" className="text-muted-foreground hover:text-foreground">LyneCloud</Link>
           {segments.length === 0 && (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />

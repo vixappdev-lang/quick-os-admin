@@ -16,7 +16,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/financeiro")({
-  head: () => ({ meta: [{ title: "Financeiro — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Financeiro — LyneCloud" }] }),
   component: FinanceiroPage,
 });
 

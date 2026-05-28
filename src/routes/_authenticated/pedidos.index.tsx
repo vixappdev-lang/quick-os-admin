@@ -22,7 +22,7 @@ import { PaymentSplitter } from "@/components/payment-splitter";
 export const Route = createFileRoute("/_authenticated/pedidos/")({
   // Index route for /pedidos. Path is normalized below via TanStack;
   // the trailing slash here mirrors the file system convention.
-  head: () => ({ meta: [{ title: "Pedidos — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Pedidos — LyneCloud" }] }),
   component: PedidosPage,
 });
 

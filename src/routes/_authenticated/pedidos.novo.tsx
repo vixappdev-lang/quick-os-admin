@@ -4,7 +4,7 @@ import { PedidoForm } from "@/components/pedido-form";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/_authenticated/pedidos/novo")({
-  head: () => ({ meta: [{ title: "Novo pedido — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Novo pedido — LyneCloud" }] }),
   validateSearch: (s: Record<string, unknown>) => ({
     cliente: typeof s.cliente === "string" ? s.cliente : undefined,
   }) as { cliente?: string },

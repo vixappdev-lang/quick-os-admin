@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/public/v1")({
       GET: async ({ request }) => {
         const origin = new URL(request.url).origin;
         return json({
-          name: "Quick OS Public API",
+          name: "LyneCloud Public API",
           base_url: `${origin}/api/public/v1`,
           endpoints: {
             produtos: `${origin}/api/public/v1/produtos`,

@@ -164,7 +164,7 @@ export const despesas = [
   { id: "d2", descricao: "Energia elétrica", categoria: "Utilidades", valor: 920.5, vencimento: "2026-06-12", status: "pendente" },
   { id: "d3", descricao: "Folha de pagamento", categoria: "RH", valor: 14200, vencimento: "2026-05-31", status: "pendente" },
   { id: "d4", descricao: "Internet fibra 500MB", categoria: "Utilidades", valor: 189.9, vencimento: "2026-05-28", status: "pago" },
-  { id: "d5", descricao: "Software gestão Quick OS", categoria: "Sistemas", valor: 349, vencimento: "2026-05-30", status: "pago" },
+  { id: "d5", descricao: "Software gestão LyneCloud", categoria: "Sistemas", valor: 349, vencimento: "2026-05-30", status: "pago" },
 ];
 
 export const contas = [

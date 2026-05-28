@@ -13,7 +13,7 @@ import { useHidScanner } from "@/lib/hid-scanner";
 import { normalizeEan } from "@/lib/ean";
 
 export const Route = createFileRoute("/_authenticated/pdv")({
-  head: () => ({ meta: [{ title: "PDV — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "PDV — LyneCloud" }] }),
   component: PdvPage,
 });
 
