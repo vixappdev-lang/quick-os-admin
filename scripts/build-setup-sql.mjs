@@ -70,6 +70,10 @@ function removeEnvironmentSpecificGrants(sql) {
     .replace(/\n--\n-- Name: DEFAULT PRIVILEGES FOR (SEQUENCES|FUNCTIONS|TABLES);[\s\S]*?(?=\n--\n-- Name: |\n--\n-- PostgreSQL database dump complete|$)/g, "\n");
 }
 
+function collapseBlankRuns(sql) {
+  return sql.replace(/\n{4,}/g, "\n\n\n");
+}
+
 function buildColumnPatch(sql) {
   const statements = [];
   const tables = sql.matchAll(/CREATE TABLE IF NOT EXISTS (public\.[a-z0-9_]+) \(([\s\S]*?)\n\);/g);
@@ -104,7 +108,7 @@ const functionSql = `\n${blocks.join("\n")}\n`;
 const firstTrigger = s.search(/\n--\n-- Name: [^\n]+; Type: TRIGGER;/);
 const firstPolicyOrGrant = s.search(/\n--\n-- Name: [^\n]+; Type: (POLICY|ACL);/);
 const insertAt = firstTrigger !== -1 ? firstTrigger : firstPolicyOrGrant !== -1 ? firstPolicyOrGrant : s.length;
-s = s.slice(0, insertAt) + functionSql + s.slice(insertAt);
+s = collapseBlankRuns(s.slice(0, insertAt) + functionSql + s.slice(insertAt));
 
 fs.writeFileSync(SRC, s);
 fs.writeFileSync(DOC, s);
