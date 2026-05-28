@@ -10,8 +10,15 @@ let s = fs.readFileSync(SRC, "utf8");
 function normalizeIdempotency(sql) {
   let out = sql;
   out = out.replace(
-    /CREATE TYPE (public\.[a-z0-9_]+) AS ENUM \(([\s\S]*?)\);/g,
-    (_m, name, body) => `DO $idem$ BEGIN\n  CREATE TYPE ${name} AS ENUM (${body});\nEXCEPTION WHEN duplicate_object THEN NULL; END $idem$;`,
+    /(?:DO\s+\$[a-zA-Z0-9_]*\$\s+BEGIN\s+)+\s*(CREATE TYPE public\.[a-z0-9_]+ AS ENUM \([\s\S]*?\);\s*)(?:EXCEPTION WHEN duplicate_object THEN NULL;\s*END\s+\$[a-zA-Z0-9_]*\$;\s*)+/gi,
+    "$1\n",
+  );
+  out = out.replace(
+    /CREATE TYPE (public\.[a-z0-9_]+) AS ENUM \(([\s\S]*?)\);/gi,
+    (_m, name, body) => {
+      const tag = `$idem_${name.replace(/^public\./, "").replace(/[^a-z0-9_]/gi, "_")}$`;
+      return `DO ${tag} BEGIN\n  CREATE TYPE ${name} AS ENUM (${body});\nEXCEPTION WHEN duplicate_object THEN NULL;\nEND ${tag};`;
+    },
   );
   out = out.replace(/CREATE TABLE (?!IF NOT EXISTS)(public\.[a-z0-9_]+) \(/g, "CREATE TABLE IF NOT EXISTS $1 (");
   out = out.replace(/CREATE SEQUENCE (?!IF NOT EXISTS)(public\.[a-z0-9_]+)/g, "CREATE SEQUENCE IF NOT EXISTS $1");
