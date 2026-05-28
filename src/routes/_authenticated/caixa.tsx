@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, Lock, Unlock, Eye, X } from "lucide-react";
+import { Wallet, ArrowDownToLine, ArrowUpFromLine, Lock, Unlock, Eye } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { KpiCard } from "@/components/kpi-card";
