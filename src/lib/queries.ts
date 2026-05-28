@@ -426,6 +426,37 @@ export function useCaixaHistorico(limit = 10) {
   });
 }
 
+export function useCaixaSessaoDetalhe(sessaoId?: string | null) {
+  return useQuery({
+    queryKey: ["caixa", "sessao", sessaoId],
+    enabled: !!sessaoId,
+    queryFn: async () => {
+      const { data: sessao, error } = await supabase
+        .from("caixa_sessoes").select("*").eq("id", sessaoId!).maybeSingle();
+      if (error) throw error;
+      const { data: movs } = await supabase
+        .from("caixa_movimentos").select("*").eq("sessao_id", sessaoId!)
+        .order("created_at", { ascending: true });
+      return { ...(sessao as any), movimentos: movs ?? [] } as any;
+    },
+    staleTime: 15_000,
+  });
+}
+
+export function useFaturamentos() {
+  return useQuery({
+    queryKey: ["faturamentos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("faturamentos" as any).select("*")
+        .order("created_at", { ascending: false }).limit(500);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    staleTime: 30_000,
+  });
+}
+
 // Faturamentos
 export function useCriarFaturamento() {
   const qc = useQueryClient();
