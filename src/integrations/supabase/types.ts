@@ -578,15 +578,12 @@ export type Database = {
       }
       fornecedores: {
         Row: {
-          agencia: string | null
           ativo: boolean
           bairro: string | null
-          banco: string | null
           cep: string | null
           cidade: string | null
           complemento: string | null
           condicoes: string | null
-          conta: string | null
           contato_nome: string | null
           cpf_cnpj: string | null
           created_at: string
@@ -598,8 +595,6 @@ export type Database = {
           nome_fantasia: string | null
           numero: string | null
           observacoes: string | null
-          pix: string | null
-          prazo_pagamento: string | null
           razao_social: string
           site: string | null
           telefone: string | null
@@ -607,15 +602,12 @@ export type Database = {
           whatsapp: string | null
         }
         Insert: {
-          agencia?: string | null
           ativo?: boolean
           bairro?: string | null
-          banco?: string | null
           cep?: string | null
           cidade?: string | null
           complemento?: string | null
           condicoes?: string | null
-          conta?: string | null
           contato_nome?: string | null
           cpf_cnpj?: string | null
           created_at?: string
@@ -627,8 +619,6 @@ export type Database = {
           nome_fantasia?: string | null
           numero?: string | null
           observacoes?: string | null
-          pix?: string | null
-          prazo_pagamento?: string | null
           razao_social: string
           site?: string | null
           telefone?: string | null
@@ -636,15 +626,12 @@ export type Database = {
           whatsapp?: string | null
         }
         Update: {
-          agencia?: string | null
           ativo?: boolean
           bairro?: string | null
-          banco?: string | null
           cep?: string | null
           cidade?: string | null
           complemento?: string | null
           condicoes?: string | null
-          conta?: string | null
           contato_nome?: string | null
           cpf_cnpj?: string | null
           created_at?: string
@@ -656,8 +643,6 @@ export type Database = {
           nome_fantasia?: string | null
           numero?: string | null
           observacoes?: string | null
-          pix?: string | null
-          prazo_pagamento?: string | null
           razao_social?: string
           site?: string | null
           telefone?: string | null
@@ -994,7 +979,9 @@ export type Database = {
           cliente_id: string | null
           created_at: string
           desconto: number
+          faturado: boolean
           faturado_em: string | null
+          fornecedor_id: string | null
           id: string
           nfe_chave: string | null
           nfe_emitida_em: string | null
@@ -1011,6 +998,7 @@ export type Database = {
           restante: number
           status: Database["public"]["Enums"]["pedido_status"]
           subtotal: number
+          tipo_operacao: string
           total: number
           total_pago: number
           updated_at: string
@@ -1020,7 +1008,9 @@ export type Database = {
           cliente_id?: string | null
           created_at?: string
           desconto?: number
+          faturado?: boolean
           faturado_em?: string | null
+          fornecedor_id?: string | null
           id?: string
           nfe_chave?: string | null
           nfe_emitida_em?: string | null
@@ -1037,6 +1027,7 @@ export type Database = {
           restante?: number
           status?: Database["public"]["Enums"]["pedido_status"]
           subtotal?: number
+          tipo_operacao?: string
           total?: number
           total_pago?: number
           updated_at?: string
@@ -1046,7 +1037,9 @@ export type Database = {
           cliente_id?: string | null
           created_at?: string
           desconto?: number
+          faturado?: boolean
           faturado_em?: string | null
+          fornecedor_id?: string | null
           id?: string
           nfe_chave?: string | null
           nfe_emitida_em?: string | null
@@ -1063,6 +1056,7 @@ export type Database = {
           restante?: number
           status?: Database["public"]["Enums"]["pedido_status"]
           subtotal?: number
+          tipo_operacao?: string
           total?: number
           total_pago?: number
           updated_at?: string
@@ -1113,7 +1107,9 @@ export type Database = {
           created_at: string
           embalagens: Json
           estoque: number
+          estoque_fiscal: number
           estoque_minimo: number | null
+          fator_unidade: number
           fornecedor_id: string | null
           id: string
           imagem_url: string | null
@@ -1124,6 +1120,7 @@ export type Database = {
           sku: string
           tem_nota_fiscal: boolean
           unidade: string
+          unidade_embalagem: string
           updated_at: string
         }
         Insert: {
@@ -1133,7 +1130,9 @@ export type Database = {
           created_at?: string
           embalagens?: Json
           estoque?: number
+          estoque_fiscal?: number
           estoque_minimo?: number | null
+          fator_unidade?: number
           fornecedor_id?: string | null
           id?: string
           imagem_url?: string | null
@@ -1144,6 +1143,7 @@ export type Database = {
           sku: string
           tem_nota_fiscal?: boolean
           unidade?: string
+          unidade_embalagem?: string
           updated_at?: string
         }
         Update: {
@@ -1153,7 +1153,9 @@ export type Database = {
           created_at?: string
           embalagens?: Json
           estoque?: number
+          estoque_fiscal?: number
           estoque_minimo?: number | null
+          fator_unidade?: number
           fornecedor_id?: string | null
           id?: string
           imagem_url?: string | null
@@ -1164,6 +1166,7 @@ export type Database = {
           sku?: string
           tem_nota_fiscal?: boolean
           unidade?: string
+          unidade_embalagem?: string
           updated_at?: string
         }
         Relationships: [
