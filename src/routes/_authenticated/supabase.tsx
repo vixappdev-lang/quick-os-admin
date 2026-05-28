@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, Search } from "lucide-react";
+import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, Search, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -11,6 +11,7 @@ import {
 import { useUsuarios } from "@/lib/queries";
 import { useAuth } from "@/lib/auth";
 import { listTenants, createTenant, deleteTenant } from "@/lib/tenants.functions";
+import { getSchemaIssues, getSchemaIssuesBySlug, clearSchemaIssues, type SchemaIssue } from "@/lib/schema-errors";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/supabase")({
@@ -39,7 +40,12 @@ function SupabasePage() {
   const [schemaTenant, setSchemaTenant] = useState<any | null>(null);
   const [viewTenant, setViewTenant] = useState<any | null>(null);
   const [trackTenant, setTrackTenant] = useState<any | null>(null);
-  const [sqlCopied, setSqlCopied] = useState(false);
+  const [issues, setIssues] = useState<SchemaIssue[]>(() => getSchemaIssues());
+  useEffect(() => {
+    const h = () => setIssues(getSchemaIssues());
+    window.addEventListener("schema-errors-changed", h);
+    return () => window.removeEventListener("schema-errors-changed", h);
+  }, []);
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
     onSuccess: () => {
@@ -56,19 +62,6 @@ function SupabasePage() {
   const mainUrl = (import.meta as any).env?.VITE_SUPABASE_URL ?? "";
   const mainProject = (import.meta as any).env?.VITE_SUPABASE_PROJECT_ID ?? "—";
 
-  const copySetupSql = async () => {
-    try {
-      const r = await fetch("/setup.sql");
-      const txt = await r.text();
-      await navigator.clipboard.writeText(txt);
-      setSqlCopied(true);
-      toast.success("SQL completo copiado. Cole no SQL Editor do Supabase do cliente.");
-      setTimeout(() => setSqlCopied(false), 1600);
-    } catch {
-      toast.error("Não foi possível copiar. Use o botão Baixar.");
-    }
-  };
-
   const mainTenant = {
     id: "__main__",
     slug: "principal",
@@ -79,24 +72,17 @@ function SupabasePage() {
     isMain: true,
   };
 
+  const issuesOf = (slug: string) => issues.filter((i) => i.slug === slug);
+
   return (
     <div>
       <PageHeader
         title="Supabase"
         description="Conecte clientes a bancos Supabase próprios usando um slug único."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <button onClick={copySetupSql} title="Copiar setup.sql atualizado" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
-              {sqlCopied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {sqlCopied ? "Copiado" : "Copiar SQL"}
-            </button>
-            <a href="/setup.sql" download="setup.sql" title="Baixar setup.sql" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
-              <Download className="h-3.5 w-3.5" /> Baixar SQL
-            </a>
-            <button onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
-              <Plus className="h-3.5 w-3.5" /> Nova conexão
-            </button>
-          </div>
+          <button onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
+            <Plus className="h-3.5 w-3.5" /> Nova conexão
+          </button>
         }
       />
 
@@ -132,6 +118,7 @@ function SupabasePage() {
                     <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                     <span className="font-semibold">Lovable Cloud</span>
                     <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">ATUAL</span>
+                    {issuesOf("principal").length > 0 && <PendingBadge n={issuesOf("principal").length} />}
                   </div>
                   <div className="text-xs text-muted-foreground">Banco gerenciado — onde tudo é salvo por padrão</div>
                 </td>
@@ -140,7 +127,7 @@ function SupabasePage() {
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1">
                     <IconBtn title="Ver" onClick={() => setViewTenant(mainTenant)}><Eye className="h-3.5 w-3.5" /></IconBtn>
-                    <IconBtn title="Copiar SQL de correção" onClick={() => setSchemaTenant(mainTenant)}><FileCode2 className="h-3.5 w-3.5" /></IconBtn>
+                    <IconBtn title="SQL de correção" highlight={issuesOf("principal").length > 0} onClick={() => setSchemaTenant(mainTenant)}><FileCode2 className="h-3.5 w-3.5" /></IconBtn>
                     <IconBtn title="Rastrear em tempo real" onClick={() => setTrackTenant(mainTenant)}><Radio className="h-3.5 w-3.5" /></IconBtn>
                   </div>
                 </td>
@@ -157,6 +144,7 @@ function SupabasePage() {
               )}
               {tenants.map((t: any) => {
                 const u = usuarios.find((x: any) => x.id === t.user_id);
+                const tIssues = issuesOf(t.slug);
                 return (
                   <tr key={t.id} className="border-b hover:bg-muted/30 transition-colors">
                     <td className="px-4 py-3"><code className="rounded bg-muted px-1.5 py-0.5 text-xs">/t/{t.slug}</code></td>
@@ -164,6 +152,7 @@ function SupabasePage() {
                       <div className="flex items-center gap-2">
                         <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
                         <span className="font-medium">{u?.nome || t.nome || "—"}</span>
+                        {tIssues.length > 0 && <PendingBadge n={tIssues.length} />}
                       </div>
                       <div className="ml-4 text-xs text-muted-foreground">{u?.email}</div>
                     </td>
@@ -172,7 +161,7 @@ function SupabasePage() {
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-1">
                         <IconBtn title="Ver" onClick={() => setViewTenant({ ...t, _user: u })}><Eye className="h-3.5 w-3.5" /></IconBtn>
-                        <IconBtn title="Reabrir schema SQL" onClick={() => setSchemaTenant(t)}><FileCode2 className="h-3.5 w-3.5" /></IconBtn>
+                        <IconBtn title="SQL de correção" highlight={tIssues.length > 0} onClick={() => setSchemaTenant(t)}><FileCode2 className="h-3.5 w-3.5" /></IconBtn>
                         <IconBtn title="Rastrear" onClick={() => setTrackTenant(t)}><Radio className="h-3.5 w-3.5" /></IconBtn>
                         <IconBtn danger title="Remover" onClick={() => confirm("Remover tenant?") && del.mutate(t.id)}><Trash2 className="h-3.5 w-3.5" /></IconBtn>
                       </div>
@@ -211,17 +200,26 @@ function SupabasePage() {
   );
 }
 
-function IconBtn({ children, title, onClick, disabled, danger }: { children: React.ReactNode; title: string; onClick?: () => void; disabled?: boolean; danger?: boolean }) {
+function IconBtn({ children, title, onClick, disabled, danger, highlight }: { children: React.ReactNode; title: string; onClick?: () => void; disabled?: boolean; danger?: boolean; highlight?: boolean }) {
   return (
     <button
       type="button"
       title={title}
       disabled={disabled}
       onClick={onClick}
-      className={`flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 ${danger ? "hover:bg-destructive/10 hover:text-destructive" : ""}`}
+      className={`relative flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-muted hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40 ${danger ? "hover:bg-destructive/10 hover:text-destructive" : ""} ${highlight ? "bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700" : ""}`}
     >
       {children}
+      {highlight && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-card" />}
     </button>
+  );
+}
+
+function PendingBadge({ n }: { n: number }) {
+  return (
+    <span title={`${n} erro(s) de schema detectado(s)`} className="inline-flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+      <AlertTriangle className="h-3 w-3" /> Correção pendente
+    </span>
   );
 }
 
@@ -330,6 +328,15 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
   const [copied, setCopied] = useState(false);
   const [query, setQuery] = useState("");
   const open = !!tenant;
+  const slug: string = tenant?.slug ?? "principal";
+  const [issues, setIssues] = useState<SchemaIssue[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    const refresh = () => setIssues(getSchemaIssuesBySlug(slug));
+    refresh();
+    window.addEventListener("schema-errors-changed", refresh);
+    return () => window.removeEventListener("schema-errors-changed", refresh);
+  }, [open, slug]);
 
   useEffect(() => {
     if (!open || sql) return;
@@ -357,22 +364,36 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><FileCode2 className="h-4 w-4" /> Schema do banco (pré-requisito)</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><FileCode2 className="h-4 w-4" /> SQL de correção — /t/{slug}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {tenant?.slug
-              ? <>Conexão criada para <code className="rounded bg-muted px-1 py-0.5 text-xs">/t/{tenant.slug}</code>. <b>Antes do primeiro login</b> do usuário, execute este SQL no Supabase do cliente.</>
-              : <>Para que as queries funcionem no Supabase do cliente, o schema (tabelas, RLS, funções) precisa estar instalado. Execute o SQL abaixo no <b>SQL Editor</b> do projeto.</>}
-            {" "}Não é possível rodar DDL via anon key — por isso é manual e único.
-          </p>
+          {issues.length > 0 ? (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
+              <p className="font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <FileCode2 className="h-3.5 w-3.5" /> {issues.length} erro(s) de schema detectado(s) nesta conexão
+              </p>
+              <ul className="mt-2 max-h-32 space-y-1 overflow-auto text-[11px] text-muted-foreground">
+                {issues.slice(0, 10).map((i, idx) => (
+                  <li key={idx} className="font-mono">
+                    {i.table ? <b>{i.table}{i.column ? `.${i.column}` : ""}</b> : null}
+                    {i.table ? " — " : ""}{i.message}
+                  </li>
+                ))}
+              </ul>
+              <button onClick={() => { clearSchemaIssues(slug); }} className="mt-2 text-[11px] underline text-amber-700">Limpar lista após executar o SQL</button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Execute o SQL abaixo no <b>SQL Editor</b> do projeto para criar/atualizar tabelas, funções, triggers e policies.
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             <a href={sqlEditorUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
               <ExternalLink className="h-3.5 w-3.5" /> Abrir SQL Editor
             </a>
             <button type="button" onClick={copyAll} disabled={!sql} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted disabled:opacity-50">
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado" : "Copiar SQL completo"}
+              {copied ? "Copiado" : "Copiar SQL de correção"}
             </button>
             <a href="/setup.sql" download="setup.sql" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
               <Download className="h-3.5 w-3.5" /> Baixar setup.sql
