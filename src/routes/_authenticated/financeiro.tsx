@@ -11,6 +11,7 @@ import {
   usePatrimonio, useUpsertPatrimonio, useDeletePatrimonio,
   useContas, useUpsertConta, useDeleteConta,
   useUpsertDespesa,
+  useFaturamentos,
 } from "@/lib/queries";
 import { toast } from "sonner";
 
@@ -54,8 +55,9 @@ function Fluxo() {
   const { data: pedidos = [] } = usePedidos();
   const { data: despesas = [] } = useDespesas();
   const { data: caixa } = useCaixaAtual();
+  const { data: faturamentos = [] } = useFaturamentos();
   const [range, setRange] = useState<7 | 15 | 30 | 60 | 90>(30);
-  const { entradas, saidas, dias } = useMemo(() => {
+  const { entradas, saidas, dias, fatTotal } = useMemo(() => {
     const now = new Date();
     const start = new Date(now); start.setDate(now.getDate() - (range - 1)); start.setHours(0, 0, 0, 0);
     const arr: { dia: string; entradas: number; saidas: number }[] = [];
@@ -72,18 +74,22 @@ function Fluxo() {
       totalIn += e; totalOut += s;
       arr.push({ dia: d.toLocaleDateString("pt-BR", { day: "2-digit" }), entradas: e, saidas: s });
     }
-    return { entradas: totalIn, saidas: totalOut, dias: arr };
-  }, [pedidos, despesas, range]);
+    const fatTotal = faturamentos
+      .filter((f: any) => new Date(f.created_at) >= start)
+      .reduce((s: number, f: any) => s + Number(f.total ?? 0), 0);
+    return { entradas: totalIn, saidas: totalOut, dias: arr, fatTotal };
+  }, [pedidos, despesas, range, faturamentos]);
   const caixaTotal = caixa
     ? Number(caixa.valor_inicial) + (caixa.movimentos ?? []).reduce(
         (s: number, m: any) => s + (m.tipo === "suprimento" || m.tipo === "venda" ? Number(m.valor) : -Number(m.valor)), 0)
     : 0;
   return (
     <div>
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard label="Entradas" value={formatBRL(entradas)} icon={TrendingUp} accent="success" />
         <KpiCard label="Saídas" value={formatBRL(saidas)} icon={TrendingDown} accent="warning" />
         <KpiCard label="Saldo líquido" value={formatBRL(entradas - saidas)} icon={CircleDollarSign} accent="primary" />
+        <KpiCard label="Faturamento" value={formatBRL(fatTotal)} icon={CircleDollarSign} accent="info" />
         <KpiCard label="Caixa" value={caixa ? formatBRL(caixaTotal) : "Fechado"} icon={Wallet} accent="info" />
       </div>
       <SectionCard
