@@ -29,12 +29,14 @@
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.app_role AS ENUM (
     'admin',
     'gerente',
     'operador',
     'vendedor'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
@@ -43,12 +45,14 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.caixa_mov_tipo AS ENUM (
     'sangria',
     'suprimento',
     'venda',
     'despesa'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
@@ -57,10 +61,12 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.caixa_status AS ENUM (
     'aberto',
     'fechado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
@@ -69,12 +75,14 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.conta_status AS ENUM (
     'pendente',
     'pago',
     'atrasado',
     'cancelado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
@@ -83,10 +91,12 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.conta_tipo AS ENUM (
     'pagar',
     'receber'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
@@ -95,12 +105,14 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.estoque_mov_tipo AS ENUM (
     'entrada',
     'saida',
     'ajuste',
     'perda'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
@@ -109,11 +121,13 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.nfe_status AS ENUM (
     'importado',
     'conferindo',
     'confirmado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
@@ -122,6 +136,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.pagamento_tipo AS ENUM (
     'pix',
     'credito',
@@ -133,6 +148,7 @@ DO $idem$ BEGIN
     'cheque'
 );
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
@@ -140,12 +156,14 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.pedido_origem AS ENUM (
     'balcao',
     'pdv',
     'vendedor',
     'delivery'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
@@ -154,6 +172,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.pedido_status AS ENUM (
     'pendente',
     'autorizado',
@@ -165,285 +184,16 @@ DO $idem$ BEGIN
     'encerrado'
 );
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
---
--- Name: apply_estoque_from_item(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.apply_estoque_from_item() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_status text;
-  v_tipo text;
-  v_qtd_un numeric;
-  v_tem_nf boolean;
-BEGIN
-  IF TG_OP = 'INSERT' THEN
-    SELECT status::text, COALESCE(tipo_operacao,'saida')
-      INTO v_status, v_tipo
-      FROM public.pedidos WHERE id = NEW.pedido_id;
-    IF v_status = 'cancelado' THEN RETURN NEW; END IF;
-    v_qtd_un := COALESCE(NEW.qtd,0) * COALESCE(NEW.qtd_un_por_embalagem,1);
-
-    IF v_tipo = 'entrada' THEN
-      SELECT COALESCE(tem_nota_fiscal,false) INTO v_tem_nf FROM public.produtos WHERE id = NEW.produto_id;
-      UPDATE public.produtos
-         SET estoque = estoque + v_qtd_un,
-             estoque_fiscal = estoque_fiscal + CASE WHEN v_tem_nf THEN v_qtd_un ELSE 0 END,
-             updated_at = now()
-       WHERE id = NEW.produto_id;
-      INSERT INTO public.estoque_movimentos (produto_id, tipo, qtd, motivo, referencia_id)
-        VALUES (NEW.produto_id, 'entrada', v_qtd_un, 'Entrada de pedido', NEW.pedido_id);
-    ELSE
-      UPDATE public.produtos
-         SET estoque = estoque - v_qtd_un,
-             estoque_fiscal = GREATEST(0, estoque_fiscal - v_qtd_un),
-             updated_at = now()
-       WHERE id = NEW.produto_id;
-      INSERT INTO public.estoque_movimentos (produto_id, tipo, qtd, motivo, referencia_id)
-        VALUES (NEW.produto_id, 'saida', v_qtd_un, 'Pedido', NEW.pedido_id);
-    END IF;
-    RETURN NEW;
-
-  ELSIF TG_OP = 'DELETE' THEN
-    SELECT status::text, COALESCE(tipo_operacao,'saida')
-      INTO v_status, v_tipo
-      FROM public.pedidos WHERE id = OLD.pedido_id;
-    IF v_status = 'cancelado' THEN RETURN OLD; END IF;
-    v_qtd_un := COALESCE(OLD.qtd,0) * COALESCE(OLD.qtd_un_por_embalagem,1);
-
-    IF v_tipo = 'entrada' THEN
-      SELECT COALESCE(tem_nota_fiscal,false) INTO v_tem_nf FROM public.produtos WHERE id = OLD.produto_id;
-      UPDATE public.produtos
-         SET estoque = estoque - v_qtd_un,
-             estoque_fiscal = GREATEST(0, estoque_fiscal - CASE WHEN v_tem_nf THEN v_qtd_un ELSE 0 END),
-             updated_at = now()
-       WHERE id = OLD.produto_id;
-      INSERT INTO public.estoque_movimentos (produto_id, tipo, qtd, motivo, referencia_id)
-        VALUES (OLD.produto_id, 'saida', v_qtd_un, 'Estorno entrada', OLD.pedido_id);
-    ELSE
-      UPDATE public.produtos
-         SET estoque = estoque + v_qtd_un, updated_at = now()
-       WHERE id = OLD.produto_id;
-      INSERT INTO public.estoque_movimentos (produto_id, tipo, qtd, motivo, referencia_id)
-        VALUES (OLD.produto_id, 'entrada', v_qtd_un, 'Estorno pedido', OLD.pedido_id);
-    END IF;
-    RETURN OLD;
-  END IF;
-  RETURN NULL;
-END;
-$$;
 
 
---
--- Name: guard_pedido_faturado(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.guard_pedido_faturado() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-BEGIN
-  IF OLD.faturado = true AND NEW.faturado = false THEN
-    IF NOT public.has_role(auth.uid(), 'admin') THEN
-      RAISE EXCEPTION 'Pedido faturado não pode ser revertido';
-    END IF;
-  END IF;
-  IF NEW.faturado = true AND (OLD.faturado IS DISTINCT FROM true) THEN
-    NEW.faturado_em := COALESCE(NEW.faturado_em, now());
-  END IF;
-  RETURN NEW;
-END;
-$$;
 
 
---
--- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.handle_new_user() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-BEGIN
-  INSERT INTO public.profiles (id, nome, email)
-  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'nome', split_part(NEW.email,'@',1)), NEW.email);
-  -- Default role: operador
-  INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'operador') ON CONFLICT DO NOTHING;
-  RETURN NEW;
-END; $$;
 
 
---
--- Name: handle_pedido_cancelamento(); Type: FUNCTION; Schema: public; Owner: -
---
 
-CREATE FUNCTION public.handle_pedido_cancelamento() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  r record;
-  v_qtd_un numeric;
-BEGIN
-  IF NEW.status::text = 'cancelado' AND OLD.status::text <> 'cancelado' THEN
-    FOR r IN SELECT produto_id, qtd, qtd_un_por_embalagem FROM public.pedido_itens WHERE pedido_id = NEW.id LOOP
-      v_qtd_un := COALESCE(r.qtd, 0) * COALESCE(r.qtd_un_por_embalagem, 1);
-      UPDATE public.produtos SET estoque = estoque + v_qtd_un, updated_at = now() WHERE id = r.produto_id;
-      INSERT INTO public.estoque_movimentos (produto_id, tipo, qtd, motivo, referencia_id)
-        VALUES (r.produto_id, 'entrada', v_qtd_un, 'Cancelamento pedido', NEW.id);
-    END LOOP;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-
---
--- Name: has_role(uuid, public.app_role); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.has_role(_user_id uuid, _role public.app_role) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role=_role) $$;
-
-
---
--- Name: is_staff(uuid); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.is_staff(_user_id uuid) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role IN ('admin','gerente','operador')) $$;
-
-
---
--- Name: notify_estoque_change(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.notify_estoque_change() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_min numeric := COALESCE(NEW.estoque_minimo, 0);
-BEGIN
-  IF NEW.estoque <= 0 AND COALESCE(OLD.estoque, 0) > 0 THEN
-    INSERT INTO public.notificacoes (tipo, severidade, titulo, mensagem, payload, dedupe_key)
-    VALUES (
-      'estoque_zerado', 'critico',
-      'Produto em ruptura',
-      NEW.nome || ' está com estoque zerado.',
-      jsonb_build_object('produto_id', NEW.id, 'nome', NEW.nome),
-      'estoque_zerado:' || NEW.id::text
-    )
-    ON CONFLICT (dedupe_key) WHERE dedupe_key IS NOT NULL AND lida_em IS NULL DO NOTHING;
-  ELSIF v_min > 0 AND NEW.estoque > 0 AND NEW.estoque < v_min
-        AND (OLD.estoque IS NULL OR OLD.estoque >= v_min) THEN
-    INSERT INTO public.notificacoes (tipo, severidade, titulo, mensagem, payload, dedupe_key)
-    VALUES (
-      'estoque_baixo', 'aviso',
-      'Estoque baixo',
-      NEW.nome || ' abaixo do mínimo (' || NEW.estoque || ' / ' || v_min || ').',
-      jsonb_build_object('produto_id', NEW.id, 'nome', NEW.nome),
-      'estoque_baixo:' || NEW.id::text
-    )
-    ON CONFLICT (dedupe_key) WHERE dedupe_key IS NOT NULL AND lida_em IS NULL DO NOTHING;
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-
---
--- Name: notify_pedido_event(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.notify_pedido_event() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $_$
-BEGIN
-  IF TG_OP = 'INSERT' THEN
-    INSERT INTO public.notificacoes (tipo, severidade, titulo, mensagem, payload)
-    VALUES (
-      'pedido_novo', 'info',
-      'Novo pedido ' || NEW.numero,
-      'Total R$ ' || COALESCE(NEW.total, 0)::text,
-      jsonb_build_object('pedido_id', NEW.id, 'numero', NEW.numero)
-    );
-  ELSIF TG_OP = 'UPDATE' AND NEW.status::text = 'cancelado' AND OLD.status::text <> 'cancelado' THEN
-    INSERT INTO public.notificacoes (tipo, severidade, titulo, mensagem, payload)
-    VALUES (
-      'pedido_cancelado', 'aviso',
-      'Pedido ' || NEW.numero || ' cancelado',
-      'Estoque foi estornado.',
-      jsonb_build_object('pedido_id', NEW.id, 'numero', NEW.numero)
-    );
-  END IF;
-  RETURN NEW;
-END;
-$_$;
-
-
---
--- Name: recalc_pedido_pagamentos(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.recalc_pedido_pagamentos() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-DECLARE
-  v_pedido_id uuid;
-  v_total numeric;
-  v_pago  numeric;
-BEGIN
-  v_pedido_id := COALESCE(NEW.pedido_id, OLD.pedido_id);
-  SELECT COALESCE(SUM(valor), 0) INTO v_pago
-    FROM public.pedido_pagamentos WHERE pedido_id = v_pedido_id;
-  SELECT total INTO v_total FROM public.pedidos WHERE id = v_pedido_id;
-  UPDATE public.pedidos
-     SET total_pago = v_pago,
-         restante   = GREATEST(0, COALESCE(v_total, 0) - v_pago),
-         updated_at = now()
-   WHERE id = v_pedido_id;
-  RETURN NULL;
-END;
-$$;
-
-
---
--- Name: recalc_pedido_restante(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.recalc_pedido_restante() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public'
-    AS $$
-BEGIN
-  IF NEW.total IS DISTINCT FROM OLD.total THEN
-    NEW.restante := GREATEST(0, COALESCE(NEW.total, 0) - COALESCE(NEW.total_pago, 0));
-  END IF;
-  RETURN NEW;
-END;
-$$;
-
-
---
--- Name: touch_updated_at(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.touch_updated_at() RETURNS trigger
-    LANGUAGE plpgsql
-    SET search_path TO 'public'
-    AS $$
-BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
 
 
 
@@ -1024,6 +774,322 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
 );
 
 
+
+-- === LYNECLOUD: COLUNAS FALTANTES (INÍCIO) ===
+-- Completa bancos já existentes/parciais antes de criar constraints, funções, triggers e policies.
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS nome text;
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS prefix text;
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS key_hash text;
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS created_by uuid;
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS ativo boolean DEFAULT true;
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS last_used_at timestamp with time zone;
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS scopes text[] DEFAULT ARRAY['read'::text, 'write'::text];
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS expires_at timestamp with time zone;
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS usage_count integer DEFAULT 0;
+ALTER TABLE public.api_keys ADD COLUMN IF NOT EXISTS descricao text;
+ALTER TABLE public.app_logs ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.app_logs ADD COLUMN IF NOT EXISTS categoria text;
+ALTER TABLE public.app_logs ADD COLUMN IF NOT EXISTS mensagem text;
+ALTER TABLE public.app_logs ADD COLUMN IF NOT EXISTS payload jsonb;
+ALTER TABLE public.app_logs ADD COLUMN IF NOT EXISTS user_id uuid;
+ALTER TABLE public.app_logs ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.app_logs ADD COLUMN IF NOT EXISTS ip text;
+ALTER TABLE public.app_logs ADD COLUMN IF NOT EXISTS user_agent text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS id text DEFAULT 'main'::text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS pdv_ativo boolean DEFAULT true;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS metodos_pagamento jsonb DEFAULT '{"pix": true, "debito": true, "credito": true, "dinheiro": true, "nota_promissoria": true}'::jsonb;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS pix_qr_url text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS pix_chave text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS empresa_razao text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS empresa_cnpj text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS empresa_telefone text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS empresa_email text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS empresa_endereco text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS updated_by uuid;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS empresa_ie text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS nfeio_api_key text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS nfeio_company_id text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS nfeio_environment text DEFAULT 'Development'::text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS nfeio_webhook_secret text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS nfeio_webhook_events jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS nfeio_validated_at timestamp with time zone;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS nfe_provider text DEFAULT 'nfeio'::text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS brasilnfe_user_token text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS brasilnfe_company_token text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS brasilnfe_environment text DEFAULT 'Production'::text;
+ALTER TABLE public.app_settings ADD COLUMN IF NOT EXISTS brasilnfe_validated_at timestamp with time zone;
+ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS user_id uuid;
+ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS acao text;
+ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS entidade text;
+ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS entidade_id uuid;
+ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS payload jsonb;
+ALTER TABLE public.audit_logs ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.backups_log ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.backups_log ADD COLUMN IF NOT EXISTS user_id uuid;
+ALTER TABLE public.backups_log ADD COLUMN IF NOT EXISTS status text DEFAULT 'success'::text;
+ALTER TABLE public.backups_log ADD COLUMN IF NOT EXISTS tamanho_bytes bigint;
+ALTER TABLE public.backups_log ADD COLUMN IF NOT EXISTS storage_path text;
+ALTER TABLE public.backups_log ADD COLUMN IF NOT EXISTS observacao text;
+ALTER TABLE public.backups_log ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.caixa_movimentos ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.caixa_movimentos ADD COLUMN IF NOT EXISTS sessao_id uuid;
+ALTER TABLE public.caixa_movimentos ADD COLUMN IF NOT EXISTS tipo public.caixa_mov_tipo;
+ALTER TABLE public.caixa_movimentos ADD COLUMN IF NOT EXISTS valor numeric(12,2);
+ALTER TABLE public.caixa_movimentos ADD COLUMN IF NOT EXISTS descricao text;
+ALTER TABLE public.caixa_movimentos ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.caixa_sessoes ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.caixa_sessoes ADD COLUMN IF NOT EXISTS operador_id uuid;
+ALTER TABLE public.caixa_sessoes ADD COLUMN IF NOT EXISTS abertura timestamp with time zone DEFAULT now();
+ALTER TABLE public.caixa_sessoes ADD COLUMN IF NOT EXISTS fechamento timestamp with time zone;
+ALTER TABLE public.caixa_sessoes ADD COLUMN IF NOT EXISTS valor_inicial numeric(12,2) DEFAULT 0;
+ALTER TABLE public.caixa_sessoes ADD COLUMN IF NOT EXISTS valor_final numeric(12,2);
+ALTER TABLE public.caixa_sessoes ADD COLUMN IF NOT EXISTS status public.caixa_status DEFAULT 'aberto'::public.caixa_status;
+ALTER TABLE public.caixa_sessoes ADD COLUMN IF NOT EXISTS observacoes text;
+ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS nome text;
+ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS cor text DEFAULT '#3b82f6'::text;
+ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS icone text;
+ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS ativo boolean DEFAULT true;
+ALTER TABLE public.categorias ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS nome text;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS telefone text;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS email text;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS documento text;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS endereco jsonb;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS limite_credito numeric(12,2) DEFAULT 0;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS saldo_fiado numeric(12,2) DEFAULT 0;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS observacoes text;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS nome_fantasia text;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS ie text;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS tipo_pessoa text DEFAULT 'PF'::text;
+ALTER TABLE public.clientes ADD COLUMN IF NOT EXISTS vendedor_id uuid;
+ALTER TABLE public.contas ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.contas ADD COLUMN IF NOT EXISTS tipo public.conta_tipo;
+ALTER TABLE public.contas ADD COLUMN IF NOT EXISTS descricao text;
+ALTER TABLE public.contas ADD COLUMN IF NOT EXISTS valor numeric(12,2);
+ALTER TABLE public.contas ADD COLUMN IF NOT EXISTS vencimento date;
+ALTER TABLE public.contas ADD COLUMN IF NOT EXISTS status public.conta_status DEFAULT 'pendente'::public.conta_status;
+ALTER TABLE public.contas ADD COLUMN IF NOT EXISTS cliente_id uuid;
+ALTER TABLE public.contas ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.contas ADD COLUMN IF NOT EXISTS anexo_url text;
+ALTER TABLE public.contas ADD COLUMN IF NOT EXISTS categoria text;
+ALTER TABLE public.despesas ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.despesas ADD COLUMN IF NOT EXISTS descricao text;
+ALTER TABLE public.despesas ADD COLUMN IF NOT EXISTS valor numeric(12,2);
+ALTER TABLE public.despesas ADD COLUMN IF NOT EXISTS categoria text;
+ALTER TABLE public.despesas ADD COLUMN IF NOT EXISTS vencimento date;
+ALTER TABLE public.despesas ADD COLUMN IF NOT EXISTS pago boolean DEFAULT false;
+ALTER TABLE public.despesas ADD COLUMN IF NOT EXISTS pago_em timestamp with time zone;
+ALTER TABLE public.despesas ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.estoque_movimentos ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.estoque_movimentos ADD COLUMN IF NOT EXISTS produto_id uuid;
+ALTER TABLE public.estoque_movimentos ADD COLUMN IF NOT EXISTS tipo public.estoque_mov_tipo;
+ALTER TABLE public.estoque_movimentos ADD COLUMN IF NOT EXISTS qtd numeric(12,3);
+ALTER TABLE public.estoque_movimentos ADD COLUMN IF NOT EXISTS motivo text;
+ALTER TABLE public.estoque_movimentos ADD COLUMN IF NOT EXISTS referencia_id uuid;
+ALTER TABLE public.estoque_movimentos ADD COLUMN IF NOT EXISTS user_id uuid;
+ALTER TABLE public.estoque_movimentos ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.faturamento_pedidos ADD COLUMN IF NOT EXISTS faturamento_id uuid;
+ALTER TABLE public.faturamento_pedidos ADD COLUMN IF NOT EXISTS pedido_id uuid;
+ALTER TABLE public.faturamentos ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.faturamentos ADD COLUMN IF NOT EXISTS numero text DEFAULT ('F'::text || lpad((nextval('public.faturamentos_numero_seq'::regclass))::text, 5, '0'::text));
+ALTER TABLE public.faturamentos ADD COLUMN IF NOT EXISTS total numeric DEFAULT 0;
+ALTER TABLE public.faturamentos ADD COLUMN IF NOT EXISTS created_by uuid;
+ALTER TABLE public.faturamentos ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.fidelidade_pontos ADD COLUMN IF NOT EXISTS cliente_id uuid;
+ALTER TABLE public.fidelidade_pontos ADD COLUMN IF NOT EXISTS pontos integer DEFAULT 0;
+ALTER TABLE public.fidelidade_pontos ADD COLUMN IF NOT EXISTS atualizado_em timestamp with time zone DEFAULT now();
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS razao_social text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS nome_fantasia text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS cpf_cnpj text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS ie text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS cidade text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS estado text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS telefone text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS email text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS observacoes text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS ativo boolean DEFAULT true;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS cep text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS endereco text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS numero text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS bairro text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS complemento text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS contato_nome text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS whatsapp text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS site text;
+ALTER TABLE public.fornecedores ADD COLUMN IF NOT EXISTS condicoes text;
+ALTER TABLE public.gtin_global ADD COLUMN IF NOT EXISTS gtin text;
+ALTER TABLE public.gtin_global ADD COLUMN IF NOT EXISTS nome text;
+ALTER TABLE public.gtin_global ADD COLUMN IF NOT EXISTS marca text;
+ALTER TABLE public.gtin_global ADD COLUMN IF NOT EXISTS categoria_sugerida text;
+ALTER TABLE public.gtin_global ADD COLUMN IF NOT EXISTS unidade text;
+ALTER TABLE public.gtin_global ADD COLUMN IF NOT EXISTS imagem_url text;
+ALTER TABLE public.gtin_global ADD COLUMN IF NOT EXISTS fonte text;
+ALTER TABLE public.gtin_global ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.nfe_entradas ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.nfe_entradas ADD COLUMN IF NOT EXISTS numero text;
+ALTER TABLE public.nfe_entradas ADD COLUMN IF NOT EXISTS chave text;
+ALTER TABLE public.nfe_entradas ADD COLUMN IF NOT EXISTS fornecedor text;
+ALTER TABLE public.nfe_entradas ADD COLUMN IF NOT EXISTS valor_total numeric(12,2) DEFAULT 0;
+ALTER TABLE public.nfe_entradas ADD COLUMN IF NOT EXISTS xml_url text;
+ALTER TABLE public.nfe_entradas ADD COLUMN IF NOT EXISTS status public.nfe_status DEFAULT 'importado'::public.nfe_status;
+ALTER TABLE public.nfe_entradas ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.nfe_entradas ADD COLUMN IF NOT EXISTS confirmado_em timestamp with time zone;
+ALTER TABLE public.nfe_entradas ADD COLUMN IF NOT EXISTS confirmado_por uuid;
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS nfe_id uuid;
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS codigo_xml text;
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS ean_xml text;
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS descricao_xml text;
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS qtd numeric(12,3) DEFAULT 0;
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS valor_unit numeric(12,4) DEFAULT 0;
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS valor_total numeric(12,2) DEFAULT 0;
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS unidade text;
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS produto_id uuid;
+ALTER TABLE public.nfe_itens ADD COLUMN IF NOT EXISTS divergencia text;
+ALTER TABLE public.nfe_webhook_events ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.nfe_webhook_events ADD COLUMN IF NOT EXISTS evento text;
+ALTER TABLE public.nfe_webhook_events ADD COLUMN IF NOT EXISTS payload jsonb;
+ALTER TABLE public.nfe_webhook_events ADD COLUMN IF NOT EXISTS pedido_id uuid;
+ALTER TABLE public.nfe_webhook_events ADD COLUMN IF NOT EXISTS recebido_em timestamp with time zone DEFAULT now();
+ALTER TABLE public.notificacoes ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.notificacoes ADD COLUMN IF NOT EXISTS user_id uuid;
+ALTER TABLE public.notificacoes ADD COLUMN IF NOT EXISTS tipo text;
+ALTER TABLE public.notificacoes ADD COLUMN IF NOT EXISTS severidade text DEFAULT 'info'::text;
+ALTER TABLE public.notificacoes ADD COLUMN IF NOT EXISTS titulo text;
+ALTER TABLE public.notificacoes ADD COLUMN IF NOT EXISTS mensagem text;
+ALTER TABLE public.notificacoes ADD COLUMN IF NOT EXISTS payload jsonb;
+ALTER TABLE public.notificacoes ADD COLUMN IF NOT EXISTS dedupe_key text;
+ALTER TABLE public.notificacoes ADD COLUMN IF NOT EXISTS lida_em timestamp with time zone;
+ALTER TABLE public.notificacoes ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.patrimonio ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.patrimonio ADD COLUMN IF NOT EXISTS nome text;
+ALTER TABLE public.patrimonio ADD COLUMN IF NOT EXISTS categoria text;
+ALTER TABLE public.patrimonio ADD COLUMN IF NOT EXISTS valor numeric DEFAULT 0;
+ALTER TABLE public.patrimonio ADD COLUMN IF NOT EXISTS data_aquisicao date;
+ALTER TABLE public.patrimonio ADD COLUMN IF NOT EXISTS observacoes text;
+ALTER TABLE public.patrimonio ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.patrimonio ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.pedido_itens ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.pedido_itens ADD COLUMN IF NOT EXISTS pedido_id uuid;
+ALTER TABLE public.pedido_itens ADD COLUMN IF NOT EXISTS produto_id uuid;
+ALTER TABLE public.pedido_itens ADD COLUMN IF NOT EXISTS qtd numeric(12,3) DEFAULT 1;
+ALTER TABLE public.pedido_itens ADD COLUMN IF NOT EXISTS preco_unit numeric(12,2) DEFAULT 0;
+ALTER TABLE public.pedido_itens ADD COLUMN IF NOT EXISTS desconto numeric(12,2) DEFAULT 0;
+ALTER TABLE public.pedido_itens ADD COLUMN IF NOT EXISTS total numeric(12,2) DEFAULT 0;
+ALTER TABLE public.pedido_itens ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.pedido_itens ADD COLUMN IF NOT EXISTS embalagem_tipo text DEFAULT 'UN'::text;
+ALTER TABLE public.pedido_itens ADD COLUMN IF NOT EXISTS qtd_un_por_embalagem numeric DEFAULT 1;
+ALTER TABLE public.pedido_pagamentos ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.pedido_pagamentos ADD COLUMN IF NOT EXISTS pedido_id uuid;
+ALTER TABLE public.pedido_pagamentos ADD COLUMN IF NOT EXISTS forma text;
+ALTER TABLE public.pedido_pagamentos ADD COLUMN IF NOT EXISTS condicao text;
+ALTER TABLE public.pedido_pagamentos ADD COLUMN IF NOT EXISTS vencimento date;
+ALTER TABLE public.pedido_pagamentos ADD COLUMN IF NOT EXISTS valor numeric DEFAULT 0;
+ALTER TABLE public.pedido_pagamentos ADD COLUMN IF NOT EXISTS observacao text;
+ALTER TABLE public.pedido_pagamentos ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.pedido_pagamentos ADD COLUMN IF NOT EXISTS created_by uuid;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS numero text DEFAULT ('P'::text || lpad((nextval('public.pedidos_numero_seq'::regclass))::text, 5, '0'::text));
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS cliente_id uuid;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS vendedor_id uuid;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS operador_id uuid;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS origem public.pedido_origem DEFAULT 'balcao'::public.pedido_origem;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS status public.pedido_status DEFAULT 'pendente'::public.pedido_status;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS pagamento public.pagamento_tipo;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS subtotal numeric(12,2) DEFAULT 0;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS desconto numeric(12,2) DEFAULT 0;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS total numeric(12,2) DEFAULT 0;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS observacoes text;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS total_pago numeric DEFAULT 0;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS restante numeric DEFAULT 0;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS nfe_numero text;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS nfe_chave text;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS nfe_emitida_em timestamp with time zone;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS faturado_em timestamp with time zone;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS nfe_id text;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS nfe_pdf_url text;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS nfe_xml_url text;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS nfe_status text;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS tipo_operacao text DEFAULT 'saida'::text;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS fornecedor_id uuid;
+ALTER TABLE public.pedidos ADD COLUMN IF NOT EXISTS faturado boolean DEFAULT false;
+DO $idem$ BEGIN
+  ALTER TABLE public.pedidos ADD CONSTRAINT pedidos_tipo_operacao_chk CHECK ((tipo_operacao = ANY (ARRAY['saida'::text, 'entrada'::text])));
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
+ALTER TABLE public.product_images ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.product_images ADD COLUMN IF NOT EXISTS nome_chave text;
+ALTER TABLE public.product_images ADD COLUMN IF NOT EXISTS nome text;
+ALTER TABLE public.product_images ADD COLUMN IF NOT EXISTS url text;
+ALTER TABLE public.product_images ADD COLUMN IF NOT EXISTS created_by uuid;
+ALTER TABLE public.product_images ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS sku text;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS codigo_barras text;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS nome text;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS categoria_id uuid;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS preco_venda numeric(12,2) DEFAULT 0;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS preco_custo numeric(12,2) DEFAULT 0;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS estoque numeric(12,3) DEFAULT 0;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS estoque_minimo numeric(12,3) DEFAULT 0;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS unidade text DEFAULT 'UN'::text;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS imagem_url text;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS ativo boolean DEFAULT true;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS embalagens jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS peso_kg numeric DEFAULT 0;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS fornecedor_id uuid;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS tem_nota_fiscal boolean DEFAULT false;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS unidade_embalagem text DEFAULT 'UN'::text;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS fator_unidade numeric DEFAULT 1;
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS estoque_fiscal numeric DEFAULT 0;
+DO $idem$ BEGIN
+  ALTER TABLE public.produtos ADD CONSTRAINT produtos_fator_unidade_positivo CHECK ((fator_unidade >= (1)::numeric));
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS id uuid;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS nome text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS telefone text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS tenant_slug text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS onboarding_completed_at timestamp with time zone;
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS slug text;
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS nome text;
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS supabase_url text;
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS supabase_anon_key text;
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS user_id uuid;
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS created_by uuid;
+ALTER TABLE public.tenants ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+DO $idem$ BEGIN
+  ALTER TABLE public.tenants ADD CONSTRAINT tenants_slug_check CHECK ((((length(slug) >= 4) AND (length(slug) <= 12)) AND (slug ~ '^[a-z0-9]+$'::text)));
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
+ALTER TABLE public.user_permissions ADD COLUMN IF NOT EXISTS user_id uuid;
+ALTER TABLE public.user_permissions ADD COLUMN IF NOT EXISTS menu text;
+ALTER TABLE public.user_permissions ADD COLUMN IF NOT EXISTS allowed boolean DEFAULT true;
+ALTER TABLE public.user_permissions ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT now();
+ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS id uuid DEFAULT gen_random_uuid();
+ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS user_id uuid;
+ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS role public.app_role;
+ALTER TABLE public.user_roles ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT now();
+-- === LYNECLOUD: COLUNAS FALTANTES (FIM) ===
+
+
 --
 -- Name: api_keys api_keys_key_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
@@ -1453,6 +1519,299 @@ CREATE UNIQUE INDEX IF NOT EXISTS profiles_tenant_slug_uidx ON public.profiles U
 --
 
 CREATE UNIQUE INDEX IF NOT EXISTS ux_produtos_codigo_barras ON public.produtos USING btree (codigo_barras) WHERE (codigo_barras IS NOT NULL);
+
+
+
+--
+-- Name: apply_estoque_from_item(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.apply_estoque_from_item() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_status text;
+  v_tipo text;
+  v_qtd_un numeric;
+  v_tem_nf boolean;
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    SELECT status::text, COALESCE(tipo_operacao,'saida')
+      INTO v_status, v_tipo
+      FROM public.pedidos WHERE id = NEW.pedido_id;
+    IF v_status = 'cancelado' THEN RETURN NEW; END IF;
+    v_qtd_un := COALESCE(NEW.qtd,0) * COALESCE(NEW.qtd_un_por_embalagem,1);
+
+    IF v_tipo = 'entrada' THEN
+      SELECT COALESCE(tem_nota_fiscal,false) INTO v_tem_nf FROM public.produtos WHERE id = NEW.produto_id;
+      UPDATE public.produtos
+         SET estoque = estoque + v_qtd_un,
+             estoque_fiscal = estoque_fiscal + CASE WHEN v_tem_nf THEN v_qtd_un ELSE 0 END,
+             updated_at = now()
+       WHERE id = NEW.produto_id;
+      INSERT INTO public.estoque_movimentos (produto_id, tipo, qtd, motivo, referencia_id)
+        VALUES (NEW.produto_id, 'entrada', v_qtd_un, 'Entrada de pedido', NEW.pedido_id);
+    ELSE
+      UPDATE public.produtos
+         SET estoque = estoque - v_qtd_un,
+             estoque_fiscal = GREATEST(0, estoque_fiscal - v_qtd_un),
+             updated_at = now()
+       WHERE id = NEW.produto_id;
+      INSERT INTO public.estoque_movimentos (produto_id, tipo, qtd, motivo, referencia_id)
+        VALUES (NEW.produto_id, 'saida', v_qtd_un, 'Pedido', NEW.pedido_id);
+    END IF;
+    RETURN NEW;
+
+  ELSIF TG_OP = 'DELETE' THEN
+    SELECT status::text, COALESCE(tipo_operacao,'saida')
+      INTO v_status, v_tipo
+      FROM public.pedidos WHERE id = OLD.pedido_id;
+    IF v_status = 'cancelado' THEN RETURN OLD; END IF;
+    v_qtd_un := COALESCE(OLD.qtd,0) * COALESCE(OLD.qtd_un_por_embalagem,1);
+
+    IF v_tipo = 'entrada' THEN
+      SELECT COALESCE(tem_nota_fiscal,false) INTO v_tem_nf FROM public.produtos WHERE id = OLD.produto_id;
+      UPDATE public.produtos
+         SET estoque = estoque - v_qtd_un,
+             estoque_fiscal = GREATEST(0, estoque_fiscal - CASE WHEN v_tem_nf THEN v_qtd_un ELSE 0 END),
+             updated_at = now()
+       WHERE id = OLD.produto_id;
+      INSERT INTO public.estoque_movimentos (produto_id, tipo, qtd, motivo, referencia_id)
+        VALUES (OLD.produto_id, 'saida', v_qtd_un, 'Estorno entrada', OLD.pedido_id);
+    ELSE
+      UPDATE public.produtos
+         SET estoque = estoque + v_qtd_un, updated_at = now()
+       WHERE id = OLD.produto_id;
+      INSERT INTO public.estoque_movimentos (produto_id, tipo, qtd, motivo, referencia_id)
+        VALUES (OLD.produto_id, 'entrada', v_qtd_un, 'Estorno pedido', OLD.pedido_id);
+    END IF;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+
+
+--
+-- Name: guard_pedido_faturado(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.guard_pedido_faturado() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  IF OLD.faturado = true AND NEW.faturado = false THEN
+    IF NOT public.has_role(auth.uid(), 'admin') THEN
+      RAISE EXCEPTION 'Pedido faturado não pode ser revertido';
+    END IF;
+  END IF;
+  IF NEW.faturado = true AND (OLD.faturado IS DISTINCT FROM true) THEN
+    NEW.faturado_em := COALESCE(NEW.faturado_em, now());
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+
+--
+-- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.handle_new_user() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  INSERT INTO public.profiles (id, nome, email)
+  VALUES (NEW.id, COALESCE(NEW.raw_user_meta_data->>'nome', split_part(NEW.email,'@',1)), NEW.email);
+  -- Default role: operador
+  INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'operador') ON CONFLICT DO NOTHING;
+  RETURN NEW;
+END; $$;
+
+
+
+--
+-- Name: handle_pedido_cancelamento(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.handle_pedido_cancelamento() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  r record;
+  v_qtd_un numeric;
+BEGIN
+  IF NEW.status::text = 'cancelado' AND OLD.status::text <> 'cancelado' THEN
+    FOR r IN SELECT produto_id, qtd, qtd_un_por_embalagem FROM public.pedido_itens WHERE pedido_id = NEW.id LOOP
+      v_qtd_un := COALESCE(r.qtd, 0) * COALESCE(r.qtd_un_por_embalagem, 1);
+      UPDATE public.produtos SET estoque = estoque + v_qtd_un, updated_at = now() WHERE id = r.produto_id;
+      INSERT INTO public.estoque_movimentos (produto_id, tipo, qtd, motivo, referencia_id)
+        VALUES (r.produto_id, 'entrada', v_qtd_un, 'Cancelamento pedido', NEW.id);
+    END LOOP;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+
+--
+-- Name: has_role(uuid, public.app_role); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role public.app_role) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role=_role) $$;
+
+
+
+--
+-- Name: is_staff(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.is_staff(_user_id uuid) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role IN ('admin','gerente','operador')) $$;
+
+
+
+--
+-- Name: notify_estoque_change(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.notify_estoque_change() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_min numeric := COALESCE(NEW.estoque_minimo, 0);
+BEGIN
+  IF NEW.estoque <= 0 AND COALESCE(OLD.estoque, 0) > 0 THEN
+    INSERT INTO public.notificacoes (tipo, severidade, titulo, mensagem, payload, dedupe_key)
+    VALUES (
+      'estoque_zerado', 'critico',
+      'Produto em ruptura',
+      NEW.nome || ' está com estoque zerado.',
+      jsonb_build_object('produto_id', NEW.id, 'nome', NEW.nome),
+      'estoque_zerado:' || NEW.id::text
+    )
+    ON CONFLICT (dedupe_key) WHERE dedupe_key IS NOT NULL AND lida_em IS NULL DO NOTHING;
+  ELSIF v_min > 0 AND NEW.estoque > 0 AND NEW.estoque < v_min
+        AND (OLD.estoque IS NULL OR OLD.estoque >= v_min) THEN
+    INSERT INTO public.notificacoes (tipo, severidade, titulo, mensagem, payload, dedupe_key)
+    VALUES (
+      'estoque_baixo', 'aviso',
+      'Estoque baixo',
+      NEW.nome || ' abaixo do mínimo (' || NEW.estoque || ' / ' || v_min || ').',
+      jsonb_build_object('produto_id', NEW.id, 'nome', NEW.nome),
+      'estoque_baixo:' || NEW.id::text
+    )
+    ON CONFLICT (dedupe_key) WHERE dedupe_key IS NOT NULL AND lida_em IS NULL DO NOTHING;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+
+--
+-- Name: notify_pedido_event(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.notify_pedido_event() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $_$
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    INSERT INTO public.notificacoes (tipo, severidade, titulo, mensagem, payload)
+    VALUES (
+      'pedido_novo', 'info',
+      'Novo pedido ' || NEW.numero,
+      'Total R$ ' || COALESCE(NEW.total, 0)::text,
+      jsonb_build_object('pedido_id', NEW.id, 'numero', NEW.numero)
+    );
+  ELSIF TG_OP = 'UPDATE' AND NEW.status::text = 'cancelado' AND OLD.status::text <> 'cancelado' THEN
+    INSERT INTO public.notificacoes (tipo, severidade, titulo, mensagem, payload)
+    VALUES (
+      'pedido_cancelado', 'aviso',
+      'Pedido ' || NEW.numero || ' cancelado',
+      'Estoque foi estornado.',
+      jsonb_build_object('pedido_id', NEW.id, 'numero', NEW.numero)
+    );
+  END IF;
+  RETURN NEW;
+END;
+$_$;
+
+
+
+--
+-- Name: recalc_pedido_pagamentos(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.recalc_pedido_pagamentos() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+DECLARE
+  v_pedido_id uuid;
+  v_total numeric;
+  v_pago  numeric;
+BEGIN
+  v_pedido_id := COALESCE(NEW.pedido_id, OLD.pedido_id);
+  SELECT COALESCE(SUM(valor), 0) INTO v_pago
+    FROM public.pedido_pagamentos WHERE pedido_id = v_pedido_id;
+  SELECT total INTO v_total FROM public.pedidos WHERE id = v_pedido_id;
+  UPDATE public.pedidos
+     SET total_pago = v_pago,
+         restante   = GREATEST(0, COALESCE(v_total, 0) - v_pago),
+         updated_at = now()
+   WHERE id = v_pedido_id;
+  RETURN NULL;
+END;
+$$;
+
+
+
+--
+-- Name: recalc_pedido_restante(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.recalc_pedido_restante() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+BEGIN
+  IF NEW.total IS DISTINCT FROM OLD.total THEN
+    NEW.restante := GREATEST(0, COALESCE(NEW.total, 0) - COALESCE(NEW.total_pago, 0));
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+
+--
+-- Name: touch_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE FUNCTION public.touch_updated_at() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
+
+
+
 
 
 --
