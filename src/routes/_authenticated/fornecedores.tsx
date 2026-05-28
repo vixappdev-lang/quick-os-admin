@@ -18,8 +18,7 @@ const EMPTY = {
   cep: "", endereco: "", numero: "", bairro: "", complemento: "",
   cidade: "", estado: "",
   telefone: "", whatsapp: "", email: "", site: "", contato_nome: "",
-  prazo_pagamento: "", condicoes: "",
-  banco: "", agencia: "", conta: "", pix: "",
+  condicoes: "",
   observacoes: "",
 };
 
@@ -141,16 +140,7 @@ function FornecedoresPage() {
                 <Field label="E-mail"><input type="email" value={panel.data.email ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, email: e.target.value } })} className={inp} /></Field>
                 <Field label="Site"><input value={panel.data.site ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, site: e.target.value } })} className={inp} /></Field>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Prazo de pagamento"><input placeholder="Ex.: 30/60/90" value={panel.data.prazo_pagamento ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, prazo_pagamento: e.target.value } })} className={inp} /></Field>
-                <Field label="Condições"><input placeholder="Ex.: à vista 5%" value={panel.data.condicoes ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, condicoes: e.target.value } })} className={inp} /></Field>
-              </div>
-              <div className="grid grid-cols-[1fr_90px_120px] gap-3">
-                <Field label="Banco"><input value={panel.data.banco ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, banco: e.target.value } })} className={inp} /></Field>
-                <Field label="Agência"><input value={panel.data.agencia ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, agencia: e.target.value } })} className={inp} /></Field>
-                <Field label="Conta"><input value={panel.data.conta ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, conta: e.target.value } })} className={inp} /></Field>
-              </div>
-              <Field label="Pix"><input value={panel.data.pix ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, pix: e.target.value } })} className={inp} /></Field>
+              <Field label="Condições"><input placeholder="Ex.: à vista 5%" value={panel.data.condicoes ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, condicoes: e.target.value } })} className={inp} /></Field>
               <Field label="Observações"><textarea value={panel.data.observacoes ?? ""} onChange={(e) => setPanel({ ...panel, data: { ...panel.data, observacoes: e.target.value } })} className={inp + " min-h-[80px] py-2"} /></Field>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setPanel({ open: false, data: null })} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>

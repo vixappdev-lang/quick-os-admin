@@ -8,6 +8,7 @@ export function SectionCard({
   children,
   className,
   padded = true,
+  allowOverflow = false,
 }: {
   title?: string;
   description?: string;
@@ -15,9 +16,10 @@ export function SectionCard({
   children: ReactNode;
   className?: string;
   padded?: boolean;
+  allowOverflow?: boolean;
 }) {
   return (
-    <section className={cn("overflow-hidden rounded-xl border bg-card shadow-subtle", className)}>
+    <section className={cn(allowOverflow ? "overflow-visible" : "overflow-hidden", "rounded-xl border bg-card shadow-subtle", className)}>
       {(title || actions) && (
         <header className="flex items-center justify-between border-b px-5 py-3.5">
           <div>

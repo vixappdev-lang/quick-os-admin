@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowRightLeft, Banknote, CalendarDays, CreditCard, FileText, Hash, Loader2, Minus, PackagePlus, Plus, QrCode, Receipt, ReceiptText, Save, Search, Trash2, User as UserIcon, UserPlus, WalletCards, X } from "lucide-react";
+import { ArrowRightLeft, Banknote, CalendarDays, CreditCard, FileText, Hash, Loader2, Minus, PackagePlus, Plus, QrCode, Receipt, ReceiptText, Save, Search, Trash2, Truck, User as UserIcon, UserPlus, WalletCards, X } from "lucide-react";
 import { SectionCard } from "@/components/section-card";
 import {
   useAppSettings,
   useProdutos,
   useClientes,
   useCreatePedido,
+  useFornecedores,
   type Produto,
   type Cliente,
 } from "@/lib/queries";
@@ -60,6 +61,7 @@ function numericValue(value: string, fallback = 0) {
 export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel, initialClienteId = null }: Props) {
   const { data: produtos = [] } = useProdutos();
   const { data: clientes = [] } = useClientes();
+  const { data: fornecedores = [] } = useFornecedores();
   const { data: settings } = useAppSettings();
   const createPedido = useCreatePedido();
   const navigate = useNavigate();
@@ -70,9 +72,12 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
     return d.toISOString().slice(0, 16);
   });
   const [tipo, setTipo] = useState<"pedido" | "orcamento">("pedido");
+  const [tipoOperacao, setTipoOperacao] = useState<"saida" | "entrada">("saida");
   const [operacao, setOperacao] = useState<"venda" | "devolucao">("venda");
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [buscaCliente, setBuscaCliente] = useState("");
+  const [fornecedor, setFornecedor] = useState<any | null>(null);
+  const [buscaFornecedor, setBuscaFornecedor] = useState("");
   const [pagamento, setPagamento] = useState<PaymentMethod>("pix");
   const [valorRecebido, setValorRecebido] = useState("");
   const [observacoes, setObservacoes] = useState("");
@@ -109,6 +114,14 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
       .filter((c) => c.nome.toLowerCase().includes(t) || c.telefone?.includes(t) || c.documento?.includes(t))
       .slice(0, 8);
   }, [clientes, buscaCliente]);
+
+  const fornFilt = useMemo(() => {
+    if (buscaFornecedor.length < 2) return [];
+    const t = buscaFornecedor.toLowerCase();
+    return fornecedores
+      .filter((f: any) => String(f.razao_social ?? "").toLowerCase().includes(t) || String(f.nome_fantasia ?? "").toLowerCase().includes(t) || String(f.cpf_cnpj ?? "").includes(t))
+      .slice(0, 8);
+  }, [fornecedores, buscaFornecedor]);
 
   const prodFilt = useMemo(() => {
     if (buscaProd.length < 1) return [];
@@ -170,11 +183,14 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
 
   const salvar = async () => {
     if (itens.length === 0) return toast.error("Adicione ao menos um item");
+    if (tipoOperacao === "entrada" && !fornecedor) return toast.error("Selecione um fornecedor para entrada");
     if (pagamento === "nota_promissoria" && !cliente) return toast.error("Selecione um cliente para nota promissória");
     if (pagamento === "dinheiro" && valorRecebido && toCents(recebido) < totalCents) return toast.error("Valor recebido menor que o total");
     try {
       const pedido = await createPedido.mutateAsync({
-        cliente_id: cliente?.id ?? null,
+        cliente_id: tipoOperacao === "entrada" ? null : (cliente?.id ?? null),
+        fornecedor_id: tipoOperacao === "entrada" ? (fornecedor?.id ?? null) : null,
+        tipo_operacao: tipoOperacao,
         vendedor_id: vendedorId ?? null,
         origem,
         pagamento,
@@ -185,6 +201,8 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
           qtd: i.qtd,
           preco_unit: money(i.preco),
           desconto: money(i.desconto),
+          qtd_un_por_embalagem: Number((i.produto as any).fator_unidade) || 1,
+          embalagem_tipo: (i.produto as any).unidade_embalagem ?? i.produto.unidade ?? "UN",
         })),
       });
       toast.success(`Pedido ${pedido.numero} criado`);
@@ -217,7 +235,7 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
         </div>
       </div>
 
-      <SectionCard title="Dados principais" description="Cliente e tipo da operação" className="shadow-elegant">
+      <SectionCard title="Dados principais" description="Cliente e tipo da operação" className="shadow-elegant" allowOverflow>
         {/* Campos meta-administrativos colapsados no mobile */}
         <details className="md:hidden -mt-1 mb-3 rounded-md border bg-muted/30 px-3 py-2 text-xs">
           <summary className="cursor-pointer select-none font-medium text-muted-foreground">Mais detalhes (orçamento, data, tipo, operação)</summary>
@@ -252,7 +270,12 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
           </Field>
 
           <Field label="Empresa" className="col-span-2 lg:col-span-4"><input disabled value={settings?.empresa_razao ?? "Empresa principal"} className={inputBase} /></Field>
-          <Field label="Entrada/Saída" className="lg:col-span-2"><select className={inputBase} defaultValue="saida"><option value="saida">Saída</option><option value="entrada">Entrada</option></select></Field>
+          <Field label="Entrada/Saída" className="lg:col-span-2">
+            <select value={tipoOperacao} onChange={(e) => setTipoOperacao(e.target.value as any)} className={inputBase}>
+              <option value="saida">Saída</option>
+              <option value="entrada">Entrada</option>
+            </select>
+          </Field>
           <Field label="Operação" className="lg:col-span-3">
             <select value={operacao} onChange={(e) => setOperacao(e.target.value as any)} className={inputBase}>
               <option value="venda">Venda (Saída)</option>
@@ -264,8 +287,42 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
 
         {/* Cliente (visível em todos os tamanhos) */}
         <div className="mt-3 md:mt-3">
-          <Field label="Cliente / Fornecedor">
-            {cliente ? (
+          <Field label={tipoOperacao === "entrada" ? "Fornecedor" : "Cliente"}>
+            {tipoOperacao === "entrada" ? (
+              fornecedor ? (
+                <div className="flex flex-col gap-2 rounded-lg border bg-muted/25 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex min-w-0 items-center gap-2 text-sm">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><Truck className="h-4 w-4" /></div>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{fornecedor.razao_social}</p>
+                      <p className="truncate text-xs text-muted-foreground">{[fornecedor.nome_fantasia, fornecedor.cpf_cnpj].filter(Boolean).join(" · ") || "Fornecedor selecionado"}</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => setFornecedor(null)} className="inline-flex h-8 items-center justify-center rounded-md px-2 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-destructive"><X className="mr-1 h-3.5 w-3.5" /> Trocar</button>
+                </div>
+              ) : (
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    value={buscaFornecedor}
+                    onChange={(e) => setBuscaFornecedor(e.target.value)}
+                    placeholder="Pesquise fornecedor por razão social, fantasia ou CNPJ..."
+                    className={`${inputBase} pl-9`}
+                  />
+                  {buscaFornecedor.length >= 2 && (
+                    <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover shadow-lg">
+                      {fornFilt.length === 0 && <p className="px-3 py-3 text-xs text-muted-foreground">Nenhum fornecedor encontrado</p>}
+                      {fornFilt.map((f: any) => (
+                        <button key={f.id} type="button" onClick={() => { setFornecedor(f); setBuscaFornecedor(""); }} className="block w-full px-3 py-2 text-left text-sm hover:bg-muted">
+                          <p className="font-medium">{f.razao_social}</p>
+                          <p className="text-[11px] text-muted-foreground">{[f.nome_fantasia, f.cpf_cnpj].filter(Boolean).join(" · ") || "Sem documento"}</p>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            ) : cliente ? (
               <div className="flex flex-col gap-2 rounded-lg border bg-muted/25 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-2 text-sm">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary"><UserIcon className="h-4 w-4" /></div>
@@ -287,7 +344,7 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
                     className={`${inputBase} pl-9`}
                   />
                   {buscaCliente.length >= 2 && (
-                    <div className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover shadow-lg">
+                    <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-md border bg-popover shadow-lg">
                       {clientesFilt.length === 0 && <p className="px-3 py-3 text-xs text-muted-foreground">Nenhum cliente encontrado</p>}
                       {clientesFilt.map((c) => (
                         <button key={c.id} type="button" onClick={() => { setCliente(c); setBuscaCliente(""); }} className="block w-full px-3 py-2 text-left text-sm hover:bg-muted">
@@ -309,7 +366,7 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
-          <SectionCard title="Produtos" description="Busque por nome, SKU ou código de barras e adicione os itens" padded={false}>
+          <SectionCard title="Produtos" description="Busque por nome, SKU ou código de barras e adicione os itens" padded={false} allowOverflow>
             <div className="border-b p-4">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -323,7 +380,7 @@ export function PedidoForm({ vendedorId, origem = "balcao", onCreated, onCancel,
                   className="h-11 w-full rounded-lg border border-input bg-background pl-10 pr-3 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
                 {showProdList && buscaProd && (
-                  <div className="absolute z-30 mt-1 max-h-80 w-full overflow-auto rounded-md border bg-popover shadow-lg">
+                  <div className="absolute z-50 mt-1 max-h-80 w-full overflow-auto rounded-md border bg-popover shadow-lg">
                     {prodFilt.length === 0 && <p className="px-3 py-4 text-center text-xs text-muted-foreground">Nenhum produto encontrado</p>}
                     {prodFilt.map((p) => (
                       <button key={p.id} type="button" onClick={() => addProduto(p)} className="flex w-full items-center gap-3 px-3 py-2.5 text-left hover:bg-muted">
