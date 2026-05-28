@@ -30,12 +30,14 @@
 
 DO $idem$ BEGIN
   DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.app_role AS ENUM (
     'admin',
     'gerente',
     'operador',
     'vendedor'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
@@ -46,12 +48,14 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 DO $idem$ BEGIN
   DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.caixa_mov_tipo AS ENUM (
     'sangria',
     'suprimento',
     'venda',
     'despesa'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
@@ -62,10 +66,12 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 DO $idem$ BEGIN
   DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.caixa_status AS ENUM (
     'aberto',
     'fechado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
@@ -76,12 +82,14 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 DO $idem$ BEGIN
   DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.conta_status AS ENUM (
     'pendente',
     'pago',
     'atrasado',
     'cancelado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
@@ -92,10 +100,12 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 DO $idem$ BEGIN
   DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.conta_tipo AS ENUM (
     'pagar',
     'receber'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
@@ -106,12 +116,14 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 DO $idem$ BEGIN
   DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.estoque_mov_tipo AS ENUM (
     'entrada',
     'saida',
     'ajuste',
     'perda'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
@@ -122,11 +134,13 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 DO $idem$ BEGIN
   DO $idem$ BEGIN
+  DO $idem$ BEGIN
   CREATE TYPE public.nfe_status AS ENUM (
     'importado',
     'conferindo',
     'confirmado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
@@ -136,6 +150,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   DO $idem$ BEGIN
   CREATE TYPE public.pagamento_tipo AS ENUM (
     'pix',
@@ -149,6 +164,7 @@ DO $idem$ BEGIN
 );
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
@@ -156,6 +172,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   DO $idem$ BEGIN
   CREATE TYPE public.pedido_origem AS ENUM (
     'balcao',
@@ -165,6 +182,7 @@ DO $idem$ BEGIN
 );
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
@@ -172,6 +190,7 @@ EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 --
 
 DO $idem$ BEGIN
+  DO $idem$ BEGIN
   DO $idem$ BEGIN
   CREATE TYPE public.pedido_status AS ENUM (
     'pendente',
@@ -183,6 +202,7 @@ DO $idem$ BEGIN
     'cancelado',
     'encerrado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
@@ -772,6 +792,10 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
     role public.app_role NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
+
+
+
+
 
 
 
@@ -1522,6 +1546,18 @@ CREATE UNIQUE INDEX IF NOT EXISTS ux_produtos_codigo_barras ON public.produtos U
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 --
 -- Name: apply_estoque_from_item(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1594,6 +1630,7 @@ $$;
 
 
 
+
 --
 -- Name: guard_pedido_faturado(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1617,6 +1654,7 @@ $$;
 
 
 
+
 --
 -- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1632,6 +1670,7 @@ BEGIN
   INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'operador') ON CONFLICT DO NOTHING;
   RETURN NEW;
 END; $$;
+
 
 
 
@@ -1661,6 +1700,7 @@ $$;
 
 
 
+
 --
 -- Name: has_role(uuid, public.app_role); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1672,6 +1712,7 @@ CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role public.app_role)
 
 
 
+
 --
 -- Name: is_staff(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1680,6 +1721,7 @@ CREATE OR REPLACE FUNCTION public.is_staff(_user_id uuid) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role IN ('admin','gerente','operador')) $$;
+
 
 
 
@@ -1722,6 +1764,7 @@ $$;
 
 
 
+
 --
 -- Name: notify_pedido_event(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1754,6 +1797,7 @@ $_$;
 
 
 
+
 --
 -- Name: recalc_pedido_pagamentos(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1782,6 +1826,7 @@ $$;
 
 
 
+
 --
 -- Name: recalc_pedido_restante(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1800,6 +1845,7 @@ $$;
 
 
 
+
 --
 -- Name: touch_updated_at(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1809,6 +1855,7 @@ CREATE OR REPLACE FUNCTION public.touch_updated_at() RETURNS trigger
     SET search_path TO 'public'
     AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
+
 
 
 
@@ -2777,7 +2824,6 @@ GRANT USAGE ON SCHEMA public TO postgres;
 GRANT USAGE ON SCHEMA public TO anon;
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT USAGE ON SCHEMA public TO service_role;
-GRANT USAGE ON SCHEMA public TO sandbox_exec;
 
 
 --
@@ -2786,7 +2832,6 @@ GRANT USAGE ON SCHEMA public TO sandbox_exec;
 
 REVOKE ALL ON FUNCTION public.apply_estoque_from_item() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.apply_estoque_from_item() TO service_role;
-GRANT ALL ON FUNCTION public.apply_estoque_from_item() TO sandbox_exec;
 
 
 --
@@ -2796,7 +2841,6 @@ GRANT ALL ON FUNCTION public.apply_estoque_from_item() TO sandbox_exec;
 GRANT ALL ON FUNCTION public.guard_pedido_faturado() TO anon;
 GRANT ALL ON FUNCTION public.guard_pedido_faturado() TO authenticated;
 GRANT ALL ON FUNCTION public.guard_pedido_faturado() TO service_role;
-GRANT ALL ON FUNCTION public.guard_pedido_faturado() TO sandbox_exec;
 
 
 --
@@ -2805,7 +2849,6 @@ GRANT ALL ON FUNCTION public.guard_pedido_faturado() TO sandbox_exec;
 
 REVOKE ALL ON FUNCTION public.handle_new_user() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.handle_new_user() TO service_role;
-GRANT ALL ON FUNCTION public.handle_new_user() TO sandbox_exec;
 
 
 --
@@ -2814,7 +2857,6 @@ GRANT ALL ON FUNCTION public.handle_new_user() TO sandbox_exec;
 
 REVOKE ALL ON FUNCTION public.handle_pedido_cancelamento() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.handle_pedido_cancelamento() TO service_role;
-GRANT ALL ON FUNCTION public.handle_pedido_cancelamento() TO sandbox_exec;
 
 
 --
@@ -2824,7 +2866,6 @@ GRANT ALL ON FUNCTION public.handle_pedido_cancelamento() TO sandbox_exec;
 REVOKE ALL ON FUNCTION public.has_role(_user_id uuid, _role public.app_role) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.has_role(_user_id uuid, _role public.app_role) TO authenticated;
 GRANT ALL ON FUNCTION public.has_role(_user_id uuid, _role public.app_role) TO service_role;
-GRANT ALL ON FUNCTION public.has_role(_user_id uuid, _role public.app_role) TO sandbox_exec;
 
 
 --
@@ -2834,7 +2875,6 @@ GRANT ALL ON FUNCTION public.has_role(_user_id uuid, _role public.app_role) TO s
 REVOKE ALL ON FUNCTION public.is_staff(_user_id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.is_staff(_user_id uuid) TO authenticated;
 GRANT ALL ON FUNCTION public.is_staff(_user_id uuid) TO service_role;
-GRANT ALL ON FUNCTION public.is_staff(_user_id uuid) TO sandbox_exec;
 
 
 --
@@ -2843,7 +2883,6 @@ GRANT ALL ON FUNCTION public.is_staff(_user_id uuid) TO sandbox_exec;
 
 REVOKE ALL ON FUNCTION public.notify_estoque_change() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.notify_estoque_change() TO service_role;
-GRANT ALL ON FUNCTION public.notify_estoque_change() TO sandbox_exec;
 
 
 --
@@ -2852,7 +2891,6 @@ GRANT ALL ON FUNCTION public.notify_estoque_change() TO sandbox_exec;
 
 REVOKE ALL ON FUNCTION public.notify_pedido_event() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.notify_pedido_event() TO service_role;
-GRANT ALL ON FUNCTION public.notify_pedido_event() TO sandbox_exec;
 
 
 --
@@ -2861,7 +2899,6 @@ GRANT ALL ON FUNCTION public.notify_pedido_event() TO sandbox_exec;
 
 REVOKE ALL ON FUNCTION public.recalc_pedido_pagamentos() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.recalc_pedido_pagamentos() TO service_role;
-GRANT ALL ON FUNCTION public.recalc_pedido_pagamentos() TO sandbox_exec;
 
 
 --
@@ -2870,7 +2907,6 @@ GRANT ALL ON FUNCTION public.recalc_pedido_pagamentos() TO sandbox_exec;
 
 REVOKE ALL ON FUNCTION public.recalc_pedido_restante() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.recalc_pedido_restante() TO service_role;
-GRANT ALL ON FUNCTION public.recalc_pedido_restante() TO sandbox_exec;
 
 
 --
@@ -2880,7 +2916,6 @@ GRANT ALL ON FUNCTION public.recalc_pedido_restante() TO sandbox_exec;
 GRANT ALL ON FUNCTION public.touch_updated_at() TO anon;
 GRANT ALL ON FUNCTION public.touch_updated_at() TO authenticated;
 GRANT ALL ON FUNCTION public.touch_updated_at() TO service_role;
-GRANT ALL ON FUNCTION public.touch_updated_at() TO sandbox_exec;
 
 
 --
@@ -2890,7 +2925,6 @@ GRANT ALL ON FUNCTION public.touch_updated_at() TO sandbox_exec;
 GRANT ALL ON TABLE public.api_keys TO anon;
 GRANT ALL ON TABLE public.api_keys TO authenticated;
 GRANT ALL ON TABLE public.api_keys TO service_role;
-GRANT SELECT,INSERT ON TABLE public.api_keys TO sandbox_exec;
 
 
 --
@@ -2900,7 +2934,6 @@ GRANT SELECT,INSERT ON TABLE public.api_keys TO sandbox_exec;
 GRANT ALL ON TABLE public.app_logs TO anon;
 GRANT ALL ON TABLE public.app_logs TO authenticated;
 GRANT ALL ON TABLE public.app_logs TO service_role;
-GRANT SELECT,INSERT ON TABLE public.app_logs TO sandbox_exec;
 
 
 --
@@ -2910,7 +2943,6 @@ GRANT SELECT,INSERT ON TABLE public.app_logs TO sandbox_exec;
 GRANT ALL ON TABLE public.app_settings TO anon;
 GRANT ALL ON TABLE public.app_settings TO authenticated;
 GRANT ALL ON TABLE public.app_settings TO service_role;
-GRANT SELECT,INSERT ON TABLE public.app_settings TO sandbox_exec;
 
 
 --
@@ -2920,7 +2952,6 @@ GRANT SELECT,INSERT ON TABLE public.app_settings TO sandbox_exec;
 GRANT ALL ON TABLE public.audit_logs TO anon;
 GRANT ALL ON TABLE public.audit_logs TO authenticated;
 GRANT ALL ON TABLE public.audit_logs TO service_role;
-GRANT SELECT,INSERT ON TABLE public.audit_logs TO sandbox_exec;
 
 
 --
@@ -2930,7 +2961,6 @@ GRANT SELECT,INSERT ON TABLE public.audit_logs TO sandbox_exec;
 GRANT ALL ON TABLE public.backups_log TO anon;
 GRANT ALL ON TABLE public.backups_log TO authenticated;
 GRANT ALL ON TABLE public.backups_log TO service_role;
-GRANT SELECT,INSERT ON TABLE public.backups_log TO sandbox_exec;
 
 
 --
@@ -2940,7 +2970,6 @@ GRANT SELECT,INSERT ON TABLE public.backups_log TO sandbox_exec;
 GRANT ALL ON TABLE public.caixa_movimentos TO anon;
 GRANT ALL ON TABLE public.caixa_movimentos TO authenticated;
 GRANT ALL ON TABLE public.caixa_movimentos TO service_role;
-GRANT SELECT,INSERT ON TABLE public.caixa_movimentos TO sandbox_exec;
 
 
 --
@@ -2950,7 +2979,6 @@ GRANT SELECT,INSERT ON TABLE public.caixa_movimentos TO sandbox_exec;
 GRANT ALL ON TABLE public.caixa_sessoes TO anon;
 GRANT ALL ON TABLE public.caixa_sessoes TO authenticated;
 GRANT ALL ON TABLE public.caixa_sessoes TO service_role;
-GRANT SELECT,INSERT ON TABLE public.caixa_sessoes TO sandbox_exec;
 
 
 --
@@ -2960,7 +2988,6 @@ GRANT SELECT,INSERT ON TABLE public.caixa_sessoes TO sandbox_exec;
 GRANT ALL ON TABLE public.categorias TO anon;
 GRANT ALL ON TABLE public.categorias TO authenticated;
 GRANT ALL ON TABLE public.categorias TO service_role;
-GRANT SELECT,INSERT ON TABLE public.categorias TO sandbox_exec;
 
 
 --
@@ -2970,7 +2997,6 @@ GRANT SELECT,INSERT ON TABLE public.categorias TO sandbox_exec;
 GRANT ALL ON TABLE public.clientes TO anon;
 GRANT ALL ON TABLE public.clientes TO authenticated;
 GRANT ALL ON TABLE public.clientes TO service_role;
-GRANT SELECT,INSERT ON TABLE public.clientes TO sandbox_exec;
 
 
 --
@@ -2980,7 +3006,6 @@ GRANT SELECT,INSERT ON TABLE public.clientes TO sandbox_exec;
 GRANT ALL ON TABLE public.contas TO anon;
 GRANT ALL ON TABLE public.contas TO authenticated;
 GRANT ALL ON TABLE public.contas TO service_role;
-GRANT SELECT,INSERT ON TABLE public.contas TO sandbox_exec;
 
 
 --
@@ -2990,7 +3015,6 @@ GRANT SELECT,INSERT ON TABLE public.contas TO sandbox_exec;
 GRANT ALL ON TABLE public.despesas TO anon;
 GRANT ALL ON TABLE public.despesas TO authenticated;
 GRANT ALL ON TABLE public.despesas TO service_role;
-GRANT SELECT,INSERT ON TABLE public.despesas TO sandbox_exec;
 
 
 --
@@ -3000,7 +3024,6 @@ GRANT SELECT,INSERT ON TABLE public.despesas TO sandbox_exec;
 GRANT ALL ON TABLE public.estoque_movimentos TO anon;
 GRANT ALL ON TABLE public.estoque_movimentos TO authenticated;
 GRANT ALL ON TABLE public.estoque_movimentos TO service_role;
-GRANT SELECT,INSERT ON TABLE public.estoque_movimentos TO sandbox_exec;
 
 
 --
@@ -3010,7 +3033,6 @@ GRANT SELECT,INSERT ON TABLE public.estoque_movimentos TO sandbox_exec;
 GRANT ALL ON TABLE public.faturamento_pedidos TO anon;
 GRANT ALL ON TABLE public.faturamento_pedidos TO authenticated;
 GRANT ALL ON TABLE public.faturamento_pedidos TO service_role;
-GRANT SELECT,INSERT ON TABLE public.faturamento_pedidos TO sandbox_exec;
 
 
 --
@@ -3020,7 +3042,6 @@ GRANT SELECT,INSERT ON TABLE public.faturamento_pedidos TO sandbox_exec;
 GRANT ALL ON SEQUENCE public.faturamentos_numero_seq TO anon;
 GRANT ALL ON SEQUENCE public.faturamentos_numero_seq TO authenticated;
 GRANT ALL ON SEQUENCE public.faturamentos_numero_seq TO service_role;
-GRANT SELECT,USAGE ON SEQUENCE public.faturamentos_numero_seq TO sandbox_exec;
 
 
 --
@@ -3030,7 +3051,6 @@ GRANT SELECT,USAGE ON SEQUENCE public.faturamentos_numero_seq TO sandbox_exec;
 GRANT ALL ON TABLE public.faturamentos TO anon;
 GRANT ALL ON TABLE public.faturamentos TO authenticated;
 GRANT ALL ON TABLE public.faturamentos TO service_role;
-GRANT SELECT,INSERT ON TABLE public.faturamentos TO sandbox_exec;
 
 
 --
@@ -3040,7 +3060,6 @@ GRANT SELECT,INSERT ON TABLE public.faturamentos TO sandbox_exec;
 GRANT ALL ON TABLE public.fidelidade_pontos TO anon;
 GRANT ALL ON TABLE public.fidelidade_pontos TO authenticated;
 GRANT ALL ON TABLE public.fidelidade_pontos TO service_role;
-GRANT SELECT,INSERT ON TABLE public.fidelidade_pontos TO sandbox_exec;
 
 
 --
@@ -3050,7 +3069,6 @@ GRANT SELECT,INSERT ON TABLE public.fidelidade_pontos TO sandbox_exec;
 GRANT ALL ON TABLE public.fornecedores TO anon;
 GRANT ALL ON TABLE public.fornecedores TO authenticated;
 GRANT ALL ON TABLE public.fornecedores TO service_role;
-GRANT SELECT,INSERT ON TABLE public.fornecedores TO sandbox_exec;
 
 
 --
@@ -3060,7 +3078,6 @@ GRANT SELECT,INSERT ON TABLE public.fornecedores TO sandbox_exec;
 GRANT ALL ON TABLE public.gtin_global TO anon;
 GRANT ALL ON TABLE public.gtin_global TO authenticated;
 GRANT ALL ON TABLE public.gtin_global TO service_role;
-GRANT SELECT,INSERT ON TABLE public.gtin_global TO sandbox_exec;
 
 
 --
@@ -3070,7 +3087,6 @@ GRANT SELECT,INSERT ON TABLE public.gtin_global TO sandbox_exec;
 GRANT ALL ON TABLE public.nfe_entradas TO anon;
 GRANT ALL ON TABLE public.nfe_entradas TO authenticated;
 GRANT ALL ON TABLE public.nfe_entradas TO service_role;
-GRANT SELECT,INSERT ON TABLE public.nfe_entradas TO sandbox_exec;
 
 
 --
@@ -3080,7 +3096,6 @@ GRANT SELECT,INSERT ON TABLE public.nfe_entradas TO sandbox_exec;
 GRANT ALL ON TABLE public.nfe_itens TO anon;
 GRANT ALL ON TABLE public.nfe_itens TO authenticated;
 GRANT ALL ON TABLE public.nfe_itens TO service_role;
-GRANT SELECT,INSERT ON TABLE public.nfe_itens TO sandbox_exec;
 
 
 --
@@ -3090,7 +3105,6 @@ GRANT SELECT,INSERT ON TABLE public.nfe_itens TO sandbox_exec;
 GRANT ALL ON TABLE public.nfe_webhook_events TO anon;
 GRANT ALL ON TABLE public.nfe_webhook_events TO authenticated;
 GRANT ALL ON TABLE public.nfe_webhook_events TO service_role;
-GRANT SELECT,INSERT ON TABLE public.nfe_webhook_events TO sandbox_exec;
 
 
 --
@@ -3100,7 +3114,6 @@ GRANT SELECT,INSERT ON TABLE public.nfe_webhook_events TO sandbox_exec;
 GRANT ALL ON TABLE public.notificacoes TO anon;
 GRANT ALL ON TABLE public.notificacoes TO authenticated;
 GRANT ALL ON TABLE public.notificacoes TO service_role;
-GRANT SELECT,INSERT ON TABLE public.notificacoes TO sandbox_exec;
 
 
 --
@@ -3110,7 +3123,6 @@ GRANT SELECT,INSERT ON TABLE public.notificacoes TO sandbox_exec;
 GRANT ALL ON TABLE public.patrimonio TO anon;
 GRANT ALL ON TABLE public.patrimonio TO authenticated;
 GRANT ALL ON TABLE public.patrimonio TO service_role;
-GRANT SELECT,INSERT ON TABLE public.patrimonio TO sandbox_exec;
 
 
 --
@@ -3120,7 +3132,6 @@ GRANT SELECT,INSERT ON TABLE public.patrimonio TO sandbox_exec;
 GRANT ALL ON TABLE public.pedido_itens TO anon;
 GRANT ALL ON TABLE public.pedido_itens TO authenticated;
 GRANT ALL ON TABLE public.pedido_itens TO service_role;
-GRANT SELECT,INSERT ON TABLE public.pedido_itens TO sandbox_exec;
 
 
 --
@@ -3130,7 +3141,6 @@ GRANT SELECT,INSERT ON TABLE public.pedido_itens TO sandbox_exec;
 GRANT ALL ON TABLE public.pedido_pagamentos TO anon;
 GRANT ALL ON TABLE public.pedido_pagamentos TO authenticated;
 GRANT ALL ON TABLE public.pedido_pagamentos TO service_role;
-GRANT SELECT,INSERT ON TABLE public.pedido_pagamentos TO sandbox_exec;
 
 
 --
@@ -3140,7 +3150,6 @@ GRANT SELECT,INSERT ON TABLE public.pedido_pagamentos TO sandbox_exec;
 GRANT ALL ON SEQUENCE public.pedidos_numero_seq TO anon;
 GRANT ALL ON SEQUENCE public.pedidos_numero_seq TO authenticated;
 GRANT ALL ON SEQUENCE public.pedidos_numero_seq TO service_role;
-GRANT SELECT,USAGE ON SEQUENCE public.pedidos_numero_seq TO sandbox_exec;
 
 
 --
@@ -3150,7 +3159,6 @@ GRANT SELECT,USAGE ON SEQUENCE public.pedidos_numero_seq TO sandbox_exec;
 GRANT ALL ON TABLE public.pedidos TO anon;
 GRANT ALL ON TABLE public.pedidos TO authenticated;
 GRANT ALL ON TABLE public.pedidos TO service_role;
-GRANT SELECT,INSERT ON TABLE public.pedidos TO sandbox_exec;
 
 
 --
@@ -3160,7 +3168,6 @@ GRANT SELECT,INSERT ON TABLE public.pedidos TO sandbox_exec;
 GRANT ALL ON TABLE public.product_images TO anon;
 GRANT ALL ON TABLE public.product_images TO authenticated;
 GRANT ALL ON TABLE public.product_images TO service_role;
-GRANT SELECT,INSERT ON TABLE public.product_images TO sandbox_exec;
 
 
 --
@@ -3170,7 +3177,6 @@ GRANT SELECT,INSERT ON TABLE public.product_images TO sandbox_exec;
 GRANT ALL ON TABLE public.produtos TO anon;
 GRANT ALL ON TABLE public.produtos TO authenticated;
 GRANT ALL ON TABLE public.produtos TO service_role;
-GRANT SELECT,INSERT ON TABLE public.produtos TO sandbox_exec;
 
 
 --
@@ -3180,7 +3186,6 @@ GRANT SELECT,INSERT ON TABLE public.produtos TO sandbox_exec;
 GRANT ALL ON TABLE public.profiles TO anon;
 GRANT ALL ON TABLE public.profiles TO authenticated;
 GRANT ALL ON TABLE public.profiles TO service_role;
-GRANT SELECT,INSERT ON TABLE public.profiles TO sandbox_exec;
 
 
 --
@@ -3190,7 +3195,6 @@ GRANT SELECT,INSERT ON TABLE public.profiles TO sandbox_exec;
 GRANT ALL ON TABLE public.tenants TO anon;
 GRANT ALL ON TABLE public.tenants TO authenticated;
 GRANT ALL ON TABLE public.tenants TO service_role;
-GRANT SELECT,INSERT ON TABLE public.tenants TO sandbox_exec;
 
 
 --
@@ -3200,7 +3204,6 @@ GRANT SELECT,INSERT ON TABLE public.tenants TO sandbox_exec;
 GRANT ALL ON TABLE public.user_permissions TO anon;
 GRANT ALL ON TABLE public.user_permissions TO authenticated;
 GRANT ALL ON TABLE public.user_permissions TO service_role;
-GRANT SELECT,INSERT ON TABLE public.user_permissions TO sandbox_exec;
 
 
 --
@@ -3210,70 +3213,12 @@ GRANT SELECT,INSERT ON TABLE public.user_permissions TO sandbox_exec;
 GRANT ALL ON TABLE public.user_roles TO anon;
 GRANT ALL ON TABLE public.user_roles TO authenticated;
 GRANT ALL ON TABLE public.user_roles TO service_role;
-GRANT SELECT,INSERT ON TABLE public.user_roles TO sandbox_exec;
 
 
---
--- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: -
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sandbox_exec;
 
 
---
--- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: -
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON SEQUENCES TO service_role;
 
 
---
--- Name: DEFAULT PRIVILEGES FOR FUNCTIONS; Type: DEFAULT ACL; Schema: public; Owner: -
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO postgres;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO service_role;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON FUNCTIONS TO sandbox_exec;
-
-
---
--- Name: DEFAULT PRIVILEGES FOR FUNCTIONS; Type: DEFAULT ACL; Schema: public; Owner: -
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON FUNCTIONS TO postgres;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON FUNCTIONS TO authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON FUNCTIONS TO service_role;
-
-
---
--- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: -
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO postgres;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES TO service_role;
-ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT SELECT,INSERT ON TABLES TO sandbox_exec;
-
-
---
--- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: -
---
-
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON TABLES TO postgres;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON TABLES TO anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON TABLES TO authenticated;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public GRANT ALL ON TABLES TO service_role;
 
 
 --
