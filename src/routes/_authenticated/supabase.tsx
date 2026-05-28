@@ -186,7 +186,7 @@ function SupabasePage() {
 
         {/* Mobile cards */}
         <div className="md:hidden divide-y">
-          <MobileRow t={mainTenant} main onView={() => setViewTenant(mainTenant)} onTrack={() => setTrackTenant(mainTenant)} />
+          <MobileRow t={mainTenant} main onView={() => setViewTenant(mainTenant)} onTrack={() => setTrackTenant(mainTenant)} onSchema={() => setSchemaTenant(mainTenant)} />
           {tenants.map((t: any) => {
             const u = usuarios.find((x: any) => x.id === t.user_id);
             return (
