@@ -39,6 +39,7 @@ function SupabasePage() {
   const [schemaTenant, setSchemaTenant] = useState<any | null>(null);
   const [viewTenant, setViewTenant] = useState<any | null>(null);
   const [trackTenant, setTrackTenant] = useState<any | null>(null);
+  const [sqlCopied, setSqlCopied] = useState(false);
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
     onSuccess: () => {
@@ -54,6 +55,20 @@ function SupabasePage() {
 
   const mainUrl = (import.meta as any).env?.VITE_SUPABASE_URL ?? "";
   const mainProject = (import.meta as any).env?.VITE_SUPABASE_PROJECT_ID ?? "—";
+
+  const copySetupSql = async () => {
+    try {
+      const r = await fetch("/setup.sql");
+      const txt = await r.text();
+      await navigator.clipboard.writeText(txt);
+      setSqlCopied(true);
+      toast.success("SQL completo copiado. Cole no SQL Editor do Supabase do cliente.");
+      setTimeout(() => setSqlCopied(false), 1600);
+    } catch {
+      toast.error("Não foi possível copiar. Use o botão Baixar.");
+    }
+  };
+
   const mainTenant = {
     id: "__main__",
     slug: "principal",
@@ -70,11 +85,37 @@ function SupabasePage() {
         title="Supabase"
         description="Conecte clientes a bancos Supabase próprios usando um slug único."
         actions={
-          <button onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
-            <Plus className="h-3.5 w-3.5" /> Nova conexão
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={copySetupSql} title="Copiar setup.sql atualizado" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
+              {sqlCopied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
+              {sqlCopied ? "Copiado" : "Copiar SQL"}
+            </button>
+            <a href="/setup.sql" download="setup.sql" title="Baixar setup.sql" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
+              <Download className="h-3.5 w-3.5" /> Baixar SQL
+            </a>
+            <button onClick={() => setOpen(true)} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
+              <Plus className="h-3.5 w-3.5" /> Nova conexão
+            </button>
+          </div>
         }
       />
+
+      {/* Diagnóstico de ambiente — ajuda quando preview e produção apontam para bancos diferentes */}
+      <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
+        <p className="font-semibold text-amber-700 dark:text-amber-400">Ambiente atual deste painel</p>
+        <p className="mt-1 text-muted-foreground">
+          Project ref: <code className="rounded bg-amber-500/10 px-1.5 py-0.5 font-mono">{mainProject}</code>{" "}
+          • URL: <code className="rounded bg-amber-500/10 px-1.5 py-0.5 font-mono break-all">{mainUrl || "—"}</code>
+        </p>
+        <p className="mt-1.5 text-muted-foreground">
+          Se o <b>preview</b> e a <b>produção</b> (lynecloud.online) mostrarem <b>project refs diferentes</b>, eles estão conectados a bancos
+          distintos — por isso a conexão criada em um lado não aparece no outro. Para unificar, defina
+          <code className="mx-1 rounded bg-muted px-1 py-0.5 font-mono">VITE_SUPABASE_URL</code>,
+          <code className="mx-1 rounded bg-muted px-1 py-0.5 font-mono">VITE_SUPABASE_PUBLISHABLE_KEY</code> e
+          <code className="mx-1 rounded bg-muted px-1 py-0.5 font-mono">VITE_SUPABASE_PROJECT_ID</code> com os mesmos valores nas
+          variáveis de ambiente da Vercel (Production + Preview) e refaça o deploy.
+        </p>
+      </div>
 
       {/* Resumo */}
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
