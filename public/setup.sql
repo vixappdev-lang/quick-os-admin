@@ -18,10 +18,8 @@
 --
 
 
-
 --
 --
-
 
 
 --
@@ -741,31 +739,6 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
     role public.app_role NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
 );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 -- === LYNECLOUD: COLUNAS FALTANTES (INÍCIO) ===
@@ -1514,79 +1487,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS profiles_tenant_slug_uidx ON public.profiles U
 CREATE UNIQUE INDEX IF NOT EXISTS ux_produtos_codigo_barras ON public.produtos USING btree (codigo_barras) WHERE (codigo_barras IS NOT NULL);
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 --
 -- Name: apply_estoque_from_item(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1658,13 +1558,6 @@ END;
 $$;
 
 
-
-
-
-
-
-
-
 --
 -- Name: guard_pedido_faturado(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1687,13 +1580,6 @@ END;
 $$;
 
 
-
-
-
-
-
-
-
 --
 -- Name: handle_new_user(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1709,13 +1595,6 @@ BEGIN
   INSERT INTO public.user_roles (user_id, role) VALUES (NEW.id, 'operador') ON CONFLICT DO NOTHING;
   RETURN NEW;
 END; $$;
-
-
-
-
-
-
-
 
 
 --
@@ -1743,13 +1622,6 @@ END;
 $$;
 
 
-
-
-
-
-
-
-
 --
 -- Name: has_role(uuid, public.app_role); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1760,13 +1632,6 @@ CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role public.app_role)
     AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role=_role) $$;
 
 
-
-
-
-
-
-
-
 --
 -- Name: is_staff(uuid); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1775,13 +1640,6 @@ CREATE OR REPLACE FUNCTION public.is_staff(_user_id uuid) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     SET search_path TO 'public'
     AS $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id=_user_id AND role IN ('admin','gerente','operador')) $$;
-
-
-
-
-
-
-
 
 
 --
@@ -1822,13 +1680,6 @@ END;
 $$;
 
 
-
-
-
-
-
-
-
 --
 -- Name: notify_pedido_event(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1860,13 +1711,6 @@ END;
 $_$;
 
 
-
-
-
-
-
-
-
 --
 -- Name: recalc_pedido_pagamentos(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1894,13 +1738,6 @@ END;
 $$;
 
 
-
-
-
-
-
-
-
 --
 -- Name: recalc_pedido_restante(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1918,13 +1755,6 @@ END;
 $$;
 
 
-
-
-
-
-
-
-
 --
 -- Name: touch_updated_at(); Type: FUNCTION; Schema: public; Owner: -
 --
@@ -1934,15 +1764,6 @@ CREATE OR REPLACE FUNCTION public.touch_updated_at() RETURNS trigger
     SET search_path TO 'public'
     AS $$
 BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
-
-
-
-
-
-
-
-
-
 
 
 --
@@ -3297,12 +3118,6 @@ GRANT ALL ON TABLE public.user_permissions TO service_role;
 GRANT ALL ON TABLE public.user_roles TO anon;
 GRANT ALL ON TABLE public.user_roles TO authenticated;
 GRANT ALL ON TABLE public.user_roles TO service_role;
-
-
-
-
-
-
 
 
 --
