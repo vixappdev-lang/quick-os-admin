@@ -8,7 +8,7 @@ import { useRelatorios, exportRelatorioCSV, printRelatorio, type RelReport, type
 import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuarios, useFornecedores, useFaturamentos } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
-  head: () => ({ meta: [{ title: "Relatórios — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Relatórios — LyneCloud" }] }),
   component: RelatoriosPage,
 });
 

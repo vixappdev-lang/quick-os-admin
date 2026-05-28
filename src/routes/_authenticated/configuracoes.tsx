@@ -24,7 +24,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { formatDateTime } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
-  head: () => ({ meta: [{ title: "Configurações | Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Configurações | LyneCloud" }] }),
   component: ConfiguracoesPage,
 });
 

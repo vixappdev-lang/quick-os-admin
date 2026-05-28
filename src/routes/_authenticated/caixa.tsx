@@ -11,7 +11,7 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/caixa")({
-  head: () => ({ meta: [{ title: "Caixa — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Caixa — LyneCloud" }] }),
   component: CaixaPage,
 });
 

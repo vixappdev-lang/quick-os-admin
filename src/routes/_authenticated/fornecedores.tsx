@@ -8,7 +8,7 @@ import { useFornecedores, useUpsertFornecedor, useDeleteFornecedor } from "@/lib
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/fornecedores")({
-  head: () => ({ meta: [{ title: "Fornecedores — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Fornecedores — LyneCloud" }] }),
   component: FornecedoresPage,
 });
 

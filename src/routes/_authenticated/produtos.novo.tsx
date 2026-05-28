@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 export const Route = createFileRoute("/_authenticated/produtos/novo")({
-  head: () => ({ meta: [{ title: "Novo produto — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Novo produto — LyneCloud" }] }),
   validateSearch: (s: Record<string, unknown>) =>
     z
       .object({

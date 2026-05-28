@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export const Route = createFileRoute("/vendedor/")({
-  head: () => ({ meta: [{ title: "Meus Pedidos | Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Meus Pedidos | LyneCloud" }] }),
   component: VendedorHome,
 });
 

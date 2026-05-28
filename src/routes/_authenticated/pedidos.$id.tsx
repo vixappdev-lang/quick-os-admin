@@ -18,7 +18,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 export const Route = createFileRoute("/_authenticated/pedidos/$id")({
-  head: () => ({ meta: [{ title: "Detalhes do pedido — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Detalhes do pedido — LyneCloud" }] }),
   validateSearch: (s: Record<string, unknown>) => ({ edit: s.edit === 1 || s.edit === "1" ? 1 : undefined }) as { edit?: 1 },
   component: PedidoDetail,
 });

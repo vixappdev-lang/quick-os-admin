@@ -14,7 +14,7 @@ import { listTenants, createTenant, deleteTenant } from "@/lib/tenants.functions
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/supabase")({
-  head: () => ({ meta: [{ title: "Supabase — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Supabase — LyneCloud" }] }),
   component: SupabasePage,
 });
 

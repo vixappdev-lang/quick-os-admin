@@ -11,7 +11,7 @@ import { formatBRL } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/produtos/$id")({
-  head: () => ({ meta: [{ title: "Produto — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Produto — LyneCloud" }] }),
   component: ProdutoDetail,
 });
 

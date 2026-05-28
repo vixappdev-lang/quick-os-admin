@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/login")({
-  head: () => ({ meta: [{ title: "Entrar | Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Entrar | LyneCloud" }] }),
   component: LoginPage,
 });
 
@@ -57,7 +57,7 @@ function LoginPage() {
             <Zap className="h-5 w-5" strokeWidth={2.5} />
           </div>
           <div>
-            <p className="text-lg font-semibold tracking-tight text-white">Quick OS</p>
+            <p className="text-lg font-semibold tracking-tight text-white">LyneCloud</p>
             <p className="text-[11px] uppercase tracking-wider text-white/50">Enterprise Edition</p>
           </div>
         </div>
@@ -156,7 +156,7 @@ function LoginPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <Zap className="h-4 w-4" strokeWidth={2.5} />
             </div>
-            <p className="text-base font-semibold tracking-tight">Quick OS</p>
+            <p className="text-base font-semibold tracking-tight">LyneCloud</p>
           </div>
 
           <div className="space-y-2">
@@ -220,7 +220,7 @@ function LoginPage() {
           </form>
 
           <p className="mt-8 text-center text-[11px] text-muted-foreground">
-            © 2026 Quick OS · <Link to="/" className="hover:text-foreground">Termos</Link> · Privacidade
+            © 2026 LyneCloud · <Link to="/" className="hover:text-foreground">Termos</Link> · Privacidade
           </p>
         </div>
       </div>

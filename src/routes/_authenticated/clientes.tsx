@@ -7,7 +7,7 @@ import { useClientes } from "@/lib/queries";
 import { formatBRL } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/clientes")({
-  head: () => ({ meta: [{ title: "Clientes — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Clientes — LyneCloud" }] }),
   component: ClientesPage,
 });
 

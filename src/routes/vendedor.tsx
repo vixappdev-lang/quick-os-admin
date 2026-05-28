@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/vendedor")({
-  head: () => ({ meta: [{ title: "Vendedor | Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Vendedor | LyneCloud" }] }),
   component: VendedorLayout,
 });
 

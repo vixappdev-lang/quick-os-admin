@@ -12,7 +12,7 @@ import { CategoriasManager } from "@/components/categorias-manager";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/estoque/")({
-  head: () => ({ meta: [{ title: "Estoque — Quick OS" }] }),
+  head: () => ({ meta: [{ title: "Estoque — LyneCloud" }] }),
   component: EstoqueIndex,
 });
 
