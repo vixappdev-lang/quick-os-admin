@@ -14,6 +14,8 @@ import { listTenants, createTenant, deleteTenant } from "@/lib/tenants.functions
 import { getSchemaIssues, getSchemaIssuesBySlug, clearSchemaIssues, type SchemaIssue } from "@/lib/schema-errors";
 import { toast } from "sonner";
 
+const SETUP_SQL_VERSION = "2026-05-28-user-roles-order";
+
 export const Route = createFileRoute("/_authenticated/supabase")({
   head: () => ({ meta: [{ title: "Supabase — LyneCloud" }] }),
   component: SupabasePage,
@@ -339,7 +341,7 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
 
   useEffect(() => {
     if (!open || sql) return;
-    fetch("/setup.sql").then((r) => r.text()).then(setSql).catch(() => setSql("-- erro ao carregar setup.sql"));
+    fetch(`/setup.sql?v=${SETUP_SQL_VERSION}`, { cache: "no-store" }).then((r) => r.text()).then(setSql).catch(() => setSql("-- erro ao carregar setup.sql"));
   }, [open, sql]);
 
   const supabaseUrl: string | undefined = tenant?.supabase_url;
@@ -381,7 +383,7 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
             </div>
           ) : (
             <p className="text-xs text-muted-foreground leading-relaxed">
-              SQL completo e <b>idempotente</b>. Pode ser executado quantas vezes for necessário, sem erro de "já existe".
+              SQL completo e <b>idempotente</b>. Cria as tabelas antes das funções e pode rodar várias vezes sem erro.
             </p>
           )}
           <div className="flex flex-wrap gap-2">
@@ -392,7 +394,7 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
               {copied ? "Copiado" : "Copiar SQL"}
             </button>
-            <a href="/setup.sql" download="setup.sql" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
+            <a href={`/setup.sql?v=${SETUP_SQL_VERSION}`} download="setup.sql" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
               <Download className="h-3.5 w-3.5" /> Baixar setup.sql
             </a>
           </div>
