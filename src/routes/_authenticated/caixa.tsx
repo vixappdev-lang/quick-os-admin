@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Wallet, ArrowDownToLine, ArrowUpFromLine, Lock, Unlock, History } from "lucide-react";
+import { Wallet, ArrowDownToLine, ArrowUpFromLine, Lock, Unlock, Eye, X } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { KpiCard } from "@/components/kpi-card";
 import { formatBRL } from "@/lib/format";
-import { useCaixaAtual, useAbrirCaixa, useFecharCaixa, useCaixaMovimento, useCaixaHistorico } from "@/lib/queries";
+import { useCaixaAtual, useAbrirCaixa, useFecharCaixa, useCaixaMovimento, useCaixaHistorico, useCaixaSessaoDetalhe } from "@/lib/queries";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
@@ -18,6 +19,7 @@ function CaixaPage() {
   const { user } = useAuth();
   const { data: caixa, isLoading } = useCaixaAtual();
   const { data: historico = [] } = useCaixaHistorico(8);
+  const [detalheId, setDetalheId] = useState<string | null>(null);
   const abrir = useAbrirCaixa();
   const fechar = useFecharCaixa();
   const mov = useCaixaMovimento();
@@ -186,12 +188,19 @@ function CaixaPage() {
               <tbody>
                 {historico.length === 0 && <tr><td colSpan={5} className="px-4 py-8 text-center text-xs text-muted-foreground">Nenhuma sessão registrada</td></tr>}
                 {historico.map((s: any) => (
-                  <tr key={s.id} className="border-b">
+                  <tr key={s.id} className="border-b hover:bg-muted/40">
                     <td className="px-4 py-3 text-xs">{new Date(s.abertura).toLocaleString("pt-BR")}</td>
                     <td className="px-4 py-3 text-xs">{s.fechamento ? new Date(s.fechamento).toLocaleString("pt-BR") : "—"}</td>
                     <td className="px-4 py-3 text-right tabular">{formatBRL(Number(s.valor_inicial))}</td>
                     <td className="px-4 py-3 text-right tabular">{s.valor_final != null ? formatBRL(Number(s.valor_final)) : "—"}</td>
-                    <td className="px-4 py-3"><span className={"rounded px-2 py-0.5 text-[11px] font-medium capitalize " + (s.status === "aberto" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground")}>{s.status}</span></td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <span className={"rounded px-2 py-0.5 text-[11px] font-medium capitalize " + (s.status === "aberto" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground")}>{s.status}</span>
+                        <button onClick={() => setDetalheId(s.id)} className="inline-flex h-7 items-center gap-1 rounded-md border bg-card px-2 text-[11px] font-medium text-muted-foreground hover:bg-muted">
+                          <Eye className="h-3 w-3" /> Detalhes
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -199,6 +208,78 @@ function CaixaPage() {
           </div>
         </SectionCard>
       </div>
+
+      <SessaoDetalheDialog id={detalheId} onClose={() => setDetalheId(null)} />
+    </div>
+  );
+}
+
+function SessaoDetalheDialog({ id, onClose }: { id: string | null; onClose: () => void }) {
+  const { data, isLoading } = useCaixaSessaoDetalhe(id);
+  const movs = (data?.movimentos ?? []) as any[];
+  const vendas = movs.filter((m) => m.tipo === "venda");
+  const suprimentos = movs.filter((m) => m.tipo === "suprimento");
+  const sangrias = movs.filter((m) => m.tipo === "sangria");
+  const totalVendas = vendas.reduce((s, m) => s + Number(m.valor), 0);
+  return (
+    <Dialog open={!!id} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Detalhes da sessão de caixa</DialogTitle>
+        </DialogHeader>
+        {isLoading || !data ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Carregando...</p>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <Stat label="Abertura" value={new Date(data.abertura).toLocaleString("pt-BR")} />
+              <Stat label="Fechamento" value={data.fechamento ? new Date(data.fechamento).toLocaleString("pt-BR") : "—"} />
+              <Stat label="Inicial" value={formatBRL(Number(data.valor_inicial))} />
+              <Stat label="Final" value={data.valor_final != null ? formatBRL(Number(data.valor_final)) : "—"} />
+            </div>
+            <div className="rounded-md border bg-info/5 p-3 text-sm">
+              <p className="font-semibold text-info">Faturamento da sessão: {formatBRL(totalVendas)}</p>
+              <p className="text-xs text-muted-foreground">{vendas.length} venda(s) • {suprimentos.length} suprimento(s) • {sangrias.length} sangria(s)</p>
+            </div>
+            <div className="rounded-md border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40 text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <th className="px-3 py-2 text-left">Tipo</th>
+                    <th className="px-3 py-2 text-left">Descrição</th>
+                    <th className="px-3 py-2 text-right">Valor</th>
+                    <th className="px-3 py-2 text-left">Hora</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {movs.length === 0 && (
+                    <tr><td colSpan={4} className="px-3 py-6 text-center text-xs text-muted-foreground">Sem movimentos</td></tr>
+                  )}
+                  {movs.map((m) => (
+                    <tr key={m.id} className="border-b last:border-b-0">
+                      <td className="px-3 py-2 capitalize">{m.tipo}</td>
+                      <td className="px-3 py-2 text-muted-foreground">{m.descricao ?? "—"}</td>
+                      <td className={"px-3 py-2 text-right tabular font-semibold " + (["sangria","despesa"].includes(m.tipo) ? "text-destructive" : "text-success")}>
+                        {["sangria","despesa"].includes(m.tipo) ? "- " : "+ "}{formatBRL(Number(m.valor))}
+                      </td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">{new Date(m.created_at).toLocaleTimeString("pt-BR")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-card p-2.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-medium">{value}</p>
     </div>
   );
 }
