@@ -328,6 +328,15 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
   const [copied, setCopied] = useState(false);
   const [query, setQuery] = useState("");
   const open = !!tenant;
+  const slug: string = tenant?.slug ?? "principal";
+  const [issues, setIssues] = useState<SchemaIssue[]>([]);
+  useEffect(() => {
+    if (!open) return;
+    const refresh = () => setIssues(getSchemaIssuesBySlug(slug));
+    refresh();
+    window.addEventListener("schema-errors-changed", refresh);
+    return () => window.removeEventListener("schema-errors-changed", refresh);
+  }, [open, slug]);
 
   useEffect(() => {
     if (!open || sql) return;
@@ -355,22 +364,36 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><FileCode2 className="h-4 w-4" /> Schema do banco (pré-requisito)</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><FileCode2 className="h-4 w-4" /> SQL de correção — /t/{slug}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            {tenant?.slug
-              ? <>Conexão criada para <code className="rounded bg-muted px-1 py-0.5 text-xs">/t/{tenant.slug}</code>. <b>Antes do primeiro login</b> do usuário, execute este SQL no Supabase do cliente.</>
-              : <>Para que as queries funcionem no Supabase do cliente, o schema (tabelas, RLS, funções) precisa estar instalado. Execute o SQL abaixo no <b>SQL Editor</b> do projeto.</>}
-            {" "}Não é possível rodar DDL via anon key — por isso é manual e único.
-          </p>
+          {issues.length > 0 ? (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
+              <p className="font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                <FileCode2 className="h-3.5 w-3.5" /> {issues.length} erro(s) de schema detectado(s) nesta conexão
+              </p>
+              <ul className="mt-2 max-h-32 space-y-1 overflow-auto text-[11px] text-muted-foreground">
+                {issues.slice(0, 10).map((i, idx) => (
+                  <li key={idx} className="font-mono">
+                    {i.table ? <b>{i.table}{i.column ? `.${i.column}` : ""}</b> : null}
+                    {i.table ? " — " : ""}{i.message}
+                  </li>
+                ))}
+              </ul>
+              <button onClick={() => { clearSchemaIssues(slug); }} className="mt-2 text-[11px] underline text-amber-700">Limpar lista após executar o SQL</button>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Execute o SQL abaixo no <b>SQL Editor</b> do projeto para criar/atualizar tabelas, funções, triggers e policies.
+            </p>
+          )}
           <div className="flex flex-wrap gap-2">
             <a href={sqlEditorUrl} target="_blank" rel="noreferrer" className="inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">
               <ExternalLink className="h-3.5 w-3.5" /> Abrir SQL Editor
             </a>
             <button type="button" onClick={copyAll} disabled={!sql} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted disabled:opacity-50">
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado" : "Copiar SQL completo"}
+              {copied ? "Copiado" : "Copiar SQL de correção"}
             </button>
             <a href="/setup.sql" download="setup.sql" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
               <Download className="h-3.5 w-3.5" /> Baixar setup.sql
