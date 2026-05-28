@@ -100,23 +100,6 @@ function SupabasePage() {
         }
       />
 
-      {/* Diagnóstico de ambiente — ajuda quando preview e produção apontam para bancos diferentes */}
-      <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs">
-        <p className="font-semibold text-amber-700 dark:text-amber-400">Ambiente atual deste painel</p>
-        <p className="mt-1 text-muted-foreground">
-          Project ref: <code className="rounded bg-amber-500/10 px-1.5 py-0.5 font-mono">{mainProject}</code>{" "}
-          • URL: <code className="rounded bg-amber-500/10 px-1.5 py-0.5 font-mono break-all">{mainUrl || "—"}</code>
-        </p>
-        <p className="mt-1.5 text-muted-foreground">
-          Se o <b>preview</b> e a <b>produção</b> (lynecloud.online) mostrarem <b>project refs diferentes</b>, eles estão conectados a bancos
-          distintos — por isso a conexão criada em um lado não aparece no outro. Para unificar, defina
-          <code className="mx-1 rounded bg-muted px-1 py-0.5 font-mono">VITE_SUPABASE_URL</code>,
-          <code className="mx-1 rounded bg-muted px-1 py-0.5 font-mono">VITE_SUPABASE_PUBLISHABLE_KEY</code> e
-          <code className="mx-1 rounded bg-muted px-1 py-0.5 font-mono">VITE_SUPABASE_PROJECT_ID</code> com os mesmos valores nas
-          variáveis de ambiente da Vercel (Production + Preview) e refaça o deploy.
-        </p>
-      </div>
-
       {/* Resumo */}
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatCard label="Conexões ativas" value={String(tenants.length + 1)} hint="incluindo principal" />
@@ -157,7 +140,7 @@ function SupabasePage() {
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-1">
                     <IconBtn title="Ver" onClick={() => setViewTenant(mainTenant)}><Eye className="h-3.5 w-3.5" /></IconBtn>
-                    <IconBtn title="Editar (gerenciado)" disabled><Pencil className="h-3.5 w-3.5" /></IconBtn>
+                    <IconBtn title="Copiar SQL de correção" onClick={() => setSchemaTenant(mainTenant)}><FileCode2 className="h-3.5 w-3.5" /></IconBtn>
                     <IconBtn title="Rastrear em tempo real" onClick={() => setTrackTenant(mainTenant)}><Radio className="h-3.5 w-3.5" /></IconBtn>
                   </div>
                 </td>
@@ -203,7 +186,7 @@ function SupabasePage() {
 
         {/* Mobile cards */}
         <div className="md:hidden divide-y">
-          <MobileRow t={mainTenant} main onView={() => setViewTenant(mainTenant)} onTrack={() => setTrackTenant(mainTenant)} />
+          <MobileRow t={mainTenant} main onView={() => setViewTenant(mainTenant)} onTrack={() => setTrackTenant(mainTenant)} onSchema={() => setSchemaTenant(mainTenant)} />
           {tenants.map((t: any) => {
             const u = usuarios.find((x: any) => x.id === t.user_id);
             return (
