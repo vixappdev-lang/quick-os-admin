@@ -14,7 +14,7 @@ import { listTenants, createTenant, deleteTenant } from "@/lib/tenants.functions
 import { getSchemaIssues, getSchemaIssuesBySlug, clearSchemaIssues, type SchemaIssue } from "@/lib/schema-errors";
 import { toast } from "sonner";
 
-const SETUP_SQL_VERSION = "2026-05-28-user-roles-order";
+const SETUP_SQL_VERSION = "2026-05-28-idempotent-do-blocks";
 
 export const Route = createFileRoute("/_authenticated/supabase")({
   head: () => ({ meta: [{ title: "Supabase — LyneCloud" }] }),

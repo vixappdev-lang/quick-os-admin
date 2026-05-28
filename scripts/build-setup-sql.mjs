@@ -10,8 +10,15 @@ let s = fs.readFileSync(SRC, "utf8");
 function normalizeIdempotency(sql) {
   let out = sql;
   out = out.replace(
-    /CREATE TYPE (public\.[a-z0-9_]+) AS ENUM \(([\s\S]*?)\);/g,
-    (_m, name, body) => `DO $idem$ BEGIN\n  CREATE TYPE ${name} AS ENUM (${body});\nEXCEPTION WHEN duplicate_object THEN NULL; END $idem$;`,
+    /(?:DO\s+\$[a-zA-Z0-9_]*\$\s+BEGIN\s+)+\s*(CREATE TYPE public\.[a-z0-9_]+ AS ENUM \([\s\S]*?\);\s*)(?:EXCEPTION WHEN duplicate_object THEN NULL;\s*END\s+\$[a-zA-Z0-9_]*\$;\s*)+/gi,
+    "$1\n",
+  );
+  out = out.replace(
+    /CREATE TYPE (public\.[a-z0-9_]+) AS ENUM \(([\s\S]*?)\);/gi,
+    (_m, name, body) => {
+      const tag = `$idem_${name.replace(/^public\./, "").replace(/[^a-z0-9_]/gi, "_")}$`;
+      return `DO ${tag} BEGIN\n  CREATE TYPE ${name} AS ENUM (${body});\nEXCEPTION WHEN duplicate_object THEN NULL;\nEND ${tag};`;
+    },
   );
   out = out.replace(/CREATE TABLE (?!IF NOT EXISTS)(public\.[a-z0-9_]+) \(/g, "CREATE TABLE IF NOT EXISTS $1 (");
   out = out.replace(/CREATE SEQUENCE (?!IF NOT EXISTS)(public\.[a-z0-9_]+)/g, "CREATE SEQUENCE IF NOT EXISTS $1");
@@ -63,6 +70,10 @@ function removeEnvironmentSpecificGrants(sql) {
     .replace(/\n--\n-- Name: DEFAULT PRIVILEGES FOR (SEQUENCES|FUNCTIONS|TABLES);[\s\S]*?(?=\n--\n-- Name: |\n--\n-- PostgreSQL database dump complete|$)/g, "\n");
 }
 
+function collapseBlankRuns(sql) {
+  return sql.replace(/\n{4,}/g, "\n\n\n");
+}
+
 function buildColumnPatch(sql) {
   const statements = [];
   const tables = sql.matchAll(/CREATE TABLE IF NOT EXISTS (public\.[a-z0-9_]+) \(([\s\S]*?)\n\);/g);
@@ -97,7 +108,7 @@ const functionSql = `\n${blocks.join("\n")}\n`;
 const firstTrigger = s.search(/\n--\n-- Name: [^\n]+; Type: TRIGGER;/);
 const firstPolicyOrGrant = s.search(/\n--\n-- Name: [^\n]+; Type: (POLICY|ACL);/);
 const insertAt = firstTrigger !== -1 ? firstTrigger : firstPolicyOrGrant !== -1 ? firstPolicyOrGrant : s.length;
-s = s.slice(0, insertAt) + functionSql + s.slice(insertAt);
+s = collapseBlankRuns(s.slice(0, insertAt) + functionSql + s.slice(insertAt));
 
 fs.writeFileSync(SRC, s);
 fs.writeFileSync(DOC, s);
