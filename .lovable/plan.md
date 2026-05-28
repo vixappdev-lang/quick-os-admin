@@ -1,140 +1,74 @@
-## Plano sênior — Pedidos, Estoque, Faturamento, Produtos, Relatórios, Fornecedores, Financeiro, Caixa
+## Objetivo
+Corrigir a tela **Supabase** para ela mostrar com precisão:
+- O banco principal **Lovable Cloud**.
+- A conexão externa `/t/admin` cadastrada.
+- Em **Ações** de cada conexão, um botão de SQL de correção atualizado e específico para corrigir tabelas/colunas ausentes.
 
-Escopo: ajustes precisos sem mexer no design global. Tudo respeita o tenant ativo (activeSupabase) e a base central onde já está. Cada bloco abaixo é independente e pode ser entregue em ondas — proponho 5 ondas.
+## Diagnóstico atual
+- A conexão `/t/admin` existe no banco central: slug `admin`, usuário `admin@loja.com`, URL `https://utyhfwqegiwrwvppleah.supabase.co`.
+- Se em produção aparece só “Lovable Cloud”, a causa mais provável é que o domínio publicado está lendo outro ambiente/banco ou a consulta de tenants está falhando/filtrando antes de renderizar.
+- A tela hoje ainda tem botões globais no topo para copiar/baixar SQL; você pediu para o SQL ficar embaixo, nas **Ações** da linha da conexão.
+- O app não tem ainda um mecanismo central para “capturar erro de tabela/coluna” e transformar isso em ação de correção visível na tela Supabase.
 
----
+## Plano de implementação
 
-### Onda 1 — Banco de dados (1 migração única, sem quebrar nada)
+### 1. Corrigir a origem da lista de conexões
+- Ajustar a função `listTenants` para retornar sempre a lista diretamente do banco principal gerenciado, com dados necessários para a tela:
+  - `id`, `slug`, `nome`, `supabase_url`, `user_id`, `created_at`.
+  - Dados do usuário dono quando possível: nome/e-mail.
+- Garantir que o front não dependa de uma segunda busca frágil para exibir `/t/admin`.
+- Se a lista vier vazia ou com erro, mostrar estado técnico discreto dentro da tabela, não uma faixa/banner decorativa.
 
-Alterações em `produtos`:
-- `unidade_embalagem text not null default 'UN'` (UN/CX/FD/PCT/Outro)
-- `fator_unidade numeric not null default 1` (qtas UN cabem em 1 embalagem)
-- `tem_nota_fiscal boolean default false` já existe — manter
-- `estoque_fiscal numeric not null default 0` (qtde com NF vinculada)
+### 2. Remover SQL global do topo
+- Remover da `PageHeader` os botões globais **Copiar SQL** e **Baixar SQL**.
+- Manter somente **Nova conexão** no topo.
+- O SQL ficará exclusivamente em **Ações** na linha da conexão, como solicitado.
 
-Alterações em `pedido_itens`:
-- já tem `embalagem_tipo` e `qtd_un_por_embalagem` — vamos passar a usar de verdade no UI.
+### 3. Ações por conexão: SQL limpo e correto
+- Na linha **Lovable Cloud**, manter ações úteis, mas o SQL será tratado como “schema principal/referência”.
+- Na linha `/t/admin` e demais conexões externas, manter o botão de SQL em **Ações** com rótulo/tooltip claro:
+  - “SQL de correção”.
+- Ao clicar, abrir um modal limpo com:
+  - Nome/slug da conexão.
+  - Botão **Copiar SQL de correção**.
+  - Botão **Abrir SQL Editor** para o projeto daquela conexão.
+  - Prévia do SQL.
+- Evitar linguagem visual bagunçada e remover textos grandes desnecessários.
 
-Alterações em `pedidos`:
-- `tipo_operacao text not null default 'saida'` ('saida' | 'entrada')
-- `fornecedor_id uuid` (somente quando tipo=entrada)
-- `faturado boolean not null default false`
-- `faturado_em` já existe
+### 4. Reconhecer erros de tabela/coluna do sistema
+- Criar um registrador leve de erros de schema no front:
+  - Detectar mensagens como `Could not find the table`, `Could not find`, `column ... does not exist`, `relation ... does not exist`, `schema cache`.
+  - Identificar a tabela/área quando possível.
+  - Salvar localmente por conexão ativa: slug, tabela/coluna, mensagem, horário e módulo provável.
+- Integrar esse registrador nos pontos centrais de queries/mutations, principalmente `src/lib/queries.ts`, para capturar erros vindos de produtos, pedidos, PDV, caixa, financeiro, estoque, clientes, fornecedores etc.
+- Quando houver erro reconhecido, a tela Supabase mostrará na linha da conexão um indicador discreto, por exemplo: “Correção pendente”.
 
-Triggers (substituem `apply_estoque_from_item`):
-- `apply_estoque_from_item`: ler `tipo_operacao` do pedido pai.
-  - saida: estoque -= qtd*fator (como hoje)
-  - entrada: estoque += qtd*fator, e se `produto.tem_nota_fiscal` ou item marcado, `estoque_fiscal += qtd*fator`
-  - DELETE: estorna espelhado.
-- `handle_pedido_cancelamento`: idem, considerando tipo_operacao.
-- Novo: ao `UPDATE pedidos SET faturado=true` → seta `status='faturado'` (enum já tem? se não, usar text auxiliar) e bloqueia voltar (trigger `BEFORE UPDATE` impede `faturado=true → false` exceto por admin).
+### 5. SQL de correção atualizado conforme erros encontrados
+- O modal de SQL da conexão vai carregar o `setup.sql` completo como base segura.
+- Se houver erros de schema registrados para aquela conexão, o modal destacará:
+  - Quais tabelas/colunas deram erro.
+  - Que o SQL completo corrige o schema daquela conexão.
+- O botão em **Ações** continuará copiando o SQL atualizado completo, porque é o caminho mais seguro para corrigir tabelas, funções, triggers, policies e grants sem deixar o banco pela metade.
 
-Remoções no schema de `fornecedores` (campos pedidos pelo usuário):
-- DROP COLUMN `prazo_pagamento, banco, agencia, conta, pix` (corrige o erro "agencia column not found in cache" — porque a coluna existe no banco mas o `types.ts` do central não foi regerado para o tenant; melhor remover de vez já que o usuário pediu).
+### 6. Garantir que novas conexões apareçam corretamente
+- Depois de salvar uma nova conexão:
+  - Invalidar a lista de tenants.
+  - Atualizar a tabela imediatamente.
+  - Abrir o modal de SQL da própria conexão recém-criada.
+- Se a conexão `/t/admin` já existe no banco principal, ela deverá aparecer sem precisar recriar.
 
-GRANTs revistos para todas as tabelas novas/alteradas (mantendo o padrão existente).
+### 7. Validação final
+- Verificar que a tela `/supabase`:
+  - Mostra Lovable Cloud + `/t/admin`.
+  - Não tem botões globais de SQL no topo.
+  - Tem SQL de correção dentro das ações da linha.
+  - Mostra indicador de schema pendente quando erros de tabela/coluna forem capturados.
+- Revisar sem mexer no design geral: somente ajustes funcionais e discretos na tela atual.
 
----
+## Observação importante sobre produção
+Se o domínio `lynecloud.online` estiver apontando para uma publicação que usa outro banco/ambiente, nenhuma mudança visual consegue “inventar” a conexão que não existe naquele ambiente. O que vou fazer no app é:
+- Tornar a consulta de conexões mais robusta.
+- Exibir erro/estado real se a produção não estiver lendo o mesmo banco.
+- Garantir que, quando o banco correto estiver ativo, `/t/admin` apareça na lista.
 
-### Onda 2 — Produtos > Novo/Editar (`product-form-panel.tsx`)
-
-- Adicionar bloco "Unidade":
-  - Select `Unidade`: UN / CX / FD / PCT / Outro (campo livre se Outro).
-  - Input `Fator` (numérico) — qtas UN equivalem a 1 unidade da embalagem. UN trava em 1.
-- Adicionar toggle "Possui Nota Fiscal?" (já existe campo no banco — só faltava o UI).
-- Remover seção de imagem (gallery + upload). Manter `imagem_url` no banco por compatibilidade mas escondido no form.
-- Validação: fator ≥ 1, inteiro quando unidade ≠ UN.
-
-Listagem de produtos / Estoque:
-- Exibir colunas: `Estoque (UN total = estoque*fator)`, `Estoque Fiscal`, badge `c/ NF`.
-- Em "Estoque", nova coluna **Estoque Fiscal**.
-
----
-
-### Onda 3 — Pedidos > Novo Pedido (`pedido-form.tsx`)
-
-Tipo Entrada/Saída funcional:
-- Substituir o select `Entrada/Saída` (hoje só visual) por estado real `tipoOperacao`.
-- Quando `entrada`:
-  - Esconder bloco "Cliente"; mostrar bloco "Fornecedor" com mesma busca/dropdown.
-  - Pagamento opcional (entrada não exige forma de pagamento; renomeia para "Condição").
-  - Ao salvar, gravar `tipo_operacao='entrada'` e `fornecedor_id`.
-- Quando `saida` (padrão): comportamento atual.
-
-Itens do pedido — embalagem:
-- Em cada linha mostrar: `Qtd | Unidade(select UN/CX/FD/Outro) | Fator (auto do produto, editável)`.
-- `qtd_un_por_embalagem` enviado ao backend = fator escolhido na linha. Total da linha = `qtd * preco`.
-- Tooltip mostrando "= X UN".
-
-Fix dropdown escondido (cliente e produto):
-- O `<div className="absolute z-30 ...">` está dentro de um pai com `overflow-hidden`/`max-h` em alguns containers e em SectionCard com clipping em mobile. Solução: portalizar dropdowns com Radix `Popover` (já instalado) ou usar `position: fixed` calculado, e elevar `z-index` para `z-50`. Aplicar também ao select de fornecedor.
-
-Faturamento:
-- Botão "Faturar pedido" na tela `/pedidos/$id`. Ao clicar → atualiza `faturado=true, faturado_em=now(), status='faturado'`. Botão "Emitir NF-e" só habilita quando `faturado=true`.
-- Status "Faturado" passa a ser terminal: trigger impede reverter; coluna Kanban não muda automaticamente.
-
----
-
-### Onda 4 — Relatórios, Fornecedores, Financeiro, Caixa
-
-**Relatórios** (`relatorios.tsx`):
-- Corrigir filtros globais (período, vendedor, categoria) — eles existem mas não estão sendo passados nas queries; centralizar em um `useRelatorioFilters()` e injetar em todas as consultas.
-- Novo: **Margem por Produto** — Produto, Custo, Venda, Margem (R$), Margem (%). Ordenar por % desc.
-- Novo: **Faturamento** — filtro por período. KPIs: total vendas, total pedidos, bruto, líquido (bruto − descontos − despesas do período).
-- Remover coluna "Saldo Fiado" do relatório "Relação de Clientes".
-
-**Fornecedores** (`fornecedores.tsx`):
-- Remover do form: prazo_pagamento, banco, agencia, conta, pix.
-- Após DROP COLUMN na migração, o erro "agencia not found in schema cache" some sozinho.
-
-**Financeiro** (`financeiro.tsx`):
-- Nova KPI "Faturamento atual" (somatório de pedidos com `faturado=true` no período).
-- Filtro de período aplica a essa KPI e ao chart (filtro 7/15/30/60/90 já existe — estender para todos os cards).
-
-**Caixa** (`caixa.tsx` + histórico de sessões):
-- Ao abrir uma sessão: drawer/modal listando pedidos da sessão (join `pedidos` por `created_at between abertura..fechamento` + operador). Mostrar itens, forma de pagamento, valor.
-- Ações: "Remover venda da sessão" (cancela pedido + estorno automático via trigger existente), "Editar itens" (abre `pedido-form` em modo edição).
-- Ao fechar caixa: além de salvar `caixa_sessoes.valor_final`, gravar registro em `faturamentos` (já existe tabela) consolidando o total da sessão. Isso aparece automaticamente no card "Faturamento atual" do Financeiro.
-
----
-
-### Onda 5 — Verificação e polimento
-
-- Atualizar `src/integrations/supabase/types.ts` é automático após a migração.
-- Smoke-test fluxos:
-  1. Criar produto CX fator 12 → estoque mostra 5 CX (= 60 UN).
-  2. Pedido saída com 2 CX → estoque cai 24 UN.
-  3. Pedido entrada com fornecedor → estoque sobe; sem cliente.
-  4. Faturar pedido → status trava em Faturado, botão NF-e libera.
-  5. Cancelar pedido → estoque retorna.
-  6. Fechar caixa → aparece em Financeiro.
-  7. Buscar cliente/fornecedor → dropdown visível.
-- Garantir que nada do design (cores, espaçamento, sombras, tokens em `styles.css`) é alterado — apenas adições semânticas.
-
----
-
-### Riscos & mitigação
-
-- **Tenants externos**: migrações rodam só no banco central. Para tenants conectados (Supabase do cliente) entregamos o SQL em `public/setup.sql` atualizado para o usuário rodar no SQL Editor do tenant — mesmo padrão já estabelecido.
-- **Trigger de faturamento terminal**: implementar exceção para `admin` para correções manuais.
-- **Compatibilidade retroativa**: produtos existentes recebem `fator_unidade=1, unidade_embalagem='UN'` (default) — nenhum cálculo muda para itens legados.
-
----
-
-## Sobre a tela /supabase e o deploy na Vercel (resposta, sem implementar)
-
-Hoje cada tenant guarda `supabase_url` e `supabase_anon_key` na tabela `tenants` do banco central, e o `active-client.ts` cria o client em runtime no browser. Isso significa que **você NÃO precisa criar Environment Variables novas na Vercel toda vez que cadastrar um cliente** — as URLs/anon keys ficam no banco e são lidas dinamicamente pelo painel. A Vercel só precisa das vars do banco *central* (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`).
-
-Como ficaria a operação ideal, com melhor suporte:
-
-1. **Domínio único, multi-tenant por login**: o usuário faz login no domínio único → o painel lê `tenants` pelo `user_id` → instancia o client do Supabase daquele cliente → todas as queries vão pro banco dele. É o que já está implementado; só precisamos garantir que a tela /supabase mostre status (online/offline, latência, schema sincronizado) e um botão "Testar conexão" + "Reaplicar setup.sql".
-
-2. **Setup do tenant em 3 cliques**: na tela /supabase, ao cadastrar um novo cliente, gerar um botão "Copiar SQL de setup" que copia o `public/setup.sql` atualizado pro clipboard e abre a URL `https://supabase.com/dashboard/project/<ref>/sql/new` em nova aba. Usuário cola e roda — tenant fica 100% pronto.
-
-3. **Secrets do tenant (service role)**: se algum dia você quiser fazer operações privilegiadas no banco do cliente (ex.: backups server-side), aí sim precisaria de uma forma de guardar o `service_role` por tenant. Recomendação: nova coluna `supabase_service_key text` em `tenants` com RLS estrita (só super-admin lê) + um server function `withTenantAdmin(tenantId)` que monta o client server-side. Continua sem precisar mexer na Vercel.
-
-4. **Quando faz sentido usar Environment da Vercel**: só se você quisesse um deploy *separado por cliente* (ex.: `cliente1.seudominio.com` apontando pro Supabase do cliente1 em build-time). Não recomendo — perde a vantagem do multi-tenant e dá trabalho operacional enorme. O modelo atual (1 deploy, N tenants no DB) é o padrão SaaS profissional (Linear, Notion, Vercel mesma fazem assim).
-
-5. **Suporte/observabilidade**: adicionar na /supabase um log por tenant (latência média, último erro de query, último backup) usando `app_logs` + filtro por `tenant_slug`. Assim você suporta clientes sem precisar acessar o Supabase deles.
-
-Resumo: **mantém um único projeto na Vercel**, as credenciais por cliente vivem na tabela `tenants`, e na /supabase só precisamos melhorar UX de cadastro e diagnóstico — nenhuma mudança de infraestrutura.
+A correção ideal é deixar o app sempre lendo o mesmo backend principal para tenants, e os bancos externos apenas para dados do cliente conectado.
