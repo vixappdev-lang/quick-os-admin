@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, Search, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, AlertTriangle } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -326,7 +326,6 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
 function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => void }) {
   const [sql, setSql] = useState<string>("");
   const [copied, setCopied] = useState(false);
-  const [query, setQuery] = useState("");
   const open = !!tenant;
   const slug: string = tenant?.slug ?? "principal";
   const [issues, setIssues] = useState<SchemaIssue[]>([]);
@@ -362,7 +361,7 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><FileCode2 className="h-4 w-4" /> SQL de correção — /t/{slug}</DialogTitle>
         </DialogHeader>
@@ -370,21 +369,19 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
           {issues.length > 0 ? (
             <div className="rounded-md border border-amber-500/40 bg-amber-500/5 p-3 text-xs">
               <p className="font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                <FileCode2 className="h-3.5 w-3.5" /> {issues.length} erro(s) de schema detectado(s) nesta conexão
+                <FileCode2 className="h-3.5 w-3.5" /> Tabelas/colunas faltando nesta conexão ({issues.length})
               </p>
-              <ul className="mt-2 max-h-32 space-y-1 overflow-auto text-[11px] text-muted-foreground">
-                {issues.slice(0, 10).map((i, idx) => (
-                  <li key={idx} className="font-mono">
-                    {i.table ? <b>{i.table}{i.column ? `.${i.column}` : ""}</b> : null}
-                    {i.table ? " — " : ""}{i.message}
-                  </li>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {Array.from(new Set(issues.map((i) => i.table ? `${i.table}${i.column ? `.${i.column}` : ""}` : i.code || "schema"))).slice(0, 16).map((tag, idx) => (
+                  <span key={idx} className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[10px]">{tag}</span>
                 ))}
-              </ul>
-              <button onClick={() => { clearSchemaIssues(slug); }} className="mt-2 text-[11px] underline text-amber-700">Limpar lista após executar o SQL</button>
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">Rodar o SQL completo abaixo cria/atualiza o que falta. É idempotente — pode executar várias vezes sem erro.</p>
+              <button onClick={() => clearSchemaIssues(slug)} className="mt-2 text-[11px] underline text-amber-700">Limpar lista após executar</button>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              Execute o SQL abaixo no <b>SQL Editor</b> do projeto para criar/atualizar tabelas, funções, triggers e policies.
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              SQL completo e <b>idempotente</b>. Pode ser executado quantas vezes for necessário, sem erro de "já existe".
             </p>
           )}
           <div className="flex flex-wrap gap-2">
@@ -393,57 +390,33 @@ function SchemaDialog({ tenant, onClose }: { tenant: any | null; onClose: () => 
             </a>
             <button type="button" onClick={copyAll} disabled={!sql} className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted disabled:opacity-50">
               {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado" : "Copiar SQL de correção"}
+              {copied ? "Copiado" : "Copiar SQL"}
             </button>
             <a href="/setup.sql" download="setup.sql" className="inline-flex h-9 items-center gap-1.5 rounded-md border bg-card px-3 text-sm font-medium hover:bg-muted">
               <Download className="h-3.5 w-3.5" /> Baixar setup.sql
             </a>
           </div>
-          <div className="rounded-md border bg-muted/30">
-            <div className="flex flex-col gap-2 border-b px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                Prévia ({sql ? `${sql.split("\n").length} linhas` : "carregando…"})
-                {query && sql ? (() => {
-                  const matches = (sql.toLowerCase().match(new RegExp(query.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) ?? []).length;
-                  return <span className="ml-2 normal-case tracking-normal text-primary">{matches} ocorrência(s)</span>;
-                })() : null}
+          <div className="rounded-md border bg-muted/20">
+            <div className="flex items-center justify-between border-b px-3 py-1.5">
+              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                Prévia {sql ? `· ${sql.split("\n").length} linhas` : "· carregando…"}
               </span>
-              <div className="relative w-full sm:w-64">
-                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Buscar no SQL…"
-                  className="h-8 w-full rounded-md border border-input bg-background pl-7 pr-2 text-xs focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
             </div>
-            <pre className="max-h-[320px] overflow-auto p-3 font-mono text-[11px] leading-relaxed">
-              {sql ? renderHighlighted(sql, query) : "carregando..."}
+            <pre className="max-h-[220px] overflow-auto p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
+              {sql ? sql.slice(0, 4000) + (sql.length > 4000 ? "\n…" : "") : "carregando..."}
             </pre>
           </div>
-          <ol className="rounded-md border bg-card p-3 text-xs text-muted-foreground space-y-1 list-decimal pl-6">
-            <li>Abra o <b>SQL Editor</b> do projeto Supabase do cliente.</li>
-            <li>Cole o SQL acima e clique em <b>Run</b>.</li>
-            <li>No próximo login do usuário, o painel limpa e carrega do banco dele.</li>
+          <ol className="text-[11px] text-muted-foreground space-y-0.5 list-decimal pl-5">
+            <li>Abra o <b>SQL Editor</b> do projeto do cliente.</li>
+            <li>Cole o SQL e clique em <b>Run</b>.</li>
+            <li>No próximo login, o painel carrega do banco dele.</li>
           </ol>
         </div>
         <DialogFooter>
-          <button onClick={onClose} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">Entendi</button>
+          <button onClick={onClose} className="h-9 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)]">Fechar</button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function renderHighlighted(text: string, query: string) {
-  if (!query) return text;
-  const safe = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const parts = text.split(new RegExp(`(${safe})`, "gi"));
-  return parts.map((p, i) =>
-    p.toLowerCase() === query.toLowerCase()
-      ? <mark key={i} className="rounded bg-primary/30 px-0.5 text-foreground">{p}</mark>
-      : <span key={i}>{p}</span>
   );
 }
 

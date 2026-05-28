@@ -1,8 +1,8 @@
 -- ============================================================
 -- LyneCloud · Schema completo (tenants Supabase)
 -- Cole este SQL no SQL Editor do projeto Supabase do cliente e EXECUTE.
--- Idempotente: pode rodar em projeto vazio. Não roda em projeto que já
--- tem outras tabelas conflitantes — limpe antes se necessário.
+-- Idempotente: pode rodar quantas vezes for necessário (criação + atualização).
+-- Seguro em projeto vazio ou já parcialmente migrado.
 -- ============================================================
 --
 -- PostgreSQL database dump
@@ -28,86 +28,101 @@
 -- Name: app_role; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.app_role AS ENUM (
+DO $idem$ BEGIN
+  CREATE TYPE public.app_role AS ENUM (
     'admin',
     'gerente',
     'operador',
     'vendedor'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
 -- Name: caixa_mov_tipo; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.caixa_mov_tipo AS ENUM (
+DO $idem$ BEGIN
+  CREATE TYPE public.caixa_mov_tipo AS ENUM (
     'sangria',
     'suprimento',
     'venda',
     'despesa'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
 -- Name: caixa_status; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.caixa_status AS ENUM (
+DO $idem$ BEGIN
+  CREATE TYPE public.caixa_status AS ENUM (
     'aberto',
     'fechado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
 -- Name: conta_status; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.conta_status AS ENUM (
+DO $idem$ BEGIN
+  CREATE TYPE public.conta_status AS ENUM (
     'pendente',
     'pago',
     'atrasado',
     'cancelado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
 -- Name: conta_tipo; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.conta_tipo AS ENUM (
+DO $idem$ BEGIN
+  CREATE TYPE public.conta_tipo AS ENUM (
     'pagar',
     'receber'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
 -- Name: estoque_mov_tipo; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.estoque_mov_tipo AS ENUM (
+DO $idem$ BEGIN
+  CREATE TYPE public.estoque_mov_tipo AS ENUM (
     'entrada',
     'saida',
     'ajuste',
     'perda'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
 -- Name: nfe_status; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.nfe_status AS ENUM (
+DO $idem$ BEGIN
+  CREATE TYPE public.nfe_status AS ENUM (
     'importado',
     'conferindo',
     'confirmado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
 -- Name: pagamento_tipo; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.pagamento_tipo AS ENUM (
+DO $idem$ BEGIN
+  CREATE TYPE public.pagamento_tipo AS ENUM (
     'pix',
     'credito',
     'debito',
@@ -117,25 +132,29 @@ CREATE TYPE public.pagamento_tipo AS ENUM (
     'nota_promissoria',
     'cheque'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
 -- Name: pedido_origem; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.pedido_origem AS ENUM (
+DO $idem$ BEGIN
+  CREATE TYPE public.pedido_origem AS ENUM (
     'balcao',
     'pdv',
     'vendedor',
     'delivery'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
 -- Name: pedido_status; Type: TYPE; Schema: public; Owner: -
 --
 
-CREATE TYPE public.pedido_status AS ENUM (
+DO $idem$ BEGIN
+  CREATE TYPE public.pedido_status AS ENUM (
     'pendente',
     'autorizado',
     'separacao',
@@ -145,6 +164,7 @@ CREATE TYPE public.pedido_status AS ENUM (
     'cancelado',
     'encerrado'
 );
+EXCEPTION WHEN duplicate_object THEN NULL; END $idem$;
 
 
 --
@@ -432,7 +452,7 @@ BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
 -- Name: api_keys; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.api_keys (
+CREATE TABLE IF NOT EXISTS public.api_keys (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     nome text NOT NULL,
     prefix text NOT NULL,
@@ -452,7 +472,7 @@ CREATE TABLE public.api_keys (
 -- Name: app_logs; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.app_logs (
+CREATE TABLE IF NOT EXISTS public.app_logs (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     categoria text NOT NULL,
     mensagem text NOT NULL,
@@ -468,7 +488,7 @@ CREATE TABLE public.app_logs (
 -- Name: app_settings; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.app_settings (
+CREATE TABLE IF NOT EXISTS public.app_settings (
     id text DEFAULT 'main'::text NOT NULL,
     pdv_ativo boolean DEFAULT true NOT NULL,
     metodos_pagamento jsonb DEFAULT '{"pix": true, "debito": true, "credito": true, "dinheiro": true, "nota_promissoria": true}'::jsonb NOT NULL,
@@ -500,7 +520,7 @@ CREATE TABLE public.app_settings (
 -- Name: audit_logs; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.audit_logs (
+CREATE TABLE IF NOT EXISTS public.audit_logs (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid,
     acao text NOT NULL,
@@ -515,7 +535,7 @@ CREATE TABLE public.audit_logs (
 -- Name: backups_log; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.backups_log (
+CREATE TABLE IF NOT EXISTS public.backups_log (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid,
     status text DEFAULT 'success'::text NOT NULL,
@@ -530,7 +550,7 @@ CREATE TABLE public.backups_log (
 -- Name: caixa_movimentos; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.caixa_movimentos (
+CREATE TABLE IF NOT EXISTS public.caixa_movimentos (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     sessao_id uuid NOT NULL,
     tipo public.caixa_mov_tipo NOT NULL,
@@ -544,7 +564,7 @@ CREATE TABLE public.caixa_movimentos (
 -- Name: caixa_sessoes; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.caixa_sessoes (
+CREATE TABLE IF NOT EXISTS public.caixa_sessoes (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     operador_id uuid NOT NULL,
     abertura timestamp with time zone DEFAULT now() NOT NULL,
@@ -560,7 +580,7 @@ CREATE TABLE public.caixa_sessoes (
 -- Name: categorias; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.categorias (
+CREATE TABLE IF NOT EXISTS public.categorias (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     nome text NOT NULL,
     cor text DEFAULT '#3b82f6'::text,
@@ -574,7 +594,7 @@ CREATE TABLE public.categorias (
 -- Name: clientes; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.clientes (
+CREATE TABLE IF NOT EXISTS public.clientes (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     nome text NOT NULL,
     telefone text,
@@ -597,7 +617,7 @@ CREATE TABLE public.clientes (
 -- Name: contas; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.contas (
+CREATE TABLE IF NOT EXISTS public.contas (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     tipo public.conta_tipo NOT NULL,
     descricao text NOT NULL,
@@ -615,7 +635,7 @@ CREATE TABLE public.contas (
 -- Name: despesas; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.despesas (
+CREATE TABLE IF NOT EXISTS public.despesas (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     descricao text NOT NULL,
     valor numeric(12,2) NOT NULL,
@@ -631,7 +651,7 @@ CREATE TABLE public.despesas (
 -- Name: estoque_movimentos; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.estoque_movimentos (
+CREATE TABLE IF NOT EXISTS public.estoque_movimentos (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     produto_id uuid NOT NULL,
     tipo public.estoque_mov_tipo NOT NULL,
@@ -647,7 +667,7 @@ CREATE TABLE public.estoque_movimentos (
 -- Name: faturamento_pedidos; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.faturamento_pedidos (
+CREATE TABLE IF NOT EXISTS public.faturamento_pedidos (
     faturamento_id uuid NOT NULL,
     pedido_id uuid NOT NULL
 );
@@ -657,7 +677,7 @@ CREATE TABLE public.faturamento_pedidos (
 -- Name: faturamentos_numero_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.faturamentos_numero_seq
+CREATE SEQUENCE IF NOT EXISTS public.faturamentos_numero_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -669,7 +689,7 @@ CREATE SEQUENCE public.faturamentos_numero_seq
 -- Name: faturamentos; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.faturamentos (
+CREATE TABLE IF NOT EXISTS public.faturamentos (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     numero text DEFAULT ('F'::text || lpad((nextval('public.faturamentos_numero_seq'::regclass))::text, 5, '0'::text)) NOT NULL,
     total numeric DEFAULT 0 NOT NULL,
@@ -682,7 +702,7 @@ CREATE TABLE public.faturamentos (
 -- Name: fidelidade_pontos; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.fidelidade_pontos (
+CREATE TABLE IF NOT EXISTS public.fidelidade_pontos (
     cliente_id uuid NOT NULL,
     pontos integer DEFAULT 0 NOT NULL,
     atualizado_em timestamp with time zone DEFAULT now() NOT NULL
@@ -693,7 +713,7 @@ CREATE TABLE public.fidelidade_pontos (
 -- Name: fornecedores; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.fornecedores (
+CREATE TABLE IF NOT EXISTS public.fornecedores (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     razao_social text NOT NULL,
     nome_fantasia text,
@@ -723,7 +743,7 @@ CREATE TABLE public.fornecedores (
 -- Name: gtin_global; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.gtin_global (
+CREATE TABLE IF NOT EXISTS public.gtin_global (
     gtin text NOT NULL,
     nome text NOT NULL,
     marca text,
@@ -739,7 +759,7 @@ CREATE TABLE public.gtin_global (
 -- Name: nfe_entradas; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.nfe_entradas (
+CREATE TABLE IF NOT EXISTS public.nfe_entradas (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     numero text,
     chave text,
@@ -757,7 +777,7 @@ CREATE TABLE public.nfe_entradas (
 -- Name: nfe_itens; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.nfe_itens (
+CREATE TABLE IF NOT EXISTS public.nfe_itens (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     nfe_id uuid NOT NULL,
     codigo_xml text,
@@ -776,7 +796,7 @@ CREATE TABLE public.nfe_itens (
 -- Name: nfe_webhook_events; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.nfe_webhook_events (
+CREATE TABLE IF NOT EXISTS public.nfe_webhook_events (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     evento text NOT NULL,
     payload jsonb NOT NULL,
@@ -789,7 +809,7 @@ CREATE TABLE public.nfe_webhook_events (
 -- Name: notificacoes; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.notificacoes (
+CREATE TABLE IF NOT EXISTS public.notificacoes (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid,
     tipo text NOT NULL,
@@ -807,7 +827,7 @@ CREATE TABLE public.notificacoes (
 -- Name: patrimonio; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.patrimonio (
+CREATE TABLE IF NOT EXISTS public.patrimonio (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     nome text NOT NULL,
     categoria text,
@@ -823,7 +843,7 @@ CREATE TABLE public.patrimonio (
 -- Name: pedido_itens; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.pedido_itens (
+CREATE TABLE IF NOT EXISTS public.pedido_itens (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     pedido_id uuid NOT NULL,
     produto_id uuid NOT NULL,
@@ -841,7 +861,7 @@ CREATE TABLE public.pedido_itens (
 -- Name: pedido_pagamentos; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.pedido_pagamentos (
+CREATE TABLE IF NOT EXISTS public.pedido_pagamentos (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     pedido_id uuid NOT NULL,
     forma text NOT NULL,
@@ -858,7 +878,7 @@ CREATE TABLE public.pedido_pagamentos (
 -- Name: pedidos_numero_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.pedidos_numero_seq
+CREATE SEQUENCE IF NOT EXISTS public.pedidos_numero_seq
     START WITH 1000
     INCREMENT BY 1
     NO MINVALUE
@@ -870,7 +890,7 @@ CREATE SEQUENCE public.pedidos_numero_seq
 -- Name: pedidos; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.pedidos (
+CREATE TABLE IF NOT EXISTS public.pedidos (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     numero text DEFAULT ('P'::text || lpad((nextval('public.pedidos_numero_seq'::regclass))::text, 5, '0'::text)) NOT NULL,
     cliente_id uuid,
@@ -906,7 +926,7 @@ CREATE TABLE public.pedidos (
 -- Name: product_images; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.product_images (
+CREATE TABLE IF NOT EXISTS public.product_images (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     nome_chave text NOT NULL,
     nome text NOT NULL,
@@ -920,7 +940,7 @@ CREATE TABLE public.product_images (
 -- Name: produtos; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.produtos (
+CREATE TABLE IF NOT EXISTS public.produtos (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     sku text NOT NULL,
     codigo_barras text,
@@ -950,7 +970,7 @@ CREATE TABLE public.produtos (
 -- Name: profiles; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.profiles (
+CREATE TABLE IF NOT EXISTS public.profiles (
     id uuid NOT NULL,
     nome text NOT NULL,
     email text,
@@ -967,7 +987,7 @@ CREATE TABLE public.profiles (
 -- Name: tenants; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.tenants (
+CREATE TABLE IF NOT EXISTS public.tenants (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     slug text NOT NULL,
     nome text,
@@ -984,7 +1004,7 @@ CREATE TABLE public.tenants (
 -- Name: user_permissions; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_permissions (
+CREATE TABLE IF NOT EXISTS public.user_permissions (
     user_id uuid NOT NULL,
     menu text NOT NULL,
     allowed boolean DEFAULT true NOT NULL,
@@ -996,7 +1016,7 @@ CREATE TABLE public.user_permissions (
 -- Name: user_roles; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.user_roles (
+CREATE TABLE IF NOT EXISTS public.user_roles (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     user_id uuid NOT NULL,
     role public.app_role NOT NULL,
@@ -1008,400 +1028,438 @@ CREATE TABLE public.user_roles (
 -- Name: api_keys api_keys_key_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.api_keys
-    ADD CONSTRAINT api_keys_key_hash_key UNIQUE (key_hash);
+DO $idem$ BEGIN
+  ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_key_hash_key UNIQUE (key_hash);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: api_keys api_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.api_keys
-    ADD CONSTRAINT api_keys_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: api_keys api_keys_prefix_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.api_keys
-    ADD CONSTRAINT api_keys_prefix_key UNIQUE (prefix);
+DO $idem$ BEGIN
+  ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_prefix_key UNIQUE (prefix);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: app_logs app_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.app_logs
-    ADD CONSTRAINT app_logs_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.app_logs ADD CONSTRAINT app_logs_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: app_settings app_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.app_settings
-    ADD CONSTRAINT app_settings_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.app_settings ADD CONSTRAINT app_settings_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: audit_logs audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.audit_logs
-    ADD CONSTRAINT audit_logs_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: backups_log backups_log_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.backups_log
-    ADD CONSTRAINT backups_log_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.backups_log ADD CONSTRAINT backups_log_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: caixa_movimentos caixa_movimentos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.caixa_movimentos
-    ADD CONSTRAINT caixa_movimentos_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.caixa_movimentos ADD CONSTRAINT caixa_movimentos_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: caixa_sessoes caixa_sessoes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.caixa_sessoes
-    ADD CONSTRAINT caixa_sessoes_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.caixa_sessoes ADD CONSTRAINT caixa_sessoes_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: categorias categorias_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.categorias
-    ADD CONSTRAINT categorias_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.categorias ADD CONSTRAINT categorias_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: clientes clientes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.clientes
-    ADD CONSTRAINT clientes_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.clientes ADD CONSTRAINT clientes_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: contas contas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.contas
-    ADD CONSTRAINT contas_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.contas ADD CONSTRAINT contas_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: despesas despesas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.despesas
-    ADD CONSTRAINT despesas_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.despesas ADD CONSTRAINT despesas_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: estoque_movimentos estoque_movimentos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.estoque_movimentos
-    ADD CONSTRAINT estoque_movimentos_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.estoque_movimentos ADD CONSTRAINT estoque_movimentos_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: faturamento_pedidos faturamento_pedidos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.faturamento_pedidos
-    ADD CONSTRAINT faturamento_pedidos_pkey PRIMARY KEY (faturamento_id, pedido_id);
+DO $idem$ BEGIN
+  ALTER TABLE public.faturamento_pedidos ADD CONSTRAINT faturamento_pedidos_pkey PRIMARY KEY (faturamento_id, pedido_id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: faturamentos faturamentos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.faturamentos
-    ADD CONSTRAINT faturamentos_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.faturamentos ADD CONSTRAINT faturamentos_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: fidelidade_pontos fidelidade_pontos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.fidelidade_pontos
-    ADD CONSTRAINT fidelidade_pontos_pkey PRIMARY KEY (cliente_id);
+DO $idem$ BEGIN
+  ALTER TABLE public.fidelidade_pontos ADD CONSTRAINT fidelidade_pontos_pkey PRIMARY KEY (cliente_id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: fornecedores fornecedores_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.fornecedores
-    ADD CONSTRAINT fornecedores_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.fornecedores ADD CONSTRAINT fornecedores_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: gtin_global gtin_global_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.gtin_global
-    ADD CONSTRAINT gtin_global_pkey PRIMARY KEY (gtin);
+DO $idem$ BEGIN
+  ALTER TABLE public.gtin_global ADD CONSTRAINT gtin_global_pkey PRIMARY KEY (gtin);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: nfe_entradas nfe_entradas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.nfe_entradas
-    ADD CONSTRAINT nfe_entradas_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.nfe_entradas ADD CONSTRAINT nfe_entradas_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: nfe_itens nfe_itens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.nfe_itens
-    ADD CONSTRAINT nfe_itens_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.nfe_itens ADD CONSTRAINT nfe_itens_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: nfe_webhook_events nfe_webhook_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.nfe_webhook_events
-    ADD CONSTRAINT nfe_webhook_events_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.nfe_webhook_events ADD CONSTRAINT nfe_webhook_events_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: notificacoes notificacoes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.notificacoes
-    ADD CONSTRAINT notificacoes_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.notificacoes ADD CONSTRAINT notificacoes_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: patrimonio patrimonio_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.patrimonio
-    ADD CONSTRAINT patrimonio_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.patrimonio ADD CONSTRAINT patrimonio_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: pedido_itens pedido_itens_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.pedido_itens
-    ADD CONSTRAINT pedido_itens_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.pedido_itens ADD CONSTRAINT pedido_itens_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: pedido_pagamentos pedido_pagamentos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.pedido_pagamentos
-    ADD CONSTRAINT pedido_pagamentos_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.pedido_pagamentos ADD CONSTRAINT pedido_pagamentos_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: pedidos pedidos_numero_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.pedidos
-    ADD CONSTRAINT pedidos_numero_key UNIQUE (numero);
+DO $idem$ BEGIN
+  ALTER TABLE public.pedidos ADD CONSTRAINT pedidos_numero_key UNIQUE (numero);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: pedidos pedidos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.pedidos
-    ADD CONSTRAINT pedidos_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.pedidos ADD CONSTRAINT pedidos_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: product_images product_images_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.product_images
-    ADD CONSTRAINT product_images_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.product_images ADD CONSTRAINT product_images_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: produtos produtos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.produtos
-    ADD CONSTRAINT produtos_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.produtos ADD CONSTRAINT produtos_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: produtos produtos_sku_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.produtos
-    ADD CONSTRAINT produtos_sku_key UNIQUE (sku);
+DO $idem$ BEGIN
+  ALTER TABLE public.produtos ADD CONSTRAINT produtos_sku_key UNIQUE (sku);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: profiles profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.profiles
-    ADD CONSTRAINT profiles_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.profiles ADD CONSTRAINT profiles_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: tenants tenants_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.tenants
-    ADD CONSTRAINT tenants_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.tenants ADD CONSTRAINT tenants_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: tenants tenants_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.tenants
-    ADD CONSTRAINT tenants_slug_key UNIQUE (slug);
+DO $idem$ BEGIN
+  ALTER TABLE public.tenants ADD CONSTRAINT tenants_slug_key UNIQUE (slug);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: user_permissions user_permissions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.user_permissions
-    ADD CONSTRAINT user_permissions_pkey PRIMARY KEY (user_id, menu);
+DO $idem$ BEGIN
+  ALTER TABLE public.user_permissions ADD CONSTRAINT user_permissions_pkey PRIMARY KEY (user_id, menu);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: user_roles user_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.user_roles
-    ADD CONSTRAINT user_roles_pkey PRIMARY KEY (id);
+DO $idem$ BEGIN
+  ALTER TABLE public.user_roles ADD CONSTRAINT user_roles_pkey PRIMARY KEY (id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: user_roles user_roles_user_id_role_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.user_roles
-    ADD CONSTRAINT user_roles_user_id_role_key UNIQUE (user_id, role);
+DO $idem$ BEGIN
+  ALTER TABLE public.user_roles ADD CONSTRAINT user_roles_user_id_role_key UNIQUE (user_id, role);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: api_keys_prefix_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX api_keys_prefix_idx ON public.api_keys USING btree (prefix);
+CREATE INDEX IF NOT EXISTS api_keys_prefix_idx ON public.api_keys USING btree (prefix);
 
 
 --
 -- Name: app_logs_cat_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX app_logs_cat_idx ON public.app_logs USING btree (categoria, created_at DESC);
+CREATE INDEX IF NOT EXISTS app_logs_cat_idx ON public.app_logs USING btree (categoria, created_at DESC);
 
 
 --
 -- Name: idx_product_images_nome_chave; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX idx_product_images_nome_chave ON public.product_images USING btree (nome_chave);
+CREATE INDEX IF NOT EXISTS idx_product_images_nome_chave ON public.product_images USING btree (nome_chave);
 
 
 --
 -- Name: notificacoes_dedupe_open; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX notificacoes_dedupe_open ON public.notificacoes USING btree (dedupe_key) WHERE ((dedupe_key IS NOT NULL) AND (lida_em IS NULL));
+CREATE UNIQUE INDEX IF NOT EXISTS notificacoes_dedupe_open ON public.notificacoes USING btree (dedupe_key) WHERE ((dedupe_key IS NOT NULL) AND (lida_em IS NULL));
 
 
 --
 -- Name: notificacoes_open_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX notificacoes_open_idx ON public.notificacoes USING btree (created_at DESC) WHERE (lida_em IS NULL);
+CREATE INDEX IF NOT EXISTS notificacoes_open_idx ON public.notificacoes USING btree (created_at DESC) WHERE (lida_em IS NULL);
 
 
 --
 -- Name: notificacoes_user_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX notificacoes_user_idx ON public.notificacoes USING btree (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS notificacoes_user_idx ON public.notificacoes USING btree (user_id, created_at DESC);
 
 
 --
 -- Name: pedido_pagamentos_pedido_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX pedido_pagamentos_pedido_idx ON public.pedido_pagamentos USING btree (pedido_id);
+CREATE INDEX IF NOT EXISTS pedido_pagamentos_pedido_idx ON public.pedido_pagamentos USING btree (pedido_id);
 
 
 --
 -- Name: pedidos_created_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX pedidos_created_idx ON public.pedidos USING btree (created_at DESC);
+CREATE INDEX IF NOT EXISTS pedidos_created_idx ON public.pedidos USING btree (created_at DESC);
 
 
 --
 -- Name: pedidos_status_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX pedidos_status_idx ON public.pedidos USING btree (status);
+CREATE INDEX IF NOT EXISTS pedidos_status_idx ON public.pedidos USING btree (status);
 
 
 --
 -- Name: pedidos_vendedor_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX pedidos_vendedor_idx ON public.pedidos USING btree (vendedor_id);
+CREATE INDEX IF NOT EXISTS pedidos_vendedor_idx ON public.pedidos USING btree (vendedor_id);
 
 
 --
 -- Name: produtos_barras_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX produtos_barras_idx ON public.produtos USING btree (codigo_barras);
+CREATE INDEX IF NOT EXISTS produtos_barras_idx ON public.produtos USING btree (codigo_barras);
 
 
 --
 -- Name: produtos_sku_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX produtos_sku_idx ON public.produtos USING btree (sku);
+CREATE INDEX IF NOT EXISTS produtos_sku_idx ON public.produtos USING btree (sku);
 
 
 --
 -- Name: profiles_tenant_slug_uidx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX profiles_tenant_slug_uidx ON public.profiles USING btree (tenant_slug) WHERE (tenant_slug IS NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS profiles_tenant_slug_uidx ON public.profiles USING btree (tenant_slug) WHERE (tenant_slug IS NOT NULL);
 
 
 --
 -- Name: ux_produtos_codigo_barras; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX ux_produtos_codigo_barras ON public.produtos USING btree (codigo_barras) WHERE (codigo_barras IS NOT NULL);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_produtos_codigo_barras ON public.produtos USING btree (codigo_barras) WHERE (codigo_barras IS NOT NULL);
 
 
 --
 -- Name: clientes clientes_touch; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS clientes_touch ON public.clientes;
 CREATE TRIGGER clientes_touch BEFORE UPDATE ON public.clientes FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
 
@@ -1409,6 +1467,7 @@ CREATE TRIGGER clientes_touch BEFORE UPDATE ON public.clientes FOR EACH ROW EXEC
 -- Name: pedidos pedidos_touch; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS pedidos_touch ON public.pedidos;
 CREATE TRIGGER pedidos_touch BEFORE UPDATE ON public.pedidos FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
 
@@ -1416,6 +1475,7 @@ CREATE TRIGGER pedidos_touch BEFORE UPDATE ON public.pedidos FOR EACH ROW EXECUT
 -- Name: produtos produtos_touch; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS produtos_touch ON public.produtos;
 CREATE TRIGGER produtos_touch BEFORE UPDATE ON public.produtos FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
 
@@ -1423,6 +1483,7 @@ CREATE TRIGGER produtos_touch BEFORE UPDATE ON public.produtos FOR EACH ROW EXEC
 -- Name: profiles profiles_touch; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS profiles_touch ON public.profiles;
 CREATE TRIGGER profiles_touch BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
 
@@ -1430,6 +1491,7 @@ CREATE TRIGGER profiles_touch BEFORE UPDATE ON public.profiles FOR EACH ROW EXEC
 -- Name: app_settings trg_app_settings_touch; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_app_settings_touch ON public.app_settings;
 CREATE TRIGGER trg_app_settings_touch BEFORE UPDATE ON public.app_settings FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
 
@@ -1437,6 +1499,7 @@ CREATE TRIGGER trg_app_settings_touch BEFORE UPDATE ON public.app_settings FOR E
 -- Name: fornecedores trg_fornecedores_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_fornecedores_updated ON public.fornecedores;
 CREATE TRIGGER trg_fornecedores_updated BEFORE UPDATE ON public.fornecedores FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
 
@@ -1444,6 +1507,7 @@ CREATE TRIGGER trg_fornecedores_updated BEFORE UPDATE ON public.fornecedores FOR
 -- Name: pedidos trg_guard_pedido_faturado; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_guard_pedido_faturado ON public.pedidos;
 CREATE TRIGGER trg_guard_pedido_faturado BEFORE UPDATE ON public.pedidos FOR EACH ROW EXECUTE FUNCTION public.guard_pedido_faturado();
 
 
@@ -1451,6 +1515,7 @@ CREATE TRIGGER trg_guard_pedido_faturado BEFORE UPDATE ON public.pedidos FOR EAC
 -- Name: produtos trg_notify_estoque; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_notify_estoque ON public.produtos;
 CREATE TRIGGER trg_notify_estoque AFTER UPDATE OF estoque ON public.produtos FOR EACH ROW EXECUTE FUNCTION public.notify_estoque_change();
 
 
@@ -1458,6 +1523,7 @@ CREATE TRIGGER trg_notify_estoque AFTER UPDATE OF estoque ON public.produtos FOR
 -- Name: pedidos trg_notify_pedido_ins; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_notify_pedido_ins ON public.pedidos;
 CREATE TRIGGER trg_notify_pedido_ins AFTER INSERT ON public.pedidos FOR EACH ROW EXECUTE FUNCTION public.notify_pedido_event();
 
 
@@ -1465,6 +1531,7 @@ CREATE TRIGGER trg_notify_pedido_ins AFTER INSERT ON public.pedidos FOR EACH ROW
 -- Name: pedidos trg_notify_pedido_upd; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_notify_pedido_upd ON public.pedidos;
 CREATE TRIGGER trg_notify_pedido_upd AFTER UPDATE OF status ON public.pedidos FOR EACH ROW EXECUTE FUNCTION public.notify_pedido_event();
 
 
@@ -1472,6 +1539,7 @@ CREATE TRIGGER trg_notify_pedido_upd AFTER UPDATE OF status ON public.pedidos FO
 -- Name: patrimonio trg_patrimonio_updated; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_patrimonio_updated ON public.patrimonio;
 CREATE TRIGGER trg_patrimonio_updated BEFORE UPDATE ON public.patrimonio FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
 
 
@@ -1479,6 +1547,7 @@ CREATE TRIGGER trg_patrimonio_updated BEFORE UPDATE ON public.patrimonio FOR EAC
 -- Name: pedidos trg_pedido_cancelamento; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_pedido_cancelamento ON public.pedidos;
 CREATE TRIGGER trg_pedido_cancelamento AFTER UPDATE OF status ON public.pedidos FOR EACH ROW EXECUTE FUNCTION public.handle_pedido_cancelamento();
 
 
@@ -1486,6 +1555,7 @@ CREATE TRIGGER trg_pedido_cancelamento AFTER UPDATE OF status ON public.pedidos 
 -- Name: pedido_itens trg_pedido_itens_estoque; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_pedido_itens_estoque ON public.pedido_itens;
 CREATE TRIGGER trg_pedido_itens_estoque AFTER INSERT OR DELETE ON public.pedido_itens FOR EACH ROW EXECUTE FUNCTION public.apply_estoque_from_item();
 
 
@@ -1493,6 +1563,7 @@ CREATE TRIGGER trg_pedido_itens_estoque AFTER INSERT OR DELETE ON public.pedido_
 -- Name: pedido_pagamentos trg_recalc_pedido_pagamentos; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_recalc_pedido_pagamentos ON public.pedido_pagamentos;
 CREATE TRIGGER trg_recalc_pedido_pagamentos AFTER INSERT OR DELETE OR UPDATE ON public.pedido_pagamentos FOR EACH ROW EXECUTE FUNCTION public.recalc_pedido_pagamentos();
 
 
@@ -1500,6 +1571,7 @@ CREATE TRIGGER trg_recalc_pedido_pagamentos AFTER INSERT OR DELETE OR UPDATE ON 
 -- Name: pedidos trg_recalc_pedido_restante; Type: TRIGGER; Schema: public; Owner: -
 --
 
+DROP TRIGGER IF EXISTS trg_recalc_pedido_restante ON public.pedidos;
 CREATE TRIGGER trg_recalc_pedido_restante BEFORE UPDATE ON public.pedidos FOR EACH ROW EXECUTE FUNCTION public.recalc_pedido_restante();
 
 
@@ -1507,176 +1579,198 @@ CREATE TRIGGER trg_recalc_pedido_restante BEFORE UPDATE ON public.pedidos FOR EA
 -- Name: api_keys api_keys_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.api_keys
-    ADD CONSTRAINT api_keys_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+DO $idem$ BEGIN
+  ALTER TABLE public.api_keys ADD CONSTRAINT api_keys_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: audit_logs audit_logs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.audit_logs
-    ADD CONSTRAINT audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
+DO $idem$ BEGIN
+  ALTER TABLE public.audit_logs ADD CONSTRAINT audit_logs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: caixa_movimentos caixa_movimentos_sessao_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.caixa_movimentos
-    ADD CONSTRAINT caixa_movimentos_sessao_id_fkey FOREIGN KEY (sessao_id) REFERENCES public.caixa_sessoes(id) ON DELETE CASCADE;
+DO $idem$ BEGIN
+  ALTER TABLE public.caixa_movimentos ADD CONSTRAINT caixa_movimentos_sessao_id_fkey FOREIGN KEY (sessao_id) REFERENCES public.caixa_sessoes(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: caixa_sessoes caixa_sessoes_operador_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.caixa_sessoes
-    ADD CONSTRAINT caixa_sessoes_operador_id_fkey FOREIGN KEY (operador_id) REFERENCES auth.users(id);
+DO $idem$ BEGIN
+  ALTER TABLE public.caixa_sessoes ADD CONSTRAINT caixa_sessoes_operador_id_fkey FOREIGN KEY (operador_id) REFERENCES auth.users(id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: contas contas_cliente_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.contas
-    ADD CONSTRAINT contas_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id) ON DELETE SET NULL;
+DO $idem$ BEGIN
+  ALTER TABLE public.contas ADD CONSTRAINT contas_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: estoque_movimentos estoque_movimentos_produto_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.estoque_movimentos
-    ADD CONSTRAINT estoque_movimentos_produto_id_fkey FOREIGN KEY (produto_id) REFERENCES public.produtos(id);
+DO $idem$ BEGIN
+  ALTER TABLE public.estoque_movimentos ADD CONSTRAINT estoque_movimentos_produto_id_fkey FOREIGN KEY (produto_id) REFERENCES public.produtos(id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: estoque_movimentos estoque_movimentos_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.estoque_movimentos
-    ADD CONSTRAINT estoque_movimentos_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
+DO $idem$ BEGIN
+  ALTER TABLE public.estoque_movimentos ADD CONSTRAINT estoque_movimentos_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: faturamento_pedidos faturamento_pedidos_faturamento_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.faturamento_pedidos
-    ADD CONSTRAINT faturamento_pedidos_faturamento_id_fkey FOREIGN KEY (faturamento_id) REFERENCES public.faturamentos(id) ON DELETE CASCADE;
+DO $idem$ BEGIN
+  ALTER TABLE public.faturamento_pedidos ADD CONSTRAINT faturamento_pedidos_faturamento_id_fkey FOREIGN KEY (faturamento_id) REFERENCES public.faturamentos(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: fidelidade_pontos fidelidade_pontos_cliente_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.fidelidade_pontos
-    ADD CONSTRAINT fidelidade_pontos_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id) ON DELETE CASCADE;
+DO $idem$ BEGIN
+  ALTER TABLE public.fidelidade_pontos ADD CONSTRAINT fidelidade_pontos_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: nfe_entradas nfe_entradas_confirmado_por_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.nfe_entradas
-    ADD CONSTRAINT nfe_entradas_confirmado_por_fkey FOREIGN KEY (confirmado_por) REFERENCES auth.users(id);
+DO $idem$ BEGIN
+  ALTER TABLE public.nfe_entradas ADD CONSTRAINT nfe_entradas_confirmado_por_fkey FOREIGN KEY (confirmado_por) REFERENCES auth.users(id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: nfe_itens nfe_itens_nfe_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.nfe_itens
-    ADD CONSTRAINT nfe_itens_nfe_id_fkey FOREIGN KEY (nfe_id) REFERENCES public.nfe_entradas(id) ON DELETE CASCADE;
+DO $idem$ BEGIN
+  ALTER TABLE public.nfe_itens ADD CONSTRAINT nfe_itens_nfe_id_fkey FOREIGN KEY (nfe_id) REFERENCES public.nfe_entradas(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: nfe_itens nfe_itens_produto_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.nfe_itens
-    ADD CONSTRAINT nfe_itens_produto_id_fkey FOREIGN KEY (produto_id) REFERENCES public.produtos(id) ON DELETE SET NULL;
+DO $idem$ BEGIN
+  ALTER TABLE public.nfe_itens ADD CONSTRAINT nfe_itens_produto_id_fkey FOREIGN KEY (produto_id) REFERENCES public.produtos(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: pedido_itens pedido_itens_pedido_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.pedido_itens
-    ADD CONSTRAINT pedido_itens_pedido_id_fkey FOREIGN KEY (pedido_id) REFERENCES public.pedidos(id) ON DELETE CASCADE;
+DO $idem$ BEGIN
+  ALTER TABLE public.pedido_itens ADD CONSTRAINT pedido_itens_pedido_id_fkey FOREIGN KEY (pedido_id) REFERENCES public.pedidos(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: pedido_itens pedido_itens_produto_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.pedido_itens
-    ADD CONSTRAINT pedido_itens_produto_id_fkey FOREIGN KEY (produto_id) REFERENCES public.produtos(id);
+DO $idem$ BEGIN
+  ALTER TABLE public.pedido_itens ADD CONSTRAINT pedido_itens_produto_id_fkey FOREIGN KEY (produto_id) REFERENCES public.produtos(id);
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: pedido_pagamentos pedido_pagamentos_pedido_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.pedido_pagamentos
-    ADD CONSTRAINT pedido_pagamentos_pedido_id_fkey FOREIGN KEY (pedido_id) REFERENCES public.pedidos(id) ON DELETE CASCADE;
+DO $idem$ BEGIN
+  ALTER TABLE public.pedido_pagamentos ADD CONSTRAINT pedido_pagamentos_pedido_id_fkey FOREIGN KEY (pedido_id) REFERENCES public.pedidos(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: pedidos pedidos_cliente_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.pedidos
-    ADD CONSTRAINT pedidos_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id) ON DELETE SET NULL;
+DO $idem$ BEGIN
+  ALTER TABLE public.pedidos ADD CONSTRAINT pedidos_cliente_id_fkey FOREIGN KEY (cliente_id) REFERENCES public.clientes(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: pedidos pedidos_operador_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.pedidos
-    ADD CONSTRAINT pedidos_operador_id_fkey FOREIGN KEY (operador_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+DO $idem$ BEGIN
+  ALTER TABLE public.pedidos ADD CONSTRAINT pedidos_operador_id_fkey FOREIGN KEY (operador_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: pedidos pedidos_vendedor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.pedidos
-    ADD CONSTRAINT pedidos_vendedor_id_fkey FOREIGN KEY (vendedor_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+DO $idem$ BEGIN
+  ALTER TABLE public.pedidos ADD CONSTRAINT pedidos_vendedor_id_fkey FOREIGN KEY (vendedor_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: produtos produtos_categoria_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.produtos
-    ADD CONSTRAINT produtos_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.categorias(id) ON DELETE SET NULL;
+DO $idem$ BEGIN
+  ALTER TABLE public.produtos ADD CONSTRAINT produtos_categoria_id_fkey FOREIGN KEY (categoria_id) REFERENCES public.categorias(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: produtos produtos_fornecedor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.produtos
-    ADD CONSTRAINT produtos_fornecedor_id_fkey FOREIGN KEY (fornecedor_id) REFERENCES public.fornecedores(id) ON DELETE SET NULL;
+DO $idem$ BEGIN
+  ALTER TABLE public.produtos ADD CONSTRAINT produtos_fornecedor_id_fkey FOREIGN KEY (fornecedor_id) REFERENCES public.fornecedores(id) ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: profiles profiles_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.profiles
-    ADD CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
+DO $idem$ BEGIN
+  ALTER TABLE public.profiles ADD CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
 -- Name: user_roles user_roles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.user_roles
-    ADD CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+DO $idem$ BEGIN
+  ALTER TABLE public.user_roles ADD CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL; WHEN duplicate_table THEN NULL; WHEN invalid_table_definition THEN NULL; END $idem$;
 
 
 --
@@ -1689,6 +1783,7 @@ ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
 -- Name: api_keys api_keys_admin_all; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS api_keys_admin_all ON public.api_keys;
 CREATE POLICY api_keys_admin_all ON public.api_keys TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 
@@ -1708,6 +1803,7 @@ ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 -- Name: app_settings app_settings_select_auth; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS app_settings_select_auth ON public.app_settings;
 CREATE POLICY app_settings_select_auth ON public.app_settings FOR SELECT TO authenticated USING (true);
 
 
@@ -1715,6 +1811,7 @@ CREATE POLICY app_settings_select_auth ON public.app_settings FOR SELECT TO auth
 -- Name: app_settings app_settings_write_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS app_settings_write_staff ON public.app_settings;
 CREATE POLICY app_settings_write_staff ON public.app_settings TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1722,6 +1819,7 @@ CREATE POLICY app_settings_write_staff ON public.app_settings TO authenticated U
 -- Name: audit_logs audit_insert_any_auth; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS audit_insert_any_auth ON public.audit_logs;
 CREATE POLICY audit_insert_any_auth ON public.audit_logs FOR INSERT TO authenticated WITH CHECK ((user_id = auth.uid()));
 
 
@@ -1735,6 +1833,7 @@ ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 -- Name: audit_logs audit_select_admin; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS audit_select_admin ON public.audit_logs;
 CREATE POLICY audit_select_admin ON public.audit_logs FOR SELECT TO authenticated USING ((public.has_role(auth.uid(), 'admin'::public.app_role) OR public.has_role(auth.uid(), 'gerente'::public.app_role)));
 
 
@@ -1748,6 +1847,7 @@ ALTER TABLE public.backups_log ENABLE ROW LEVEL SECURITY;
 -- Name: backups_log bklog_select_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS bklog_select_staff ON public.backups_log;
 CREATE POLICY bklog_select_staff ON public.backups_log FOR SELECT TO authenticated USING (public.is_staff(auth.uid()));
 
 
@@ -1767,6 +1867,7 @@ ALTER TABLE public.caixa_sessoes ENABLE ROW LEVEL SECURITY;
 -- Name: categorias cat_select_auth; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS cat_select_auth ON public.categorias;
 CREATE POLICY cat_select_auth ON public.categorias FOR SELECT TO authenticated USING (true);
 
 
@@ -1774,6 +1875,7 @@ CREATE POLICY cat_select_auth ON public.categorias FOR SELECT TO authenticated U
 -- Name: categorias cat_write_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS cat_write_staff ON public.categorias;
 CREATE POLICY cat_write_staff ON public.categorias TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1787,6 +1889,7 @@ ALTER TABLE public.categorias ENABLE ROW LEVEL SECURITY;
 -- Name: clientes cli_select_auth; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS cli_select_auth ON public.clientes;
 CREATE POLICY cli_select_auth ON public.clientes FOR SELECT TO authenticated USING (true);
 
 
@@ -1794,6 +1897,7 @@ CREATE POLICY cli_select_auth ON public.clientes FOR SELECT TO authenticated USI
 -- Name: clientes cli_write_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS cli_write_staff ON public.clientes;
 CREATE POLICY cli_write_staff ON public.clientes TO authenticated USING ((public.is_staff(auth.uid()) OR public.has_role(auth.uid(), 'vendedor'::public.app_role))) WITH CHECK ((public.is_staff(auth.uid()) OR public.has_role(auth.uid(), 'vendedor'::public.app_role)));
 
 
@@ -1813,6 +1917,7 @@ ALTER TABLE public.contas ENABLE ROW LEVEL SECURITY;
 -- Name: contas ct_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS ct_staff ON public.contas;
 CREATE POLICY ct_staff ON public.contas TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1820,6 +1925,7 @@ CREATE POLICY ct_staff ON public.contas TO authenticated USING (public.is_staff(
 -- Name: caixa_sessoes cx_select_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS cx_select_staff ON public.caixa_sessoes;
 CREATE POLICY cx_select_staff ON public.caixa_sessoes FOR SELECT TO authenticated USING (public.is_staff(auth.uid()));
 
 
@@ -1827,6 +1933,7 @@ CREATE POLICY cx_select_staff ON public.caixa_sessoes FOR SELECT TO authenticate
 -- Name: caixa_sessoes cx_write_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS cx_write_staff ON public.caixa_sessoes;
 CREATE POLICY cx_write_staff ON public.caixa_sessoes TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1834,6 +1941,7 @@ CREATE POLICY cx_write_staff ON public.caixa_sessoes TO authenticated USING (pub
 -- Name: caixa_movimentos cxm_select_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS cxm_select_staff ON public.caixa_movimentos;
 CREATE POLICY cxm_select_staff ON public.caixa_movimentos FOR SELECT TO authenticated USING (public.is_staff(auth.uid()));
 
 
@@ -1841,6 +1949,7 @@ CREATE POLICY cxm_select_staff ON public.caixa_movimentos FOR SELECT TO authenti
 -- Name: caixa_movimentos cxm_write_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS cxm_write_staff ON public.caixa_movimentos;
 CREATE POLICY cxm_write_staff ON public.caixa_movimentos TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1848,6 +1957,7 @@ CREATE POLICY cxm_write_staff ON public.caixa_movimentos TO authenticated USING 
 -- Name: despesas desp_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS desp_staff ON public.despesas;
 CREATE POLICY desp_staff ON public.despesas TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1861,6 +1971,7 @@ ALTER TABLE public.despesas ENABLE ROW LEVEL SECURITY;
 -- Name: estoque_movimentos em_select_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS em_select_staff ON public.estoque_movimentos;
 CREATE POLICY em_select_staff ON public.estoque_movimentos FOR SELECT TO authenticated USING (public.is_staff(auth.uid()));
 
 
@@ -1868,6 +1979,7 @@ CREATE POLICY em_select_staff ON public.estoque_movimentos FOR SELECT TO authent
 -- Name: estoque_movimentos em_write_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS em_write_staff ON public.estoque_movimentos;
 CREATE POLICY em_write_staff ON public.estoque_movimentos TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1881,6 +1993,7 @@ ALTER TABLE public.estoque_movimentos ENABLE ROW LEVEL SECURITY;
 -- Name: faturamentos fat_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS fat_staff ON public.faturamentos;
 CREATE POLICY fat_staff ON public.faturamentos TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1888,6 +2001,7 @@ CREATE POLICY fat_staff ON public.faturamentos TO authenticated USING (public.is
 -- Name: faturamento_pedidos fatp_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS fatp_staff ON public.faturamento_pedidos;
 CREATE POLICY fatp_staff ON public.faturamento_pedidos TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1913,6 +2027,7 @@ ALTER TABLE public.fidelidade_pontos ENABLE ROW LEVEL SECURITY;
 -- Name: fornecedores forn_select_auth; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS forn_select_auth ON public.fornecedores;
 CREATE POLICY forn_select_auth ON public.fornecedores FOR SELECT TO authenticated USING (true);
 
 
@@ -1920,6 +2035,7 @@ CREATE POLICY forn_select_auth ON public.fornecedores FOR SELECT TO authenticate
 -- Name: fornecedores forn_write_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS forn_write_staff ON public.fornecedores;
 CREATE POLICY forn_write_staff ON public.fornecedores TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1933,6 +2049,7 @@ ALTER TABLE public.fornecedores ENABLE ROW LEVEL SECURITY;
 -- Name: fidelidade_pontos fp_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS fp_staff ON public.fidelidade_pontos;
 CREATE POLICY fp_staff ON public.fidelidade_pontos TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1946,6 +2063,7 @@ ALTER TABLE public.gtin_global ENABLE ROW LEVEL SECURITY;
 -- Name: gtin_global gtin_read_auth; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS gtin_read_auth ON public.gtin_global;
 CREATE POLICY gtin_read_auth ON public.gtin_global FOR SELECT TO authenticated USING (true);
 
 
@@ -1953,6 +2071,7 @@ CREATE POLICY gtin_read_auth ON public.gtin_global FOR SELECT TO authenticated U
 -- Name: app_logs logs_insert_auth; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS logs_insert_auth ON public.app_logs;
 CREATE POLICY logs_insert_auth ON public.app_logs FOR INSERT TO authenticated WITH CHECK ((auth.uid() IS NOT NULL));
 
 
@@ -1960,6 +2079,7 @@ CREATE POLICY logs_insert_auth ON public.app_logs FOR INSERT TO authenticated WI
 -- Name: app_logs logs_select_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS logs_select_staff ON public.app_logs;
 CREATE POLICY logs_select_staff ON public.app_logs FOR SELECT TO authenticated USING (public.is_staff(auth.uid()));
 
 
@@ -1979,6 +2099,7 @@ ALTER TABLE public.nfe_itens ENABLE ROW LEVEL SECURITY;
 -- Name: nfe_entradas nfe_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS nfe_staff ON public.nfe_entradas;
 CREATE POLICY nfe_staff ON public.nfe_entradas TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1992,6 +2113,7 @@ ALTER TABLE public.nfe_webhook_events ENABLE ROW LEVEL SECURITY;
 -- Name: nfe_itens nfei_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS nfei_staff ON public.nfe_itens;
 CREATE POLICY nfei_staff ON public.nfe_itens TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -1999,6 +2121,7 @@ CREATE POLICY nfei_staff ON public.nfe_itens TO authenticated USING (public.is_s
 -- Name: nfe_webhook_events nfew_insert_service; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS nfew_insert_service ON public.nfe_webhook_events;
 CREATE POLICY nfew_insert_service ON public.nfe_webhook_events FOR INSERT TO authenticated WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -2006,6 +2129,7 @@ CREATE POLICY nfew_insert_service ON public.nfe_webhook_events FOR INSERT TO aut
 -- Name: nfe_webhook_events nfew_select_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS nfew_select_staff ON public.nfe_webhook_events;
 CREATE POLICY nfew_select_staff ON public.nfe_webhook_events FOR SELECT TO authenticated USING (public.is_staff(auth.uid()));
 
 
@@ -2013,6 +2137,7 @@ CREATE POLICY nfew_select_staff ON public.nfe_webhook_events FOR SELECT TO authe
 -- Name: notificacoes notif_insert_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS notif_insert_staff ON public.notificacoes;
 CREATE POLICY notif_insert_staff ON public.notificacoes FOR INSERT TO authenticated WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -2020,6 +2145,7 @@ CREATE POLICY notif_insert_staff ON public.notificacoes FOR INSERT TO authentica
 -- Name: notificacoes notif_select_own_or_broadcast; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS notif_select_own_or_broadcast ON public.notificacoes;
 CREATE POLICY notif_select_own_or_broadcast ON public.notificacoes FOR SELECT TO authenticated USING (((user_id IS NULL) OR (user_id = auth.uid()) OR public.is_staff(auth.uid())));
 
 
@@ -2027,6 +2153,7 @@ CREATE POLICY notif_select_own_or_broadcast ON public.notificacoes FOR SELECT TO
 -- Name: notificacoes notif_update_own; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS notif_update_own ON public.notificacoes;
 CREATE POLICY notif_update_own ON public.notificacoes FOR UPDATE TO authenticated USING (((user_id = auth.uid()) OR public.is_staff(auth.uid()))) WITH CHECK (((user_id = auth.uid()) OR public.is_staff(auth.uid())));
 
 
@@ -2040,6 +2167,7 @@ ALTER TABLE public.notificacoes ENABLE ROW LEVEL SECURITY;
 -- Name: patrimonio patr_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS patr_staff ON public.patrimonio;
 CREATE POLICY patr_staff ON public.patrimonio TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -2053,6 +2181,7 @@ ALTER TABLE public.patrimonio ENABLE ROW LEVEL SECURITY;
 -- Name: pedidos ped_delete_admin; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS ped_delete_admin ON public.pedidos;
 CREATE POLICY ped_delete_admin ON public.pedidos FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 
@@ -2060,6 +2189,7 @@ CREATE POLICY ped_delete_admin ON public.pedidos FOR DELETE TO authenticated USI
 -- Name: pedidos ped_insert_scope; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS ped_insert_scope ON public.pedidos;
 CREATE POLICY ped_insert_scope ON public.pedidos FOR INSERT TO authenticated WITH CHECK ((public.is_staff(auth.uid()) OR (public.has_role(auth.uid(), 'vendedor'::public.app_role) AND (vendedor_id = auth.uid()))));
 
 
@@ -2067,6 +2197,7 @@ CREATE POLICY ped_insert_scope ON public.pedidos FOR INSERT TO authenticated WIT
 -- Name: pedidos ped_select_scope; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS ped_select_scope ON public.pedidos;
 CREATE POLICY ped_select_scope ON public.pedidos FOR SELECT TO authenticated USING ((public.is_staff(auth.uid()) OR (vendedor_id = auth.uid())));
 
 
@@ -2074,6 +2205,7 @@ CREATE POLICY ped_select_scope ON public.pedidos FOR SELECT TO authenticated USI
 -- Name: pedidos ped_update_scope; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS ped_update_scope ON public.pedidos;
 CREATE POLICY ped_update_scope ON public.pedidos FOR UPDATE TO authenticated USING ((public.is_staff(auth.uid()) OR (public.has_role(auth.uid(), 'vendedor'::public.app_role) AND (vendedor_id = auth.uid()) AND (status = 'pendente'::public.pedido_status))));
 
 
@@ -2099,6 +2231,7 @@ ALTER TABLE public.pedidos ENABLE ROW LEVEL SECURITY;
 -- Name: pedido_itens pi_select_scope; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS pi_select_scope ON public.pedido_itens;
 CREATE POLICY pi_select_scope ON public.pedido_itens FOR SELECT TO authenticated USING ((EXISTS ( SELECT 1
    FROM public.pedidos p
   WHERE ((p.id = pedido_itens.pedido_id) AND (public.is_staff(auth.uid()) OR (p.vendedor_id = auth.uid()))))));
@@ -2108,6 +2241,7 @@ CREATE POLICY pi_select_scope ON public.pedido_itens FOR SELECT TO authenticated
 -- Name: pedido_itens pi_write_scope; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS pi_write_scope ON public.pedido_itens;
 CREATE POLICY pi_write_scope ON public.pedido_itens TO authenticated USING ((EXISTS ( SELECT 1
    FROM public.pedidos p
   WHERE ((p.id = pedido_itens.pedido_id) AND (public.is_staff(auth.uid()) OR (p.vendedor_id = auth.uid())))))) WITH CHECK ((EXISTS ( SELECT 1
@@ -2119,6 +2253,7 @@ CREATE POLICY pi_write_scope ON public.pedido_itens TO authenticated USING ((EXI
 -- Name: product_images pimg_select_auth; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS pimg_select_auth ON public.product_images;
 CREATE POLICY pimg_select_auth ON public.product_images FOR SELECT TO authenticated USING (true);
 
 
@@ -2126,6 +2261,7 @@ CREATE POLICY pimg_select_auth ON public.product_images FOR SELECT TO authentica
 -- Name: product_images pimg_write_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS pimg_write_staff ON public.product_images;
 CREATE POLICY pimg_write_staff ON public.product_images TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -2133,6 +2269,7 @@ CREATE POLICY pimg_write_staff ON public.product_images TO authenticated USING (
 -- Name: pedido_pagamentos pp_select_scope; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS pp_select_scope ON public.pedido_pagamentos;
 CREATE POLICY pp_select_scope ON public.pedido_pagamentos FOR SELECT TO authenticated USING ((EXISTS ( SELECT 1
    FROM public.pedidos p
   WHERE ((p.id = pedido_pagamentos.pedido_id) AND (public.is_staff(auth.uid()) OR (p.vendedor_id = auth.uid()))))));
@@ -2142,6 +2279,7 @@ CREATE POLICY pp_select_scope ON public.pedido_pagamentos FOR SELECT TO authenti
 -- Name: pedido_pagamentos pp_write_scope; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS pp_write_scope ON public.pedido_pagamentos;
 CREATE POLICY pp_write_scope ON public.pedido_pagamentos TO authenticated USING ((EXISTS ( SELECT 1
    FROM public.pedidos p
   WHERE ((p.id = pedido_pagamentos.pedido_id) AND (public.is_staff(auth.uid()) OR (p.vendedor_id = auth.uid())))))) WITH CHECK ((EXISTS ( SELECT 1
@@ -2153,6 +2291,7 @@ CREATE POLICY pp_write_scope ON public.pedido_pagamentos TO authenticated USING 
 -- Name: produtos prod_select_auth; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS prod_select_auth ON public.produtos;
 CREATE POLICY prod_select_auth ON public.produtos FOR SELECT TO authenticated USING (true);
 
 
@@ -2160,6 +2299,7 @@ CREATE POLICY prod_select_auth ON public.produtos FOR SELECT TO authenticated US
 -- Name: produtos prod_write_staff; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS prod_write_staff ON public.produtos;
 CREATE POLICY prod_write_staff ON public.produtos TO authenticated USING (public.is_staff(auth.uid())) WITH CHECK (public.is_staff(auth.uid()));
 
 
@@ -2185,6 +2325,7 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 -- Name: profiles profiles_admin_all; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS profiles_admin_all ON public.profiles;
 CREATE POLICY profiles_admin_all ON public.profiles TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 
@@ -2192,6 +2333,7 @@ CREATE POLICY profiles_admin_all ON public.profiles TO authenticated USING (publ
 -- Name: profiles profiles_select_all_auth; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS profiles_select_all_auth ON public.profiles;
 CREATE POLICY profiles_select_all_auth ON public.profiles FOR SELECT TO authenticated USING (true);
 
 
@@ -2199,6 +2341,7 @@ CREATE POLICY profiles_select_all_auth ON public.profiles FOR SELECT TO authenti
 -- Name: profiles profiles_update_self; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS profiles_update_self ON public.profiles;
 CREATE POLICY profiles_update_self ON public.profiles FOR UPDATE TO authenticated USING ((id = auth.uid()));
 
 
@@ -2206,6 +2349,7 @@ CREATE POLICY profiles_update_self ON public.profiles FOR UPDATE TO authenticate
 -- Name: user_roles roles_admin_write; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS roles_admin_write ON public.user_roles;
 CREATE POLICY roles_admin_write ON public.user_roles TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 
@@ -2213,6 +2357,7 @@ CREATE POLICY roles_admin_write ON public.user_roles TO authenticated USING (pub
 -- Name: user_roles roles_select_self_or_admin; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS roles_select_self_or_admin ON public.user_roles;
 CREATE POLICY roles_select_self_or_admin ON public.user_roles FOR SELECT TO authenticated USING (((user_id = auth.uid()) OR public.has_role(auth.uid(), 'admin'::public.app_role)));
 
 
@@ -2226,6 +2371,7 @@ ALTER TABLE public.tenants ENABLE ROW LEVEL SECURITY;
 -- Name: tenants tenants_admin_all; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS tenants_admin_all ON public.tenants;
 CREATE POLICY tenants_admin_all ON public.tenants TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 
@@ -2233,6 +2379,7 @@ CREATE POLICY tenants_admin_all ON public.tenants TO authenticated USING (public
 -- Name: tenants tenants_owner_select; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS tenants_owner_select ON public.tenants;
 CREATE POLICY tenants_owner_select ON public.tenants FOR SELECT TO authenticated USING ((user_id = auth.uid()));
 
 
@@ -2240,6 +2387,7 @@ CREATE POLICY tenants_owner_select ON public.tenants FOR SELECT TO authenticated
 -- Name: user_permissions uperm_admin_all; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS uperm_admin_all ON public.user_permissions;
 CREATE POLICY uperm_admin_all ON public.user_permissions TO authenticated USING (public.has_role(auth.uid(), 'admin'::public.app_role)) WITH CHECK (public.has_role(auth.uid(), 'admin'::public.app_role));
 
 
@@ -2247,6 +2395,7 @@ CREATE POLICY uperm_admin_all ON public.user_permissions TO authenticated USING 
 -- Name: user_permissions uperm_self_select; Type: POLICY; Schema: public; Owner: -
 --
 
+DROP POLICY IF EXISTS uperm_self_select ON public.user_permissions;
 CREATE POLICY uperm_self_select ON public.user_permissions FOR SELECT TO authenticated USING ((user_id = auth.uid()));
 
 

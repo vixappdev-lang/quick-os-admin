@@ -1,74 +1,42 @@
-## Objetivo
-Corrigir a tela **Supabase** para ela mostrar com precisão:
-- O banco principal **Lovable Cloud**.
-- A conexão externa `/t/admin` cadastrada.
-- Em **Ações** de cada conexão, um botão de SQL de correção atualizado e específico para corrigir tabelas/colunas ausentes.
+## Problema
+1. O `public/setup.sql` (origem do "SQL de correção") é um dump do `pg_dump` que **não é idempotente** — só funciona em banco vazio. Rodar em projeto que já tem o schema dá `ERROR: 42710: type "app_role" already exists`, e o mesmo vale para tabelas, índices, policies, sequences, triggers.
+2. O modal "SQL de correção" hoje só mostra o SQL inteiro (2776 linhas) sem dizer **o que realmente falta** naquela conexão — fica visualmente bagunçado e não ajuda a resolver.
 
-## Diagnóstico atual
-- A conexão `/t/admin` existe no banco central: slug `admin`, usuário `admin@loja.com`, URL `https://utyhfwqegiwrwvppleah.supabase.co`.
-- Se em produção aparece só “Lovable Cloud”, a causa mais provável é que o domínio publicado está lendo outro ambiente/banco ou a consulta de tenants está falhando/filtrando antes de renderizar.
-- A tela hoje ainda tem botões globais no topo para copiar/baixar SQL; você pediu para o SQL ficar embaixo, nas **Ações** da linha da conexão.
-- O app não tem ainda um mecanismo central para “capturar erro de tabela/coluna” e transformar isso em ação de correção visível na tela Supabase.
+## O que vou fazer (sem mexer no design geral)
 
-## Plano de implementação
+### 1. Gerar um SQL idempotente de verdade
+Criar um script Node em `scripts/build-setup-sql.mjs` que lê o dump bruto e produz `public/setup.sql` (e copia para `docs/setup.sql`) com:
+- `CREATE TYPE` → envolto em `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$;` (corrige 42710).
+- `CREATE TABLE x (...)` → `CREATE TABLE IF NOT EXISTS x (...)` + bloco que adiciona colunas faltantes via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`.
+- `CREATE SEQUENCE` → `CREATE SEQUENCE IF NOT EXISTS`.
+- `CREATE INDEX` → `CREATE INDEX IF NOT EXISTS` (e `CREATE UNIQUE INDEX IF NOT EXISTS`).
+- `CREATE TRIGGER` → precedido de `DROP TRIGGER IF EXISTS ... ON ...;`.
+- `CREATE POLICY` → precedido de `DROP POLICY IF EXISTS ... ON ...;`.
+- `CREATE FUNCTION` → já usa `CREATE OR REPLACE`, mantém.
+- `ALTER TABLE ... ADD CONSTRAINT` (PK/UK/FK) → envolto em `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object/duplicate_table THEN NULL; END $$;`.
+- `GRANT` é naturalmente idempotente — mantém.
+- `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` é idempotente — mantém.
 
-### 1. Corrigir a origem da lista de conexões
-- Ajustar a função `listTenants` para retornar sempre a lista diretamente do banco principal gerenciado, com dados necessários para a tela:
-  - `id`, `slug`, `nome`, `supabase_url`, `user_id`, `created_at`.
-  - Dados do usuário dono quando possível: nome/e-mail.
-- Garantir que o front não dependa de uma segunda busca frágil para exibir `/t/admin`.
-- Se a lista vier vazia ou com erro, mostrar estado técnico discreto dentro da tabela, não uma faixa/banner decorativa.
+O resultado pode ser executado **N vezes** em qualquer banco (vazio ou já com schema parcial) sem erro, e completa o que estiver faltando.
 
-### 2. Remover SQL global do topo
-- Remover da `PageHeader` os botões globais **Copiar SQL** e **Baixar SQL**.
-- Manter somente **Nova conexão** no topo.
-- O SQL ficará exclusivamente em **Ações** na linha da conexão, como solicitado.
-
-### 3. Ações por conexão: SQL limpo e correto
-- Na linha **Lovable Cloud**, manter ações úteis, mas o SQL será tratado como “schema principal/referência”.
-- Na linha `/t/admin` e demais conexões externas, manter o botão de SQL em **Ações** com rótulo/tooltip claro:
-  - “SQL de correção”.
-- Ao clicar, abrir um modal limpo com:
+### 2. Limpar o modal "SQL de correção"
+Em `src/routes/_authenticated/supabase.tsx`:
+- Remover a "PRÉVIA (2776 linhas)" enorme. Substituir por um bloco compacto e rolável menor (max-height ~240px) com fonte mono e fade na borda.
+- Cabeçalho do modal mostra **somente**:
   - Nome/slug da conexão.
-  - Botão **Copiar SQL de correção**.
-  - Botão **Abrir SQL Editor** para o projeto daquela conexão.
-  - Prévia do SQL.
-- Evitar linguagem visual bagunçada e remover textos grandes desnecessários.
+  - Se houver erros capturados (via `getSchemaIssuesBySlug`), uma lista curta: "Tabelas/colunas que falharam: produtos, pedido_itens.desconto…".
+  - Se não houver erros: texto neutro "SQL completo idempotente — pode ser executado quantas vezes for necessário".
+- Três ações no topo: **Copiar SQL**, **Baixar setup.sql**, **Abrir SQL Editor** do projeto correto.
+- Rodapé com 3 passos curtos (abrir, colar, run).
+- Sem banners decorativos, sem texto longo.
 
-### 4. Reconhecer erros de tabela/coluna do sistema
-- Criar um registrador leve de erros de schema no front:
-  - Detectar mensagens como `Could not find the table`, `Could not find`, `column ... does not exist`, `relation ... does not exist`, `schema cache`.
-  - Identificar a tabela/área quando possível.
-  - Salvar localmente por conexão ativa: slug, tabela/coluna, mensagem, horário e módulo provável.
-- Integrar esse registrador nos pontos centrais de queries/mutations, principalmente `src/lib/queries.ts`, para capturar erros vindos de produtos, pedidos, PDV, caixa, financeiro, estoque, clientes, fornecedores etc.
-- Quando houver erro reconhecido, a tela Supabase mostrará na linha da conexão um indicador discreto, por exemplo: “Correção pendente”.
+### 3. Build hook
+Rodar o script uma vez para regenerar o `public/setup.sql` idempotente. Não mexo no design das outras telas, não toco em business logic, não mexo em rotas além do modal.
 
-### 5. SQL de correção atualizado conforme erros encontrados
-- O modal de SQL da conexão vai carregar o `setup.sql` completo como base segura.
-- Se houver erros de schema registrados para aquela conexão, o modal destacará:
-  - Quais tabelas/colunas deram erro.
-  - Que o SQL completo corrige o schema daquela conexão.
-- O botão em **Ações** continuará copiando o SQL atualizado completo, porque é o caminho mais seguro para corrigir tabelas, funções, triggers, policies e grants sem deixar o banco pela metade.
+## Fora do escopo
+- Não mexo em `src/lib/schema-errors.ts`, `src/router.tsx`, `tenants.functions.ts` — já fazem o trabalho deles.
+- Não vou tentar gerar um SQL "diff" cirúrgico (apenas o que falta) — é frágil e perigoso. O caminho seguro é um SQL completo **idempotente**, que é exatamente o que resolve o `42710`.
 
-### 6. Garantir que novas conexões apareçam corretamente
-- Depois de salvar uma nova conexão:
-  - Invalidar a lista de tenants.
-  - Atualizar a tabela imediatamente.
-  - Abrir o modal de SQL da própria conexão recém-criada.
-- Se a conexão `/t/admin` já existe no banco principal, ela deverá aparecer sem precisar recriar.
-
-### 7. Validação final
-- Verificar que a tela `/supabase`:
-  - Mostra Lovable Cloud + `/t/admin`.
-  - Não tem botões globais de SQL no topo.
-  - Tem SQL de correção dentro das ações da linha.
-  - Mostra indicador de schema pendente quando erros de tabela/coluna forem capturados.
-- Revisar sem mexer no design geral: somente ajustes funcionais e discretos na tela atual.
-
-## Observação importante sobre produção
-Se o domínio `lynecloud.online` estiver apontando para uma publicação que usa outro banco/ambiente, nenhuma mudança visual consegue “inventar” a conexão que não existe naquele ambiente. O que vou fazer no app é:
-- Tornar a consulta de conexões mais robusta.
-- Exibir erro/estado real se a produção não estiver lendo o mesmo banco.
-- Garantir que, quando o banco correto estiver ativo, `/t/admin` apareça na lista.
-
-A correção ideal é deixar o app sempre lendo o mesmo backend principal para tenants, e os bancos externos apenas para dados do cliente conectado.
+## Resultado esperado
+- Colar o SQL no SQL Editor do tenant **nunca mais** dá erro de "already exists".
+- O modal fica enxuto, mostrando claramente qual é a conexão, o que falhou (quando há erro registrado) e o SQL pronto para copiar.
