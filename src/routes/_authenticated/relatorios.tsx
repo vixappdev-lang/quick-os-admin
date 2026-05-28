@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useRelatorios, exportRelatorioCSV, printRelatorio, type RelReport, type RelRow } from "@/components/relatorio-catalog";
-import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuarios, useFornecedores } from "@/lib/queries";
+import { usePedidos, useProdutos, useClientes, useDespesas, useContas, useUsuarios, useFornecedores, useFaturamentos } from "@/lib/queries";
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
   head: () => ({ meta: [{ title: "Relatórios — Quick OS" }] }),
@@ -20,6 +20,7 @@ function RelatoriosPage() {
   const { data: contas = [] } = useContas();
   const { data: usuarios = [] } = useUsuarios();
   const { data: fornecedores = [] } = useFornecedores();
+  const { data: faturamentosAll = [] } = useFaturamentos();
 
   // Filtros globais
   const [dtIni, setDtIni] = useState<string>("");
@@ -46,7 +47,14 @@ function RelatoriosPage() {
 
   const filtrosAtivos = !!(dtIni || dtFim || vendedorId || fornecedorId);
 
-  const grupos = useRelatorios({ pedidos, produtos, clientes, despesas, contas, usuarios });
+  const faturamentos = useMemo(() => {
+    return faturamentosAll.filter((f: any) => {
+      if (dtIni && new Date(f.created_at) < new Date(dtIni)) return false;
+      if (dtFim) { const end = new Date(dtFim); end.setHours(23,59,59,999); if (new Date(f.created_at) > end) return false; }
+      return true;
+    });
+  }, [faturamentosAll, dtIni, dtFim]);
+  const grupos = useRelatorios({ pedidos, produtos, clientes, despesas, contas, usuarios, faturamentos });
   const [selectedNum, setSelectedNum] = useState<number | null>(null);
   const [busca, setBusca] = useState("");
 

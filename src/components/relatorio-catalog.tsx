@@ -12,6 +12,7 @@ export interface RelDatasets {
   despesas: any[];
   contas: any[];
   usuarios: any[];
+  faturamentos?: any[];
 }
 
 const PAG_LABEL: Record<string, string> = {
@@ -19,22 +20,22 @@ const PAG_LABEL: Record<string, string> = {
   debito: "Débito", credito: "Crédito", fiado: "Fiado", outro: "Outro",
 };
 
-export function useRelatorios({ pedidos, produtos, clientes, despesas, contas, usuarios }: RelDatasets): RelGrupo[] {
+export function useRelatorios({ pedidos, produtos, clientes, despesas, contas, usuarios, faturamentos = [] }: RelDatasets): RelGrupo[] {
   const validos = useMemo(() => pedidos.filter((p: any) => p.status !== "cancelado"), [pedidos]);
   return useMemo(() => [
     {
       titulo: "Cadastros",
       rows: [
-        { num: 1, titulo: "Relação de Clientes", info: "Todos os clientes cadastrados com contato e saldo fiado.", build: () => ({
+        { num: 1, titulo: "Relação de Clientes", info: "Todos os clientes cadastrados com contato.", build: () => ({
           titulo: "Relação de Clientes",
-          colunas: ["Nome", "Documento", "Telefone", "Saldo fiado"],
-          linhas: clientes.map((c: any) => [c.nome, c.documento ?? "—", c.telefone ?? "—", formatBRL(Number(c.saldo_fiado ?? 0))]),
+          colunas: ["Nome", "Documento", "Telefone", "E-mail"],
+          linhas: clientes.map((c: any) => [c.nome, c.documento ?? "—", c.telefone ?? "—", c.email ?? "—"]),
           rodape: `${clientes.length} cliente(s)`,
         }) },
         { num: 2, titulo: "Relação de Produtos", info: "Produtos ativos com SKU, estoque e preço.", build: () => ({
           titulo: "Relação de Produtos",
-          colunas: ["SKU", "Produto", "Estoque", "Mínimo", "Preço"],
-          linhas: produtos.map((p: any) => [p.sku, p.nome, `${Number(p.estoque)} ${p.unidade}`, Number(p.estoque_minimo ?? 0), formatBRL(Number(p.preco_venda))]),
+          colunas: ["SKU", "Produto", "Estoque", "Fiscal", "NF", "Preço"],
+          linhas: produtos.map((p: any) => [p.sku, p.nome, `${Number(p.estoque)} ${p.unidade}`, Number(p.estoque_fiscal ?? 0), p.tem_nota_fiscal ? "Sim" : "—", formatBRL(Number(p.preco_venda))]),
           rodape: `${produtos.length} produto(s)`,
         }) },
         { num: 3, titulo: "Relação de Vendedores", info: "Usuários ativos no sistema.", build: () => ({
@@ -112,6 +113,25 @@ export function useRelatorios({ pedidos, produtos, clientes, despesas, contas, u
           }));
           return { titulo: "Top produtos", colunas: ["Produto", "Qtd", "Receita"], linhas: Array.from(m.values()).sort((a, b) => b.receita - a.receita).map((v) => [v.nome, v.qtd, formatBRL(v.receita)]) };
         } },
+        { num: 204, titulo: "Margem por Produto", info: "Custo, preço de venda e margem de cada produto.", build: () => {
+          const linhas = produtos.map((p: any) => {
+            const custo = Number(p.preco_custo ?? 0);
+            const venda = Number(p.preco_venda ?? 0);
+            const margem = venda - custo;
+            const pct = venda > 0 ? (margem / venda) * 100 : 0;
+            return [p.nome, formatBRL(custo), formatBRL(venda), formatBRL(margem), `${pct.toFixed(1)}%`];
+          });
+          return { titulo: "Margem por Produto", colunas: ["Produto", "Custo", "Venda", "Margem R$", "Margem %"], linhas };
+        } },
+        { num: 205, titulo: "Faturamento por período", info: "Faturamentos gerados (fechamento de caixa e manuais).", build: () => {
+          const total = faturamentos.reduce((s: number, f: any) => s + Number(f.total ?? 0), 0);
+          return {
+            titulo: "Faturamento por período",
+            colunas: ["Nº", "Data", "Total"],
+            linhas: faturamentos.map((f: any) => [f.numero, new Date(f.created_at).toLocaleString("pt-BR"), formatBRL(Number(f.total))]),
+            rodape: `Total: ${formatBRL(total)} • ${faturamentos.length} faturamento(s)`,
+          };
+        } },
       ],
     },
     {
@@ -119,8 +139,8 @@ export function useRelatorios({ pedidos, produtos, clientes, despesas, contas, u
       rows: [
         { num: 300, titulo: "Posição de estoque", info: "Estoque atual de todos os produtos.", build: () => ({
           titulo: "Posição de estoque",
-          colunas: ["SKU", "Produto", "Estoque", "Unidade"],
-          linhas: produtos.map((p: any) => [p.sku, p.nome, Number(p.estoque), p.unidade]),
+          colunas: ["SKU", "Produto", "Estoque (UN)", "Embalagem", "Fator", "Fiscal"],
+          linhas: produtos.map((p: any) => [p.sku, p.nome, Number(p.estoque), p.unidade_embalagem ?? "UN", Number(p.fator_unidade ?? 1), Number(p.estoque_fiscal ?? 0)]),
         }) },
         { num: 301, titulo: "Produtos com estoque baixo", info: "Produtos no limite ou abaixo do mínimo.", build: () => ({
           titulo: "Produtos com estoque baixo",
@@ -136,7 +156,7 @@ export function useRelatorios({ pedidos, produtos, clientes, despesas, contas, u
         } },
       ],
     },
-  ], [validos, produtos, clientes, despesas, contas, usuarios]);
+  ], [validos, produtos, clientes, despesas, contas, usuarios, faturamentos]);
 }
 
 export function exportRelatorioCSV(report: RelReport) {

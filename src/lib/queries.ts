@@ -426,6 +426,37 @@ export function useCaixaHistorico(limit = 10) {
   });
 }
 
+export function useCaixaSessaoDetalhe(sessaoId?: string | null) {
+  return useQuery({
+    queryKey: ["caixa", "sessao", sessaoId],
+    enabled: !!sessaoId,
+    queryFn: async () => {
+      const { data: sessao, error } = await supabase
+        .from("caixa_sessoes").select("*").eq("id", sessaoId!).maybeSingle();
+      if (error) throw error;
+      const { data: movs } = await supabase
+        .from("caixa_movimentos").select("*").eq("sessao_id", sessaoId!)
+        .order("created_at", { ascending: true });
+      return { ...(sessao as any), movimentos: movs ?? [] } as any;
+    },
+    staleTime: 15_000,
+  });
+}
+
+export function useFaturamentos() {
+  return useQuery({
+    queryKey: ["faturamentos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("faturamentos" as any).select("*")
+        .order("created_at", { ascending: false }).limit(500);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    staleTime: 30_000,
+  });
+}
+
 // Faturamentos
 export function useCriarFaturamento() {
   const qc = useQueryClient();
@@ -722,9 +753,27 @@ export function useFecharCaixa() {
         observacoes: input.observacoes ?? null,
       }).eq("id", input.id).select().single();
       if (error) throw error;
+      // Auto-registra Faturamento com a soma das vendas da sessão
+      try {
+        const { data: movs } = await supabase
+          .from("caixa_movimentos").select("valor,tipo").eq("sessao_id", input.id);
+        const totalVendas = (movs ?? [])
+          .filter((m: any) => m.tipo === "venda")
+          .reduce((s: number, m: any) => s + Number(m.valor), 0);
+        if (totalVendas > 0) {
+          const { data: u } = await supabase.auth.getUser();
+          await supabase.from("faturamentos" as any).insert({
+            total: totalVendas,
+            created_by: u.user?.id ?? null,
+          } as any);
+        }
+      } catch {}
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["caixa"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["caixa"] });
+      qc.invalidateQueries({ queryKey: ["faturamentos"] });
+    },
   });
 }
 export function useCaixaMovimento() {

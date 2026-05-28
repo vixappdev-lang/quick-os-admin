@@ -113,6 +113,7 @@ function ProdutosPage() {
                     <th className="px-4 py-2.5 text-left">Produto</th>
                     <th className="px-4 py-2.5 text-left">SKU</th>
                     <th className="px-4 py-2.5 text-right">Estoque</th>
+                    <th className="px-4 py-2.5 text-right">Fiscal</th>
                     <th className="px-4 py-2.5 text-right">Custo</th>
                     <th className="px-4 py-2.5 text-right">Venda</th>
                     <th className="w-24 px-4 py-2.5 text-right">Ações</th>
@@ -120,7 +121,7 @@ function ProdutosPage() {
                 </thead>
                 <tbody>
                   {pageRows.length === 0 && (
-                    <tr><td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">Nenhum produto encontrado</td></tr>
+                    <tr><td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">Nenhum produto encontrado</td></tr>
                   )}
                   {pageRows.map((p: any) => (
                     <tr key={p.id} className="group cursor-pointer border-b hover:bg-muted/40" onClick={() => openView(p)}>
@@ -138,6 +139,13 @@ function ProdutosPage() {
                       <td className="px-4 py-3"><span className="font-mono text-xs text-muted-foreground">{p.sku}</span></td>
                       <td className="px-4 py-3 text-right tabular">
                         <span className={Number(p.estoque) < Number(p.estoque_minimo ?? 0) ? "text-destructive font-semibold" : ""}>{Math.round(Number(p.estoque))} UN</span>
+                        {Number(p.fator_unidade ?? 1) > 1 && (
+                          <span className="ml-1 text-[10px] text-muted-foreground">({(Number(p.estoque) / Number(p.fator_unidade)).toFixed(1)} {p.unidade_embalagem})</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right tabular">
+                        <span className="text-xs">{Math.round(Number(p.estoque_fiscal ?? 0))}</span>
+                        {p.tem_nota_fiscal && <span className="ml-1 rounded bg-info/10 px-1.5 py-0.5 text-[9px] font-semibold text-info">NF</span>}
                       </td>
                       <td className="px-4 py-3 text-right tabular text-muted-foreground">{formatBRL(Number(p.preco_custo ?? 0))}</td>
                       <td className="px-4 py-3 text-right tabular font-semibold">{formatBRL(Number(p.preco_venda))}</td>
