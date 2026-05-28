@@ -722,9 +722,27 @@ export function useFecharCaixa() {
         observacoes: input.observacoes ?? null,
       }).eq("id", input.id).select().single();
       if (error) throw error;
+      // Auto-registra Faturamento com a soma das vendas da sessão
+      try {
+        const { data: movs } = await supabase
+          .from("caixa_movimentos").select("valor,tipo").eq("sessao_id", input.id);
+        const totalVendas = (movs ?? [])
+          .filter((m: any) => m.tipo === "venda")
+          .reduce((s: number, m: any) => s + Number(m.valor), 0);
+        if (totalVendas > 0) {
+          const { data: u } = await supabase.auth.getUser();
+          await supabase.from("faturamentos" as any).insert({
+            total: totalVendas,
+            created_by: u.user?.id ?? null,
+          } as any);
+        }
+      } catch {}
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["caixa"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["caixa"] });
+      qc.invalidateQueries({ queryKey: ["faturamentos"] });
+    },
   });
 }
 export function useCaixaMovimento() {
