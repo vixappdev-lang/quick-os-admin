@@ -23,29 +23,62 @@ function AuthLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const fetchMyTenant = useServerFn(getMyTenant);
+  // Gate de renderização: até resolver qual banco (central ou tenant) o
+  // usuário deve usar, NÃO renderizamos a UI e NÃO pré-carregamos queries.
+  // Sem isso, o prefetch dispara no banco errado e o usuário enxerga
+  // dados de outra conta por um instante.
+  const [tenantReady, setTenantReady] = useState(false);
+  const [resolvedForUid, setResolvedForUid] = useState<string | null>(null);
 
   // Sincroniza tenant ativo do usuário (banco próprio). Se ele tem um tenant
   // conectado, todas as queries de dados passam a apontar para esse banco.
   useEffect(() => {
-    if (!ready || !user) return;
+    if (!ready) return;
+    if (!user) {
+      // logout: derruba tenant e cache para o próximo usuário começar limpo.
+      if (getActiveTenant()) setActiveTenant(null);
+      qc.clear();
+      setTenantReady(false);
+      setResolvedForUid(null);
+      return;
+    }
+    // Mudou de usuário: zera AGORA o tenant ativo e o cache para evitar
+    // que o proxy `activeSupabase` resolva para o banco do usuário anterior
+    // enquanto buscamos o tenant correto deste usuário.
+    if (resolvedForUid !== user.id) {
+      if (getActiveTenant()) setActiveTenant(null);
+      qc.clear();
+      setTenantReady(false);
+    } else if (tenantReady) {
+      return;
+    }
+
     let cancelled = false;
     (async () => {
       try {
         const t = await fetchMyTenant();
         if (cancelled) return;
-        const current = getActiveTenant();
         if (!t) {
-          if (current) { setActiveTenant(null); qc.clear(); }
-          return;
+          if (getActiveTenant()) setActiveTenant(null);
+        } else {
+          const current = getActiveTenant();
+          if (!current || current.slug !== t.slug || current.url !== t.url) {
+            setActiveTenant({ slug: t.slug, url: t.url, anon_key: t.anon_key });
+          }
         }
-        if (!current || current.slug !== t.slug || current.url !== t.url) {
-          setActiveTenant({ slug: t.slug, url: t.url, anon_key: t.anon_key });
-          qc.clear(); // painel "limpa" — recarrega dados do tenant
+      } catch {
+        // falha em resolver tenant: segue no banco central.
+        if (getActiveTenant()) setActiveTenant(null);
+      } finally {
+        if (!cancelled) {
+          qc.clear();
+          setResolvedForUid(user.id);
+          setTenantReady(true);
         }
-      } catch {/* ignore — segue no banco central */}
+      }
     })();
     return () => { cancelled = true; };
-  }, [ready, user, fetchMyTenant, qc]);
+  }, [ready, user?.id, fetchMyTenant, qc, resolvedForUid, tenantReady]);
 
   // Reage a trocas manuais do tenant (super-admin conectando/removendo).
   useEffect(() => {
@@ -66,7 +99,10 @@ function AuthLayout() {
   // Pre-warm code-split route bundles AND common data caches once auth is
   // ready, so switching tabs feels instant instead of waiting on first fetch.
   useEffect(() => {
-    if (!ready || !user || user.role === "vendedor") return;
+    // CRÍTICO: só pré-carrega dados depois que o tenant ativo correto foi
+    // resolvido — caso contrário, o prefetch vai no banco errado e o
+    // usuário enxerga dados de outra conta por um instante.
+    if (!ready || !user || user.role === "vendedor" || !tenantReady) return;
     const routes = [
       "/pedidos", "/produtos", "/estoque", "/clientes",
       "/caixa", "/financeiro", "/pdv", "/configuracoes", "/relatorios",
@@ -91,9 +127,9 @@ function AuthLayout() {
         staleTime: 30_000,
       });
     });
-  }, [ready, user, router, qc]);
+  }, [ready, user, router, qc, tenantReady]);
 
-  if (!ready) {
+  if (!ready || (user && user.role !== "vendedor" && !tenantReady)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
