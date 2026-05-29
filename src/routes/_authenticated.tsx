@@ -62,8 +62,8 @@ function AuthLayout() {
           if (getActiveTenant()) setActiveTenant(null);
         } else {
           const current = getActiveTenant();
-          if (!current || current.slug !== t.slug || current.url !== t.url) {
-            setActiveTenant({ slug: t.slug, url: t.url, anon_key: t.anon_key });
+          if (!current || current.slug !== t.slug) {
+            setActiveTenant({ slug: t.slug, nome: t.nome, url: t.url });
           }
         }
       } catch {
