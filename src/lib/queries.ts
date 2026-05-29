@@ -343,8 +343,10 @@ export function useVendedores() {
   return useQuery({
     queryKey: ["vendedores"],
     queryFn: async () => {
+      const { data: me } = await centralSupabase.auth.getUser();
+      const myId = me.user?.id;
       const [{ data: profiles }, { data: roles }] = await Promise.all([
-        centralSupabase.from("profiles").select("id, nome, email").order("nome"),
+        centralSupabase.from("profiles").select("id, nome, email, created_by_admin").order("nome"),
         centralSupabase.from("user_roles").select("user_id, role"),
       ]);
       const rmap = new Map<string, string[]>();
@@ -353,8 +355,11 @@ export function useVendedores() {
         arr.push(r.role);
         rmap.set(r.user_id, arr);
       });
-      return (profiles ?? []).map((p: any) => ({ ...p, roles: rmap.get(p.id) ?? [] }))
-        .filter((p: any) => p.roles.some((r: string) => ["vendedor", "admin", "gerente", "operador"].includes(r)));
+      return (profiles ?? [])
+        .map((p: any) => ({ ...p, roles: rmap.get(p.id) ?? [] }))
+        .filter((p: any) => p.roles.some((r: string) => ["vendedor", "admin", "gerente", "operador"].includes(r)))
+        // Isola por admin dono: cada admin só vê quem ele criou (e a si mesmo).
+        .filter((p: any) => !myId || p.id === myId || p.created_by_admin === myId);
     },
     staleTime: 60_000,
   });
@@ -909,6 +914,8 @@ export function useUsuarios() {
   return useQuery({
     queryKey: ["usuarios"],
     queryFn: async () => {
+      const { data: me } = await centralSupabase.auth.getUser();
+      const myId = me.user?.id;
       const [{ data: profiles, error: pe }, { data: roles, error: re }] = await Promise.all([
         centralSupabase.from("profiles").select("*").order("nome"),
         centralSupabase.from("user_roles").select("*"),
@@ -921,7 +928,9 @@ export function useUsuarios() {
         arr.push(r.role);
         map.set(r.user_id, arr);
       });
-      return (profiles ?? []).map((p) => ({ ...p, roles: map.get(p.id) ?? [] }));
+      return (profiles ?? [])
+        .filter((p: any) => !myId || p.id === myId || p.created_by_admin === myId)
+        .map((p) => ({ ...p, roles: map.get(p.id) ?? [] }));
     },
     staleTime: 30_000,
   });
