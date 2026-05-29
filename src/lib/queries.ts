@@ -4,6 +4,8 @@ import { supabase as centralSupabase } from "@/integrations/supabase/client";
 import { activeSupabase as supabase } from "@/integrations/supabase/active-client";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
+const SUPER_ADMIN_EMAIL = "admin@loja.com";
+
 export type Produto = Tables<"produtos">;
 export type Categoria = Tables<"categorias">;
 export type Cliente = Tables<"clientes">;
@@ -345,6 +347,8 @@ export function useVendedores() {
     queryFn: async () => {
       const { data: me } = await centralSupabase.auth.getUser();
       const myId = me.user?.id;
+      const myEmail = (me.user?.email ?? "").toLowerCase();
+      const isSuper = myEmail === SUPER_ADMIN_EMAIL;
       const [{ data: profiles }, { data: roles }] = await Promise.all([
         centralSupabase.from("profiles").select("id, nome, email, created_by_admin").order("nome"),
         centralSupabase.from("user_roles").select("user_id, role"),
@@ -358,8 +362,8 @@ export function useVendedores() {
       return (profiles ?? [])
         .map((p: any) => ({ ...p, roles: rmap.get(p.id) ?? [] }))
         .filter((p: any) => p.roles.some((r: string) => ["vendedor", "admin", "gerente", "operador"].includes(r)))
-        // Isola por admin dono: cada admin só vê quem ele criou (e a si mesmo).
-        .filter((p: any) => !myId || p.id === myId || p.created_by_admin === myId);
+        // Super-admin vê todos; demais admins veem a si próprios e os usuários que criaram.
+        .filter((p: any) => isSuper || !myId || p.id === myId || p.created_by_admin === myId);
     },
     staleTime: 60_000,
   });
@@ -916,6 +920,8 @@ export function useUsuarios() {
     queryFn: async () => {
       const { data: me } = await centralSupabase.auth.getUser();
       const myId = me.user?.id;
+      const myEmail = (me.user?.email ?? "").toLowerCase();
+      const isSuper = myEmail === SUPER_ADMIN_EMAIL;
       const [{ data: profiles, error: pe }, { data: roles, error: re }] = await Promise.all([
         centralSupabase.from("profiles").select("*").order("nome"),
         centralSupabase.from("user_roles").select("*"),
@@ -929,7 +935,7 @@ export function useUsuarios() {
         map.set(r.user_id, arr);
       });
       return (profiles ?? [])
-        .filter((p: any) => !myId || p.id === myId || p.created_by_admin === myId)
+        .filter((p: any) => isSuper || !myId || p.id === myId || p.created_by_admin === myId)
         .map((p) => ({ ...p, roles: map.get(p.id) ?? [] }));
     },
     staleTime: 30_000,
