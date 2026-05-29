@@ -4,6 +4,8 @@ import { supabase as centralSupabase } from "@/integrations/supabase/client";
 import { activeSupabase as supabase } from "@/integrations/supabase/active-client";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
+const SUPER_ADMIN_EMAIL = "admin@loja.com";
+
 export type Produto = Tables<"produtos">;
 export type Categoria = Tables<"categorias">;
 export type Cliente = Tables<"clientes">;
