@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, AlertTriangle, KeyRound, ArrowRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -11,6 +11,7 @@ import {
 import { useUsuarios } from "@/lib/queries";
 import { useAuth } from "@/lib/auth";
 import { listTenants, createTenant, deleteTenant } from "@/lib/tenants.functions";
+import { startSupabaseOAuth, listOAuthProjects, connectOAuthProject, cancelOAuthState } from "@/lib/supabase-oauth.functions";
 import { getSchemaIssues, getSchemaIssuesBySlug, clearSchemaIssues, type SchemaIssue } from "@/lib/schema-errors";
 import { toast } from "sonner";
 
@@ -42,11 +43,29 @@ function SupabasePage() {
   const [schemaTenant, setSchemaTenant] = useState<any | null>(null);
   const [viewTenant, setViewTenant] = useState<any | null>(null);
   const [trackTenant, setTrackTenant] = useState<any | null>(null);
+  const [oauthState, setOauthState] = useState<string | null>(null);
   const [issues, setIssues] = useState<SchemaIssue[]>(() => getSchemaIssues());
   useEffect(() => {
     const h = () => setIssues(getSchemaIssues());
     window.addEventListener("schema-errors-changed", h);
     return () => window.removeEventListener("schema-errors-changed", h);
+  }, []);
+  // Detecta retorno do OAuth Supabase via querystring (?oauth_state=... ou ?oauth_err=...)
+  useEffect(() => {
+    const u = new URL(window.location.href);
+    const st = u.searchParams.get("oauth_state");
+    const er = u.searchParams.get("oauth_err");
+    if (er) {
+      toast.error("Falha no OAuth Supabase: " + er);
+      u.searchParams.delete("oauth_err");
+      window.history.replaceState({}, "", u.pathname + (u.searchParams.toString() ? "?" + u.searchParams.toString() : ""));
+    }
+    if (st) {
+      setOauthState(st);
+      setOpen(true);
+      u.searchParams.delete("oauth_state");
+      window.history.replaceState({}, "", u.pathname + (u.searchParams.toString() ? "?" + u.searchParams.toString() : ""));
+    }
   }, []);
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
@@ -194,7 +213,13 @@ function SupabasePage() {
         </div>
       </SectionCard>
 
-      <NewTenantDialog open={open} onOpenChange={setOpen} usuarios={usuarios} onCreated={(t) => setSchemaTenant(t)} />
+      <NewTenantDialog
+        open={open}
+        onOpenChange={(o) => { setOpen(o); if (!o) setOauthState(null); }}
+        usuarios={usuarios}
+        oauthState={oauthState}
+        onCreated={(t) => setSchemaTenant(t)}
+      />
       <SchemaDialog tenant={schemaTenant} onClose={() => setSchemaTenant(null)} />
       <ViewTenantDialog tenant={viewTenant} onClose={() => setViewTenant(null)} />
       <TrackTenantDialog tenant={trackTenant} onClose={() => setTrackTenant(null)} />
@@ -436,67 +461,191 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
   );
 }
 
-function NewTenantDialog({ open, onOpenChange, usuarios, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; usuarios: any[]; onCreated?: (tenant: any) => void }) {
+function NewTenantDialog({ open, onOpenChange, usuarios, oauthState, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; usuarios: any[]; oauthState?: string | null; onCreated?: (tenant: any) => void }) {
   const qc = useQueryClient();
   const createFn = useServerFn(createTenant);
-  const [form, setForm] = useState({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "", supabase_service_role_key: "" });
-  const [copied, setCopied] = useState(false);
+  const startOAuth = useServerFn(startSupabaseOAuth);
+  const listProj = useServerFn(listOAuthProjects);
+  const connectProj = useServerFn(connectOAuthProject);
+  const cancelOAuth = useServerFn(cancelOAuthState);
 
-  const m = useMutation({
-    mutationFn: (input: typeof form) => createFn({ data: input }),
-    onSuccess: (created: any) => {
+  // Fluxo OAuth (etapa 2: após retorno do Supabase)
+  const inOauthReturn = !!oauthState;
+
+  // Etapa 1
+  const [user_id, setUserId] = useState("");
+  const [slug, setSlug] = useState(randomSlug());
+  const [nome, setNome] = useState("");
+  const [mode, setMode] = useState<"oauth" | "manual">("oauth");
+
+  // Etapa 2 (project picker)
+  const [projects, setProjects] = useState<any[]>([]);
+  const [pickedRef, setPickedRef] = useState("");
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [returnedSlug, setReturnedSlug] = useState<string | null>(null);
+  const [returnedNome, setReturnedNome] = useState<string | null>(null);
+  const [returnedUserId, setReturnedUserId] = useState<string | null>(null);
+
+  // Manual fallback
+  const [manual, setManual] = useState({ supabase_url: "", supabase_anon_key: "", supabase_service_role_key: "" });
+
+  // Carrega projetos quando recebe state
+  useEffect(() => {
+    if (!inOauthReturn || !open) return;
+    setLoadingProjects(true);
+    listProj({ data: { state: oauthState! } })
+      .then((r: any) => {
+        setProjects(r.projects || []);
+        setReturnedSlug(r.slug);
+        setReturnedNome(r.nome);
+        setReturnedUserId(r.target_user_id);
+      })
+      .catch((e: any) => toast.error("Não consegui listar seus projetos Supabase: " + (e?.message || e)))
+      .finally(() => setLoadingProjects(false));
+  }, [inOauthReturn, open, oauthState, listProj]);
+
+  const startMut = useMutation({
+    mutationFn: () => startOAuth({ data: { target_user_id: user_id, slug, nome: nome || null } }),
+    onSuccess: (r: any) => { window.location.href = r.url; },
+    onError: (e: any) => toast.error(e.message ?? "Erro"),
+  });
+
+  const connectMut = useMutation({
+    mutationFn: () => connectProj({ data: {
+      state: oauthState!,
+      project_ref: pickedRef,
+      slug: returnedSlug || slug,
+      nome: returnedNome ?? nome ?? null,
+    } }),
+    onSuccess: (r: any) => {
       qc.invalidateQueries({ queryKey: ["tenants"] });
-      toast.success("Tenant conectado.");
-      const payload = created && typeof created === "object" ? { ...form, ...created } : { ...form };
+      toast.success("Banco conectado e schema instalado.");
       onOpenChange(false);
-      setForm({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "", supabase_service_role_key: "" });
-      onCreated?.(payload);
+      onCreated?.(r.tenant);
     },
     onError: (e: any) => toast.error(e.message ?? "Erro"),
   });
 
-  const copySlug = () => { navigator.clipboard.writeText(form.slug); setCopied(true); setTimeout(() => setCopied(false), 1200); };
+  const manualMut = useMutation({
+    mutationFn: () => createFn({ data: { user_id, slug, nome: nome || null, ...manual } }),
+    onSuccess: (created: any) => {
+      qc.invalidateQueries({ queryKey: ["tenants"] });
+      toast.success("Tenant conectado.");
+      onOpenChange(false);
+      onCreated?.(created);
+    },
+    onError: (e: any) => toast.error(e.message ?? "Erro"),
+  });
+
+  const handleCancel = async () => {
+    if (oauthState) { try { await cancelOAuth({ data: { state: oauthState } }); } catch {} }
+    onOpenChange(false);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(o) => { if (!o) handleCancel(); else onOpenChange(o); }}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Database className="h-4 w-4" /> Conectar novo Supabase</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            {inOauthReturn ? "Escolha o projeto Supabase" : "Conectar Supabase do cliente"}
+          </DialogTitle>
         </DialogHeader>
-        <form onSubmit={(e) => { e.preventDefault(); m.mutate(form); }} className="space-y-3">
-          <Field label="Usuário (dono do tenant)">
-            <select required value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} className="input">
-              <option value="">— selecione —</option>
-              {usuarios.map((u: any) => <option key={u.id} value={u.id}>{u.nome} — {u.email}</option>)}
-            </select>
-          </Field>
-          <Field label="Slug (URL: /t/<slug>)">
-            <div className="flex gap-2">
-              <input required value={form.slug} onChange={(e) => setForm({ ...form, slug: e.target.value.toLowerCase() })} pattern="[a-z0-9]{3,24}" className="input flex-1 font-mono" />
-              <button type="button" onClick={() => setForm({ ...form, slug: randomSlug() })} className="h-9 rounded-md border bg-card px-3 text-xs hover:bg-muted">Gerar</button>
-              <button type="button" onClick={copySlug} className="h-9 rounded-md border bg-card px-2 hover:bg-muted">{copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}</button>
+
+        {inOauthReturn ? (
+          <div className="space-y-3">
+            <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-xs">
+              <p className="font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5">
+                <Check className="h-3.5 w-3.5" /> Autorizado com sucesso
+              </p>
+              <p className="mt-1 text-muted-foreground">Selecione abaixo qual projeto será conectado a este usuário. Vou instalar o schema completo automaticamente.</p>
             </div>
-          </Field>
-          <Field label="Nome (opcional)">
-            <input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="input" placeholder="Comércio do João" />
-          </Field>
-          <Field label="Supabase URL">
-            <input required type="url" value={form.supabase_url} onChange={(e) => setForm({ ...form, supabase_url: e.target.value })} className="input" placeholder="https://xxxx.supabase.co" />
-          </Field>
-          <Field label="Anon Key (publishable)">
-            <textarea required value={form.supabase_anon_key} onChange={(e) => setForm({ ...form, supabase_anon_key: e.target.value })} className="input min-h-[80px] py-2 font-mono text-[11px]" />
-          </Field>
-          <Field label="Service Role Key (secreta — usada apenas no servidor)">
-            <textarea required value={form.supabase_service_role_key} onChange={(e) => setForm({ ...form, supabase_service_role_key: e.target.value })} className="input min-h-[80px] py-2 font-mono text-[11px]" placeholder="eyJ... (Project Settings → API → service_role)" />
-            <p className="mt-1 text-[10px] text-muted-foreground">Necessária para que o usuário consiga gravar dados no banco dele. Nunca é exposta ao navegador.</p>
-          </Field>
-          <DialogFooter className="mt-2">
-            <button type="button" onClick={() => onOpenChange(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
-            <button type="submit" disabled={m.isPending} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">
-              {m.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Salvar conexão
-            </button>
-          </DialogFooter>
-        </form>
+            {loadingProjects ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Carregando projetos…</div>
+            ) : projects.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhum projeto encontrado nessa organização.</p>
+            ) : (
+              <div className="space-y-1 max-h-72 overflow-auto">
+                {projects.map((p) => (
+                  <label key={p.id} className={`flex cursor-pointer items-center gap-2 rounded-md border p-2.5 text-sm hover:bg-muted/30 ${pickedRef === p.id ? "border-primary bg-primary/5" : ""}`}>
+                    <input type="radio" name="ref" checked={pickedRef === p.id} onChange={() => setPickedRef(p.id)} />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{p.name}</p>
+                      <p className="font-mono text-[10px] text-muted-foreground">{p.id} · {p.region}</p>
+                    </div>
+                    <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase">{p.status}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <DialogFooter className="mt-2">
+              <button type="button" onClick={handleCancel} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
+              <button type="button" disabled={!pickedRef || connectMut.isPending} onClick={() => connectMut.mutate()}
+                className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">
+                {connectMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Conectar e instalar schema
+              </button>
+            </DialogFooter>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <Field label="Usuário (dono do tenant)">
+              <select required value={user_id} onChange={(e) => setUserId(e.target.value)} className="input">
+                <option value="">— selecione —</option>
+                {usuarios.map((u: any) => <option key={u.id} value={u.id}>{u.nome} — {u.email}</option>)}
+              </select>
+            </Field>
+            <Field label="Slug (URL: /t/<slug>)">
+              <div className="flex gap-2">
+                <input required value={slug} onChange={(e) => setSlug(e.target.value.toLowerCase())} pattern="[a-z0-9]{3,24}" className="input flex-1 font-mono" />
+                <button type="button" onClick={() => setSlug(randomSlug())} className="h-9 rounded-md border bg-card px-3 text-xs hover:bg-muted">Gerar</button>
+              </div>
+            </Field>
+            <Field label="Nome (opcional)">
+              <input value={nome} onChange={(e) => setNome(e.target.value)} className="input" placeholder="Comércio do João" />
+            </Field>
+
+            <div className="flex rounded-md border p-0.5 text-xs">
+              <button type="button" onClick={() => setMode("oauth")} className={`flex-1 h-8 rounded ${mode === "oauth" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>OAuth Supabase (recomendado)</button>
+              <button type="button" onClick={() => setMode("manual")} className={`flex-1 h-8 rounded ${mode === "manual" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>Manual (colar chaves)</button>
+            </div>
+
+            {mode === "oauth" ? (
+              <div className="rounded-md border bg-muted/20 p-3 text-xs space-y-2">
+                <p className="flex items-center gap-1.5 font-semibold text-foreground"><KeyRound className="h-3.5 w-3.5" /> Conexão oficial via OAuth</p>
+                <p className="text-muted-foreground">Você vai entrar na sua conta Supabase, escolher a organização e o projeto. Vou pegar URL + chaves e instalar o schema completo, tudo automatizado.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Field label="Supabase URL">
+                  <input type="url" value={manual.supabase_url} onChange={(e) => setManual({ ...manual, supabase_url: e.target.value })} className="input" placeholder="https://xxxx.supabase.co" />
+                </Field>
+                <Field label="Anon Key">
+                  <textarea value={manual.supabase_anon_key} onChange={(e) => setManual({ ...manual, supabase_anon_key: e.target.value })} className="input min-h-[64px] py-2 font-mono text-[11px]" />
+                </Field>
+                <Field label="Service Role Key (secreta)">
+                  <textarea value={manual.supabase_service_role_key} onChange={(e) => setManual({ ...manual, supabase_service_role_key: e.target.value })} className="input min-h-[64px] py-2 font-mono text-[11px]" />
+                </Field>
+              </div>
+            )}
+
+            <DialogFooter className="mt-2">
+              <button type="button" onClick={handleCancel} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
+              {mode === "oauth" ? (
+                <button type="button" disabled={!user_id || !slug || startMut.isPending} onClick={() => startMut.mutate()}
+                  className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">
+                  {startMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+                  Conectar via Supabase
+                </button>
+              ) : (
+                <button type="button" disabled={!user_id || !slug || !manual.supabase_url || !manual.supabase_anon_key || !manual.supabase_service_role_key || manualMut.isPending}
+                  onClick={() => manualMut.mutate()}
+                  className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground hover:bg-[var(--primary-hover)] disabled:opacity-60">
+                  {manualMut.isPending && <Loader2 className="h-4 w-4 animate-spin" />} Salvar conexão
+                </button>
+              )}
+            </DialogFooter>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

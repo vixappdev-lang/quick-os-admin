@@ -1225,12 +1225,52 @@ export type Database = {
         }
         Relationships: []
       }
+      supabase_oauth_states: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          expires_at: string | null
+          nome: string | null
+          refresh_token: string | null
+          slug: string | null
+          state: string
+          super_admin_id: string
+          target_user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          expires_at?: string | null
+          nome?: string | null
+          refresh_token?: string | null
+          slug?: string | null
+          state: string
+          super_admin_id: string
+          target_user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          expires_at?: string | null
+          nome?: string | null
+          refresh_token?: string | null
+          slug?: string | null
+          state?: string
+          super_admin_id?: string
+          target_user_id?: string
+        }
+        Relationships: []
+      }
       tenants: {
         Row: {
           created_at: string
           created_by: string | null
           id: string
           nome: string | null
+          oauth_access_token: string | null
+          oauth_expires_at: string | null
+          oauth_refresh_token: string | null
+          project_ref: string | null
           slug: string
           supabase_anon_key: string
           supabase_service_role_key: string | null
@@ -1242,6 +1282,10 @@ export type Database = {
           created_by?: string | null
           id?: string
           nome?: string | null
+          oauth_access_token?: string | null
+          oauth_expires_at?: string | null
+          oauth_refresh_token?: string | null
+          project_ref?: string | null
           slug: string
           supabase_anon_key: string
           supabase_service_role_key?: string | null
@@ -1253,6 +1297,10 @@ export type Database = {
           created_by?: string | null
           id?: string
           nome?: string | null
+          oauth_access_token?: string | null
+          oauth_expires_at?: string | null
+          oauth_refresh_token?: string | null
+          project_ref?: string | null
           slug?: string
           supabase_anon_key?: string
           supabase_service_role_key?: string | null

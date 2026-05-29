@@ -30,6 +30,7 @@ import { Route as AuthenticatedCaixaRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedPedidosIndexRouteImport } from './routes/_authenticated/pedidos.index'
 import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
 import { Route as ApiTenantSplatRouteImport } from './routes/api/tenant/$'
+import { Route as ApiSupabaseOauthCallbackRouteImport } from './routes/api/supabase-oauth/callback'
 import { Route as ApiPublicV1RouteImport } from './routes/api/public/v1'
 import { Route as ApiPublicNfeioWebhookRouteImport } from './routes/api/public/nfeio-webhook'
 import { Route as AuthenticatedRelatoriosCatalogoRouteImport } from './routes/_authenticated/relatorios.catalogo'
@@ -151,6 +152,12 @@ const ApiTenantSplatRoute = ApiTenantSplatRouteImport.update({
   path: '/api/tenant/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiSupabaseOauthCallbackRoute =
+  ApiSupabaseOauthCallbackRouteImport.update({
+    id: '/api/supabase-oauth/callback',
+    path: '/api/supabase-oauth/callback',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicV1Route = ApiPublicV1RouteImport.update({
   id: '/api/public/v1',
   path: '/api/public/v1',
@@ -245,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/nfeio-webhook': typeof ApiPublicNfeioWebhookRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
+  '/api/supabase-oauth/callback': typeof ApiSupabaseOauthCallbackRoute
   '/api/tenant/$': typeof ApiTenantSplatRoute
   '/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/pedidos/': typeof AuthenticatedPedidosIndexRoute
@@ -277,6 +285,7 @@ export interface FileRoutesByTo {
   '/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/nfeio-webhook': typeof ApiPublicNfeioWebhookRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
+  '/api/supabase-oauth/callback': typeof ApiSupabaseOauthCallbackRoute
   '/api/tenant/$': typeof ApiTenantSplatRoute
   '/estoque': typeof AuthenticatedEstoqueIndexRoute
   '/pedidos': typeof AuthenticatedPedidosIndexRoute
@@ -313,6 +322,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/nfeio-webhook': typeof ApiPublicNfeioWebhookRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
+  '/api/supabase-oauth/callback': typeof ApiSupabaseOauthCallbackRoute
   '/api/tenant/$': typeof ApiTenantSplatRoute
   '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/_authenticated/pedidos/': typeof AuthenticatedPedidosIndexRoute
@@ -349,6 +359,7 @@ export interface FileRouteTypes {
     | '/relatorios/catalogo'
     | '/api/public/nfeio-webhook'
     | '/api/public/v1'
+    | '/api/supabase-oauth/callback'
     | '/api/tenant/$'
     | '/estoque/'
     | '/pedidos/'
@@ -381,6 +392,7 @@ export interface FileRouteTypes {
     | '/relatorios/catalogo'
     | '/api/public/nfeio-webhook'
     | '/api/public/v1'
+    | '/api/supabase-oauth/callback'
     | '/api/tenant/$'
     | '/estoque'
     | '/pedidos'
@@ -416,6 +428,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios/catalogo'
     | '/api/public/nfeio-webhook'
     | '/api/public/v1'
+    | '/api/supabase-oauth/callback'
     | '/api/tenant/$'
     | '/_authenticated/estoque/'
     | '/_authenticated/pedidos/'
@@ -429,6 +442,7 @@ export interface RootRouteChildren {
   VendedorRoute: typeof VendedorRouteWithChildren
   ApiPublicNfeioWebhookRoute: typeof ApiPublicNfeioWebhookRoute
   ApiPublicV1Route: typeof ApiPublicV1RouteWithChildren
+  ApiSupabaseOauthCallbackRoute: typeof ApiSupabaseOauthCallbackRoute
   ApiTenantSplatRoute: typeof ApiTenantSplatRoute
 }
 
@@ -579,6 +593,13 @@ declare module '@tanstack/react-router' {
       path: '/api/tenant/$'
       fullPath: '/api/tenant/$'
       preLoaderRoute: typeof ApiTenantSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/supabase-oauth/callback': {
+      id: '/api/supabase-oauth/callback'
+      path: '/api/supabase-oauth/callback'
+      fullPath: '/api/supabase-oauth/callback'
+      preLoaderRoute: typeof ApiSupabaseOauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/v1': {
@@ -802,6 +823,7 @@ const rootRouteChildren: RootRouteChildren = {
   VendedorRoute: VendedorRouteWithChildren,
   ApiPublicNfeioWebhookRoute: ApiPublicNfeioWebhookRoute,
   ApiPublicV1Route: ApiPublicV1RouteWithChildren,
+  ApiSupabaseOauthCallbackRoute: ApiSupabaseOauthCallbackRoute,
   ApiTenantSplatRoute: ApiTenantSplatRoute,
 }
 export const routeTree = rootRouteImport
