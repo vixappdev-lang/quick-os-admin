@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VendedorRouteImport } from './routes/vendedor'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as DownRouteImport } from './routes/down'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as VendedorIndexRouteImport } from './routes/vendedor.index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
@@ -53,6 +54,11 @@ const VendedorRoute = VendedorRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DownRoute = DownRouteImport.update({
+  id: '/down',
+  path: '/down',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -232,6 +238,7 @@ const ApiPublicV1PedidosRoute = ApiPublicV1PedidosRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
+  '/down': typeof DownRoute
   '/login': typeof LoginRoute
   '/vendedor': typeof VendedorRouteWithChildren
   '/caixa': typeof AuthenticatedCaixaRoute
@@ -267,6 +274,7 @@ export interface FileRoutesByFullPath {
   '/api/public/v1/produtos': typeof ApiPublicV1ProdutosRoute
 }
 export interface FileRoutesByTo {
+  '/down': typeof DownRoute
   '/login': typeof LoginRoute
   '/caixa': typeof AuthenticatedCaixaRoute
   '/clientes': typeof AuthenticatedClientesRouteWithChildren
@@ -303,6 +311,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/down': typeof DownRoute
   '/login': typeof LoginRoute
   '/vendedor': typeof VendedorRouteWithChildren
   '/_authenticated/caixa': typeof AuthenticatedCaixaRoute
@@ -342,6 +351,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/down'
     | '/login'
     | '/vendedor'
     | '/caixa'
@@ -377,6 +387,7 @@ export interface FileRouteTypes {
     | '/api/public/v1/produtos'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/down'
     | '/login'
     | '/caixa'
     | '/clientes'
@@ -412,6 +423,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authenticated'
+    | '/down'
     | '/login'
     | '/vendedor'
     | '/_authenticated/caixa'
@@ -450,6 +462,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  DownRoute: typeof DownRoute
   LoginRoute: typeof LoginRoute
   VendedorRoute: typeof VendedorRouteWithChildren
   ApiDownRoute: typeof ApiDownRoute
@@ -473,6 +486,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/down': {
+      id: '/down'
+      path: '/down'
+      fullPath: '/down'
+      preLoaderRoute: typeof DownRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -839,6 +859,7 @@ const ApiPublicV1RouteWithChildren = ApiPublicV1Route._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  DownRoute: DownRoute,
   LoginRoute: LoginRoute,
   VendedorRoute: VendedorRouteWithChildren,
   ApiDownRoute: ApiDownRoute,
