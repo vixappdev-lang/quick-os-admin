@@ -213,7 +213,13 @@ function SupabasePage() {
         </div>
       </SectionCard>
 
-      <NewTenantDialog open={open} onOpenChange={setOpen} usuarios={usuarios} onCreated={(t) => setSchemaTenant(t)} />
+      <NewTenantDialog
+        open={open}
+        onOpenChange={(o) => { setOpen(o); if (!o) setOauthState(null); }}
+        usuarios={usuarios}
+        oauthState={oauthState}
+        onCreated={(t) => setSchemaTenant(t)}
+      />
       <SchemaDialog tenant={schemaTenant} onClose={() => setSchemaTenant(null)} />
       <ViewTenantDialog tenant={viewTenant} onClose={() => setViewTenant(null)} />
       <TrackTenantDialog tenant={trackTenant} onClose={() => setTrackTenant(null)} />
