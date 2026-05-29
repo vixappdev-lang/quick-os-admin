@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Loader2, Database, Copy, Check, Download, ExternalLink, FileCode2, Eye, Radio, Pencil, Shield, AlertTriangle, KeyRound, ArrowRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { SectionCard } from "@/components/section-card";
 import {
@@ -11,6 +11,7 @@ import {
 import { useUsuarios } from "@/lib/queries";
 import { useAuth } from "@/lib/auth";
 import { listTenants, createTenant, deleteTenant } from "@/lib/tenants.functions";
+import { startSupabaseOAuth, listOAuthProjects, connectOAuthProject, cancelOAuthState } from "@/lib/supabase-oauth.functions";
 import { getSchemaIssues, getSchemaIssuesBySlug, clearSchemaIssues, type SchemaIssue } from "@/lib/schema-errors";
 import { toast } from "sonner";
 
