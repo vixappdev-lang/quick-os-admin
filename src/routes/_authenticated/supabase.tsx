@@ -43,11 +43,29 @@ function SupabasePage() {
   const [schemaTenant, setSchemaTenant] = useState<any | null>(null);
   const [viewTenant, setViewTenant] = useState<any | null>(null);
   const [trackTenant, setTrackTenant] = useState<any | null>(null);
+  const [oauthState, setOauthState] = useState<string | null>(null);
   const [issues, setIssues] = useState<SchemaIssue[]>(() => getSchemaIssues());
   useEffect(() => {
     const h = () => setIssues(getSchemaIssues());
     window.addEventListener("schema-errors-changed", h);
     return () => window.removeEventListener("schema-errors-changed", h);
+  }, []);
+  // Detecta retorno do OAuth Supabase via querystring (?oauth_state=... ou ?oauth_err=...)
+  useEffect(() => {
+    const u = new URL(window.location.href);
+    const st = u.searchParams.get("oauth_state");
+    const er = u.searchParams.get("oauth_err");
+    if (er) {
+      toast.error("Falha no OAuth Supabase: " + er);
+      u.searchParams.delete("oauth_err");
+      window.history.replaceState({}, "", u.pathname + (u.searchParams.toString() ? "?" + u.searchParams.toString() : ""));
+    }
+    if (st) {
+      setOauthState(st);
+      setOpen(true);
+      u.searchParams.delete("oauth_state");
+      window.history.replaceState({}, "", u.pathname + (u.searchParams.toString() ? "?" + u.searchParams.toString() : ""));
+    }
   }, []);
   const del = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { id } }),
