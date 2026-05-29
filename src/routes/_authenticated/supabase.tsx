@@ -548,7 +548,8 @@ function NewTenantDialog({ open, onOpenChange, usuarios, oauthState, onCreated }
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Database className="h-4 w-4" />
-            {inOauthReturn ? "Escolha o projeto Supabase" : "Conectar Supabase do cliente"}
+            {inOauthReturn ? "Escolha o projeto Supabase" : "Nova conexão Supabase (OAuth)"}
+            <span className="ml-2 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-600">v2 OAuth</span>
           </DialogTitle>
         </DialogHeader>
 
