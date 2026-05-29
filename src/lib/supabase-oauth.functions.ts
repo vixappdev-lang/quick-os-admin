@@ -111,7 +111,7 @@ export const connectOAuthProject = createServerFn({ method: "POST" })
     }
 
     const url = projectUrl(data.project_ref);
-    const slug = data.slug || row.slug;
+    const slug = data.slug || row.slug || "loja";
     const nome = data.nome ?? row.nome ?? null;
 
     const { data: tenant, error: te } = await supabaseAdmin.from("tenants").insert({
