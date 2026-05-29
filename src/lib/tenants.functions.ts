@@ -66,7 +66,7 @@ export const updateTenant = createServerFn({ method: "POST" })
       if (v !== undefined) clean[k] = v;
     }
     if (!Object.keys(clean).length) return { ok: true };
-    const { error } = await supabaseAdmin.from("tenants").update(clean).eq("id", id);
+    const { error } = await supabaseAdmin.from("tenants").update(clean as any).eq("id", id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
