@@ -1190,6 +1190,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          created_by_admin: string | null
           email: string | null
           id: string
           nome: string
@@ -1201,6 +1202,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          created_by_admin?: string | null
           email?: string | null
           id: string
           nome: string
@@ -1212,6 +1214,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          created_by_admin?: string | null
           email?: string | null
           id?: string
           nome?: string
@@ -1230,6 +1233,7 @@ export type Database = {
           nome: string | null
           slug: string
           supabase_anon_key: string
+          supabase_service_role_key: string | null
           supabase_url: string
           user_id: string
         }
@@ -1240,6 +1244,7 @@ export type Database = {
           nome?: string | null
           slug: string
           supabase_anon_key: string
+          supabase_service_role_key?: string | null
           supabase_url: string
           user_id: string
         }
@@ -1250,6 +1255,7 @@ export type Database = {
           nome?: string | null
           slug?: string
           supabase_anon_key?: string
+          supabase_service_role_key?: string | null
           supabase_url?: string
           user_id?: string
         }

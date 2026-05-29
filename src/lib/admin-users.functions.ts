@@ -26,10 +26,16 @@ export const createUser = createServerFn({ method: "POST" })
       email: data.email,
       password: data.password,
       email_confirm: true,
-      user_metadata: { nome: data.nome },
+      user_metadata: { nome: data.nome, created_by_admin: context.userId },
     });
     if (error) throw new Error(error.message);
     const newId = created.user!.id;
+
+    // Garante que o profile fique vinculado ao admin que criou.
+    await supabaseAdmin
+      .from("profiles")
+      .update({ created_by_admin: context.userId })
+      .eq("id", newId);
 
     // Profile is auto-created by handle_new_user trigger.
     // Default role inserted by trigger is 'operador' — replace with chosen role.

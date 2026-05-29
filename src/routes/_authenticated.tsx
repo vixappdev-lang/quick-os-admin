@@ -58,12 +58,14 @@ function AuthLayout() {
       try {
         const t = await fetchMyTenant();
         if (cancelled) return;
-        if (!t) {
+        if (!t || !(t as any).hasServiceRole) {
+          // Sem tenant — ou tenant sem service_role (proxy não funciona):
+          // mantém usuário no banco central até o admin completar a conexão.
           if (getActiveTenant()) setActiveTenant(null);
         } else {
           const current = getActiveTenant();
-          if (!current || current.slug !== t.slug || current.url !== t.url) {
-            setActiveTenant({ slug: t.slug, url: t.url, anon_key: t.anon_key });
+          if (!current || current.slug !== t.slug) {
+            setActiveTenant({ slug: t.slug, nome: t.nome, url: t.url });
           }
         }
       } catch {

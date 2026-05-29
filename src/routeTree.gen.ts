@@ -29,6 +29,7 @@ import { Route as AuthenticatedClientesRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedCaixaRouteImport } from './routes/_authenticated/caixa'
 import { Route as AuthenticatedPedidosIndexRouteImport } from './routes/_authenticated/pedidos.index'
 import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
+import { Route as ApiTenantSplatRouteImport } from './routes/api/tenant/$'
 import { Route as ApiPublicV1RouteImport } from './routes/api/public/v1'
 import { Route as ApiPublicNfeioWebhookRouteImport } from './routes/api/public/nfeio-webhook'
 import { Route as AuthenticatedRelatoriosCatalogoRouteImport } from './routes/_authenticated/relatorios.catalogo'
@@ -145,6 +146,11 @@ const AuthenticatedEstoqueIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedEstoqueRoute,
   } as any)
+const ApiTenantSplatRoute = ApiTenantSplatRouteImport.update({
+  id: '/api/tenant/$',
+  path: '/api/tenant/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicV1Route = ApiPublicV1RouteImport.update({
   id: '/api/public/v1',
   path: '/api/public/v1',
@@ -239,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/nfeio-webhook': typeof ApiPublicNfeioWebhookRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
+  '/api/tenant/$': typeof ApiTenantSplatRoute
   '/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/pedidos/': typeof AuthenticatedPedidosIndexRoute
   '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
@@ -270,6 +277,7 @@ export interface FileRoutesByTo {
   '/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/nfeio-webhook': typeof ApiPublicNfeioWebhookRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
+  '/api/tenant/$': typeof ApiTenantSplatRoute
   '/estoque': typeof AuthenticatedEstoqueIndexRoute
   '/pedidos': typeof AuthenticatedPedidosIndexRoute
   '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
@@ -305,6 +313,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios/catalogo': typeof AuthenticatedRelatoriosCatalogoRoute
   '/api/public/nfeio-webhook': typeof ApiPublicNfeioWebhookRoute
   '/api/public/v1': typeof ApiPublicV1RouteWithChildren
+  '/api/tenant/$': typeof ApiTenantSplatRoute
   '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/_authenticated/pedidos/': typeof AuthenticatedPedidosIndexRoute
   '/api/public/v1/pedidos': typeof ApiPublicV1PedidosRoute
@@ -340,6 +349,7 @@ export interface FileRouteTypes {
     | '/relatorios/catalogo'
     | '/api/public/nfeio-webhook'
     | '/api/public/v1'
+    | '/api/tenant/$'
     | '/estoque/'
     | '/pedidos/'
     | '/api/public/v1/pedidos'
@@ -371,6 +381,7 @@ export interface FileRouteTypes {
     | '/relatorios/catalogo'
     | '/api/public/nfeio-webhook'
     | '/api/public/v1'
+    | '/api/tenant/$'
     | '/estoque'
     | '/pedidos'
     | '/api/public/v1/pedidos'
@@ -405,6 +416,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios/catalogo'
     | '/api/public/nfeio-webhook'
     | '/api/public/v1'
+    | '/api/tenant/$'
     | '/_authenticated/estoque/'
     | '/_authenticated/pedidos/'
     | '/api/public/v1/pedidos'
@@ -417,6 +429,7 @@ export interface RootRouteChildren {
   VendedorRoute: typeof VendedorRouteWithChildren
   ApiPublicNfeioWebhookRoute: typeof ApiPublicNfeioWebhookRoute
   ApiPublicV1Route: typeof ApiPublicV1RouteWithChildren
+  ApiTenantSplatRoute: typeof ApiTenantSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -560,6 +573,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/estoque/'
       preLoaderRoute: typeof AuthenticatedEstoqueIndexRouteImport
       parentRoute: typeof AuthenticatedEstoqueRoute
+    }
+    '/api/tenant/$': {
+      id: '/api/tenant/$'
+      path: '/api/tenant/$'
+      fullPath: '/api/tenant/$'
+      preLoaderRoute: typeof ApiTenantSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/v1': {
       id: '/api/public/v1'
@@ -782,17 +802,8 @@ const rootRouteChildren: RootRouteChildren = {
   VendedorRoute: VendedorRouteWithChildren,
   ApiPublicNfeioWebhookRoute: ApiPublicNfeioWebhookRoute,
   ApiPublicV1Route: ApiPublicV1RouteWithChildren,
+  ApiTenantSplatRoute: ApiTenantSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

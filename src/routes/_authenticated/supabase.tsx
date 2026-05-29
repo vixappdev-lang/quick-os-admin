@@ -439,7 +439,7 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
 function NewTenantDialog({ open, onOpenChange, usuarios, onCreated }: { open: boolean; onOpenChange: (o: boolean) => void; usuarios: any[]; onCreated?: (tenant: any) => void }) {
   const qc = useQueryClient();
   const createFn = useServerFn(createTenant);
-  const [form, setForm] = useState({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "" });
+  const [form, setForm] = useState({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "", supabase_service_role_key: "" });
   const [copied, setCopied] = useState(false);
 
   const m = useMutation({
@@ -449,7 +449,7 @@ function NewTenantDialog({ open, onOpenChange, usuarios, onCreated }: { open: bo
       toast.success("Tenant conectado.");
       const payload = created && typeof created === "object" ? { ...form, ...created } : { ...form };
       onOpenChange(false);
-      setForm({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "" });
+      setForm({ user_id: "", slug: randomSlug(), nome: "", supabase_url: "", supabase_anon_key: "", supabase_service_role_key: "" });
       onCreated?.(payload);
     },
     onError: (e: any) => toast.error(e.message ?? "Erro"),
@@ -485,6 +485,10 @@ function NewTenantDialog({ open, onOpenChange, usuarios, onCreated }: { open: bo
           </Field>
           <Field label="Anon Key (publishable)">
             <textarea required value={form.supabase_anon_key} onChange={(e) => setForm({ ...form, supabase_anon_key: e.target.value })} className="input min-h-[80px] py-2 font-mono text-[11px]" />
+          </Field>
+          <Field label="Service Role Key (secreta — usada apenas no servidor)">
+            <textarea required value={form.supabase_service_role_key} onChange={(e) => setForm({ ...form, supabase_service_role_key: e.target.value })} className="input min-h-[80px] py-2 font-mono text-[11px]" placeholder="eyJ... (Project Settings → API → service_role)" />
+            <p className="mt-1 text-[10px] text-muted-foreground">Necessária para que o usuário consiga gravar dados no banco dele. Nunca é exposta ao navegador.</p>
           </Field>
           <DialogFooter className="mt-2">
             <button type="button" onClick={() => onOpenChange(false)} className="h-9 rounded-md border bg-card px-3 text-sm hover:bg-muted">Cancelar</button>
