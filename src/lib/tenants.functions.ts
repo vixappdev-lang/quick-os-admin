@@ -19,6 +19,7 @@ const CreateTenantSchema = z.object({
   nome: z.string().max(80).optional().nullable(),
   supabase_url: z.string().url(),
   supabase_anon_key: z.string().min(20),
+  supabase_service_role_key: z.string().min(20),
 });
 
 export const createTenant = createServerFn({ method: "POST" })
@@ -35,6 +36,7 @@ export const createTenant = createServerFn({ method: "POST" })
         nome: data.nome ?? null,
         supabase_url: data.supabase_url,
         supabase_anon_key: data.supabase_anon_key,
+        supabase_service_role_key: data.supabase_service_role_key,
         created_by: context.userId,
       })
       .select()
@@ -43,6 +45,30 @@ export const createTenant = createServerFn({ method: "POST" })
     // 2) atualiza profile.tenant_slug
     await supabaseAdmin.from("profiles").update({ tenant_slug: data.slug }).eq("id", data.user_id);
     return { tenant: t };
+  });
+
+const UpdateTenantSchema = z.object({
+  id: z.string().uuid(),
+  supabase_url: z.string().url().optional(),
+  supabase_anon_key: z.string().min(20).optional(),
+  supabase_service_role_key: z.string().min(20).optional(),
+  nome: z.string().max(80).optional().nullable(),
+});
+
+export const updateTenant = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i) => UpdateTenantSchema.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertSuperAdmin(context);
+    const { id, ...patch } = data;
+    const clean: Record<string, any> = {};
+    for (const [k, v] of Object.entries(patch)) {
+      if (v !== undefined) clean[k] = v;
+    }
+    if (!Object.keys(clean).length) return { ok: true };
+    const { error } = await supabaseAdmin.from("tenants").update(clean).eq("id", id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const deleteTenant = createServerFn({ method: "POST" })
@@ -73,12 +99,19 @@ export const getMyTenant = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { data, error } = await supabaseAdmin
       .from("tenants")
-      .select("slug, nome, supabase_url, supabase_anon_key")
+      .select("slug, nome, supabase_url, supabase_service_role_key")
       .eq("user_id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return null;
-    return { slug: data.slug, nome: data.nome, url: data.supabase_url, anon_key: data.supabase_anon_key };
+    // NÃO devolve service_role nem anon ao browser — só metadados.
+    // O proxy /api/tenant resolve a service_role do lado do servidor.
+    return {
+      slug: data.slug,
+      nome: data.nome,
+      url: data.supabase_url,
+      hasServiceRole: !!data.supabase_service_role_key,
+    };
   });
 
 const PermSchema = z.object({
