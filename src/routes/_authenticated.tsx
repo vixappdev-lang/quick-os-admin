@@ -58,7 +58,9 @@ function AuthLayout() {
       try {
         const t = await fetchMyTenant();
         if (cancelled) return;
-        if (!t) {
+        if (!t || !(t as any).hasServiceRole) {
+          // Sem tenant — ou tenant sem service_role (proxy não funciona):
+          // mantém usuário no banco central até o admin completar a conexão.
           if (getActiveTenant()) setActiveTenant(null);
         } else {
           const current = getActiveTenant();
