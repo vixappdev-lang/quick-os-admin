@@ -920,6 +920,8 @@ export function useUsuarios() {
     queryFn: async () => {
       const { data: me } = await centralSupabase.auth.getUser();
       const myId = me.user?.id;
+      const myEmail = (me.user?.email ?? "").toLowerCase();
+      const isSuper = myEmail === SUPER_ADMIN_EMAIL;
       const [{ data: profiles, error: pe }, { data: roles, error: re }] = await Promise.all([
         centralSupabase.from("profiles").select("*").order("nome"),
         centralSupabase.from("user_roles").select("*"),
@@ -933,7 +935,7 @@ export function useUsuarios() {
         map.set(r.user_id, arr);
       });
       return (profiles ?? [])
-        .filter((p: any) => !myId || p.id === myId || p.created_by_admin === myId)
+        .filter((p: any) => isSuper || !myId || p.id === myId || p.created_by_admin === myId)
         .map((p) => ({ ...p, roles: map.get(p.id) ?? [] }));
     },
     staleTime: 30_000,
