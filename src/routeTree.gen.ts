@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as VendedorIndexRouteImport } from './routes/vendedor.index'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as VendedorNovoRouteImport } from './routes/vendedor.novo'
+import { Route as ApiDownRouteImport } from './routes/api/down'
 import { Route as AuthenticatedUsuariosRouteImport } from './routes/_authenticated/usuarios'
 import { Route as AuthenticatedSupabaseRouteImport } from './routes/_authenticated/supabase'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
@@ -72,6 +73,11 @@ const VendedorNovoRoute = VendedorNovoRouteImport.update({
   id: '/novo',
   path: '/novo',
   getParentRoute: () => VendedorRoute,
+} as any)
+const ApiDownRoute = ApiDownRouteImport.update({
+  id: '/api/down',
+  path: '/api/down',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedUsuariosRoute = AuthenticatedUsuariosRouteImport.update({
   id: '/usuarios',
@@ -240,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/supabase': typeof AuthenticatedSupabaseRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/api/down': typeof ApiDownRoute
   '/vendedor/novo': typeof VendedorNovoRoute
   '/vendedor/': typeof VendedorIndexRoute
   '/clientes/$id': typeof AuthenticatedClientesIdRoute
@@ -272,6 +279,7 @@ export interface FileRoutesByTo {
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/supabase': typeof AuthenticatedSupabaseRoute
   '/usuarios': typeof AuthenticatedUsuariosRoute
+  '/api/down': typeof ApiDownRoute
   '/vendedor/novo': typeof VendedorNovoRoute
   '/': typeof AuthenticatedIndexRoute
   '/vendedor': typeof VendedorIndexRoute
@@ -309,6 +317,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/supabase': typeof AuthenticatedSupabaseRoute
   '/_authenticated/usuarios': typeof AuthenticatedUsuariosRoute
+  '/api/down': typeof ApiDownRoute
   '/vendedor/novo': typeof VendedorNovoRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/vendedor/': typeof VendedorIndexRoute
@@ -347,6 +356,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/supabase'
     | '/usuarios'
+    | '/api/down'
     | '/vendedor/novo'
     | '/vendedor/'
     | '/clientes/$id'
@@ -379,6 +389,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/supabase'
     | '/usuarios'
+    | '/api/down'
     | '/vendedor/novo'
     | '/'
     | '/vendedor'
@@ -415,6 +426,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios'
     | '/_authenticated/supabase'
     | '/_authenticated/usuarios'
+    | '/api/down'
     | '/vendedor/novo'
     | '/_authenticated/'
     | '/vendedor/'
@@ -440,6 +452,7 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   LoginRoute: typeof LoginRoute
   VendedorRoute: typeof VendedorRouteWithChildren
+  ApiDownRoute: typeof ApiDownRoute
   ApiPublicNfeioWebhookRoute: typeof ApiPublicNfeioWebhookRoute
   ApiPublicV1Route: typeof ApiPublicV1RouteWithChildren
   ApiSupabaseOauthCallbackRoute: typeof ApiSupabaseOauthCallbackRoute
@@ -489,6 +502,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/vendedor/novo'
       preLoaderRoute: typeof VendedorNovoRouteImport
       parentRoute: typeof VendedorRoute
+    }
+    '/api/down': {
+      id: '/api/down'
+      path: '/api/down'
+      fullPath: '/api/down'
+      preLoaderRoute: typeof ApiDownRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/usuarios': {
       id: '/_authenticated/usuarios'
@@ -821,6 +841,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   LoginRoute: LoginRoute,
   VendedorRoute: VendedorRouteWithChildren,
+  ApiDownRoute: ApiDownRoute,
   ApiPublicNfeioWebhookRoute: ApiPublicNfeioWebhookRoute,
   ApiPublicV1Route: ApiPublicV1RouteWithChildren,
   ApiSupabaseOauthCallbackRoute: ApiSupabaseOauthCallbackRoute,
@@ -829,3 +850,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
